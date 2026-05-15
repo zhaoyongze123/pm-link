@@ -1,7 +1,6 @@
 package cn.iocoder.yudao.module.bpm.framework.flowable.core.el;
 
 import org.flowable.common.engine.api.variable.VariableContainer;
-import org.flowable.common.engine.impl.el.function.AbstractFlowableVariableExpressionFunction;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,12 +10,8 @@ import org.springframework.stereotype.Component;
  * @author jason
  */
 @Deprecated // TODO @芋艿：兼容老版本，预计 27 年删除；
-@Component
-public class VariableConvertByTypeExpressionFunction extends AbstractFlowableVariableExpressionFunction {
-
-    public VariableConvertByTypeExpressionFunction() {
-        super("convertByType");
-    }
+// @Component
+public class VariableConvertByTypeExpressionFunction {
 
     public static Object convertByType(VariableContainer variableContainer, String variableName, Object parmaValue) {
         Object variable = variableContainer.getVariable(variableName);
