@@ -399,7 +399,7 @@ function processDeptNode(node: any): DeptTreeNode {
 </script>
 
 <template>
-  <Modal class="w-2/5" key="user-select-modal" :title="title">
+  <Modal class="w-2/5 oa-user-select-modal" key="user-select-modal" :title="title">
     <Row :gutter="[16, 16]">
       <Col :span="6">
         <div class="h-[500px] overflow-auto rounded border">
@@ -535,5 +535,113 @@ function processDeptNode(node: any): DeptTreeNode {
 
 :deep(.ant-pagination-options-size-changer) {
   margin-right: 8px;
+}
+</style>
+
+<style lang="scss">
+body.oa-lite-light-theme .oa-user-select-modal {
+  background: #fff !important;
+  color: #111827 !important;
+  border-color: #dbe5f0 !important;
+  box-shadow: 0 20px 48px rgb(15 23 42 / 14%) !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .text-foreground,
+body.oa-lite-light-theme .oa-user-select-modal .text-foreground\/80,
+body.oa-lite-light-theme .oa-user-select-modal .text-muted-foreground,
+body.oa-lite-light-theme .oa-user-select-modal [class*='text-foreground'],
+body.oa-lite-light-theme .oa-user-select-modal [class*='text-muted-foreground'] {
+  color: #111827 !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .border-border,
+body.oa-lite-light-theme .oa-user-select-modal [class*='border-border'] {
+  border-color: #dbe5f0 !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .bg-background,
+body.oa-lite-light-theme .oa-user-select-modal .bg-card,
+body.oa-lite-light-theme .oa-user-select-modal .bg-popover {
+  background: #fff !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .bg-accent,
+body.oa-lite-light-theme .oa-user-select-modal .bg-secondary,
+body.oa-lite-light-theme .oa-user-select-modal .bg-muted {
+  background: #f8fafc !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal input,
+body.oa-lite-light-theme .oa-user-select-modal textarea,
+body.oa-lite-light-theme .oa-user-select-modal .ant-input,
+body.oa-lite-light-theme .oa-user-select-modal .ant-input-affix-wrapper,
+body.oa-lite-light-theme .oa-user-select-modal .ant-select-selector {
+  background: #fff !important;
+  color: #111827 !important;
+  border-color: #d1d5db !important;
+  box-shadow: none !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .ant-input::placeholder,
+body.oa-lite-light-theme .oa-user-select-modal .ant-input-affix-wrapper input::placeholder,
+body.oa-lite-light-theme .oa-user-select-modal .ant-select-selection-placeholder {
+  color: #94a3b8 !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer,
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list,
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-header,
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-body,
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-content,
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-content-item,
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-search,
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-footer,
+body.oa-lite-light-theme .oa-user-select-modal .ant-tree,
+body.oa-lite-light-theme .oa-user-select-modal .ant-tree-list,
+body.oa-lite-light-theme .oa-user-select-modal .ant-tree-treenode,
+body.oa-lite-light-theme .oa-user-select-modal .ant-tree-node-content-wrapper,
+body.oa-lite-light-theme .oa-user-select-modal .ant-pagination {
+  background: #fff !important;
+  color: #111827 !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list,
+body.oa-lite-light-theme .oa-user-select-modal .ant-tree,
+body.oa-lite-light-theme .oa-user-select-modal .rounded.border,
+body.oa-lite-light-theme .oa-user-select-modal .border-b {
+  border-color: #dbe5f0 !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-content-item:hover,
+body.oa-lite-light-theme .oa-user-select-modal .ant-tree-node-content-wrapper:hover {
+  background: #f8fafc !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-content-item-checked,
+body.oa-lite-light-theme .oa-user-select-modal .ant-tree-node-selected,
+body.oa-lite-light-theme .oa-user-select-modal .ant-tree-node-content-wrapper.ant-tree-node-selected {
+  background: #eff6ff !important;
+  color: #111827 !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-header-title,
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-content-item-text,
+body.oa-lite-light-theme .oa-user-select-modal .ant-pagination-total-text,
+body.oa-lite-light-theme .oa-user-select-modal .ant-pagination-options,
+body.oa-lite-light-theme .oa-user-select-modal .ant-pagination-item a,
+body.oa-lite-light-theme .oa-user-select-modal .ant-btn:not(.ant-btn-primary),
+body.oa-lite-light-theme .oa-user-select-modal .ant-btn:not(.ant-btn-primary) > span,
+body.oa-lite-light-theme .oa-user-select-modal .anticon,
+body.oa-lite-light-theme .oa-user-select-modal .ant-input-prefix,
+body.oa-lite-light-theme .oa-user-select-modal .ant-transfer-list-header .ant-checkbox + span {
+  color: #111827 !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .ant-btn {
+  border-color: #dbe5f0 !important;
+}
+
+body.oa-lite-light-theme .oa-user-select-modal .ant-btn-primary {
+  color: #fff !important;
 }
 </style>

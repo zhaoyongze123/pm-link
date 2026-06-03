@@ -8,6 +8,7 @@ import { computed, ref, unref, watch, watchEffect } from 'vue';
 import { useVbenModal } from '@vben/common-ui';
 import { IconifyIcon } from '@vben/icons';
 import { $t } from '@vben/locales';
+import { preferences } from '@vben/preferences';
 
 import { Button, message } from 'ant-design-vue';
 
@@ -39,6 +40,10 @@ const getIconWidth = computed(
 );
 
 const getStyle = computed((): CSSProperties => ({ width: unref(getWidth) }));
+
+const displaySourceValue = computed(
+  () => sourceValue.value || preferences.app.defaultAvatar,
+);
 
 const getImageWrapperStyle = computed(
   (): CSSProperties => ({ height: unref(getWidth), width: unref(getWidth) }),
@@ -97,8 +102,8 @@ defineExpose({
       </div>
       <!-- 头像图片 -->
       <img
-        v-if="sourceValue"
-        :src="sourceValue"
+        v-if="displaySourceValue"
+        :src="displaySourceValue"
         alt="avatar"
         class="h-full w-full object-cover"
       />

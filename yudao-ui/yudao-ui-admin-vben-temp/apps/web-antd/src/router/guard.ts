@@ -11,6 +11,7 @@ import { message } from 'ant-design-vue';
 import { getSimpleDictDataList } from '#/api/system/dict/data';
 import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
+import { resolveUserHomePath } from '#/utils/oa-user';
 
 import { generateAccess } from './access';
 
@@ -60,8 +61,11 @@ function setupAccessGuard(router: Router) {
       if (to.path === LOGIN_PATH && accessStore.accessToken) {
         return decodeURIComponent(
           (to.query?.redirect as string) ||
-            userStore.userInfo?.homePath ||
-            preferences.app.defaultHomePath,
+            resolveUserHomePath(
+              preferences.app.defaultHomePath,
+              userStore.userInfo?.homePath,
+              userStore.userRoles,
+            ),
         );
       }
       return true;
@@ -132,7 +136,11 @@ function setupAccessGuard(router: Router) {
     userStore.setUserRoles(userRoles);
     const redirectPath = (from.query.redirect ??
       (to.path === preferences.app.defaultHomePath
-        ? userInfo?.homePath || preferences.app.defaultHomePath
+        ? resolveUserHomePath(
+            preferences.app.defaultHomePath,
+            userInfo?.homePath,
+            userRoles,
+          )
         : to.fullPath)) as string;
 
     return {

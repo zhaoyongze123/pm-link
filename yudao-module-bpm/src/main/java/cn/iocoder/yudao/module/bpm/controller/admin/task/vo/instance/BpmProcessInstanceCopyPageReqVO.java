@@ -16,6 +16,9 @@ public class BpmProcessInstanceCopyPageReqVO extends PageParam {
     @Schema(description = "流程名称", example = "芋道")
     private String processInstanceName;
 
+    @Schema(description = "流程定义编号", example = "oa_leave:1:123456")
+    private String processDefinitionId;
+
     @Schema(description = "创建时间")
     @DateTimeFormat(pattern = FORMAT_YEAR_MONTH_DAY_HOUR_MINUTE_SECOND)
     private LocalDateTime[] createTime;

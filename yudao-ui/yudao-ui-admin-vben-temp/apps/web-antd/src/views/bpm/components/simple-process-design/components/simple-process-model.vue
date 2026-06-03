@@ -242,10 +242,7 @@ onMounted(() => {
       @mouseleave="stopDrag"
       @mouseenter="setGrabCursor"
     >
-      <ProcessNodeTree
-        v-if="processNodeTree"
-        v-model:flow-node="processNodeTree"
-      />
+      <ProcessNodeTree v-if="processNodeTree" :flow-node="processNodeTree" />
     </div>
   </div>
 

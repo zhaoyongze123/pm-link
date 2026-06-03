@@ -4,15 +4,15 @@ import { requestClient } from '#/api/request';
 
 export namespace BpmOALeaveApi {
   export interface Leave {
-    id: number;
-    status: number;
+    id?: number;
+    status?: number;
     type: number;
     reason: string;
-    processInstanceId: string;
+    processInstanceId?: string;
     startTime: number;
     endTime: number;
-    createTime: Date;
-    startUserSelectAssignees?: Record<string, string[]>;
+    createTime?: Date;
+    startUserSelectAssignees?: Record<string, number[]>;
   }
 }
 

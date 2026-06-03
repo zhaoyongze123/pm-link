@@ -19,10 +19,43 @@ import UserSocial from './modules/user-social.vue';
 const userStore = useUserStore();
 const activeName = ref('basicInfo');
 
+function syncUserStoreProfile(
+  profile?: SystemUserProfileApi.UserProfileRespVO,
+  fallbackUser?: Record<string, any>,
+) {
+  if (!profile && !fallbackUser) {
+    return;
+  }
+  userStore.setUserInfo({
+    ...(userStore.userInfo ?? {}),
+    ...(fallbackUser ?? {}),
+    avatar: profile?.avatar || fallbackUser?.avatar || userStore.userInfo?.avatar || '',
+    email: profile?.email ?? fallbackUser?.email ?? userStore.userInfo?.email,
+    nickname:
+      profile?.nickname ??
+      fallbackUser?.nickname ??
+      userStore.userInfo?.nickname ??
+      '',
+    userId:
+      String(
+        userStore.userInfo?.userId ??
+          fallbackUser?.userId ??
+          profile?.id ??
+          '',
+      ) || '',
+    username:
+      profile?.username ??
+      fallbackUser?.username ??
+      userStore.userInfo?.username ??
+      '',
+  });
+}
+
 /** 加载个人信息 */
 const profile = ref<SystemUserProfileApi.UserProfileRespVO>();
 async function loadProfile() {
   profile.value = await getUserProfile();
+  syncUserStoreProfile(profile.value);
 }
 
 /** 刷新个人信息 */
@@ -32,7 +65,7 @@ async function refreshProfile() {
 
   // 更新 store
   const authPermissionInfo = await getAuthPermissionInfoApi();
-  userStore.setUserInfo(authPermissionInfo.user);
+  syncUserStoreProfile(profile.value, authPermissionInfo.user);
 }
 
 /** 初始化 */

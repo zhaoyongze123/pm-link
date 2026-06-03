@@ -14,6 +14,7 @@ public interface BpmProcessInstanceCopyMapper extends BaseMapperX<BpmProcessInst
         return selectPage(reqVO, new LambdaQueryWrapperX<BpmProcessInstanceCopyDO>()
                 .eqIfPresent(BpmProcessInstanceCopyDO::getUserId, loginUserId)
                 .likeIfPresent(BpmProcessInstanceCopyDO::getProcessInstanceName, reqVO.getProcessInstanceName())
+                .eqIfPresent(BpmProcessInstanceCopyDO::getProcessDefinitionId, reqVO.getProcessDefinitionId())
                 .betweenIfPresent(BpmProcessInstanceCopyDO::getCreateTime, reqVO.getCreateTime())
                 .orderByDesc(BpmProcessInstanceCopyDO::getId));
     }

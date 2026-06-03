@@ -97,26 +97,35 @@ function cropped() {
   if (!cropper.value) {
     return;
   }
-  const imgInfo = cropper.value.getData();
-  const canvas = props.circled
-    ? getRoundedCanvas()
-    : cropper.value.getCroppedCanvas();
-  canvas.toBlob((blob) => {
-    if (!blob) {
+  try {
+    const imgInfo = cropper.value.getData();
+    const canvas = props.circled
+      ? getRoundedCanvas()
+      : cropper.value.getCroppedCanvas();
+    if (!canvas) {
+      emit('cropendError');
       return;
     }
-    const fileReader: FileReader = new FileReader();
-    fileReader.readAsDataURL(blob);
-    fileReader.onloadend = (e) => {
-      emit('cropend', {
-        imgBase64: e.target?.result ?? '',
-        imgInfo,
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        emit('cropendError');
+        return;
+      }
+      const fileReader: FileReader = new FileReader();
+      fileReader.readAsDataURL(blob);
+      fileReader.onloadend = (e) => {
+        emit('cropend', {
+          imgBase64: e.target?.result ?? '',
+          imgInfo,
+        });
+      };
+      fileReader.addEventListener('error', () => {
+        emit('cropendError');
       });
-    };
-    fileReader.addEventListener('error', () => {
-      emit('cropendError');
-    });
-  }, 'image/png');
+    }, 'image/png');
+  } catch {
+    emit('cropendError');
+  }
 }
 
 // Get a circular picture canvas

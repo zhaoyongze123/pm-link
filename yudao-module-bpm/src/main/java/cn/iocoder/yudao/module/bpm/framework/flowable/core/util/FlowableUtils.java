@@ -12,6 +12,7 @@ import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.form.BpmFormFi
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitionInfoDO;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmModelFormTypeEnum;
 import cn.iocoder.yudao.module.bpm.framework.flowable.core.enums.BpmnVariableConstants;
+import lombok.extern.slf4j.Slf4j;
 import lombok.SneakyThrows;
 import org.flowable.common.engine.api.delegate.Expression;
 import org.flowable.common.engine.api.variable.VariableContainer;
@@ -40,6 +41,7 @@ import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.
  *
  * @author 芋道源码
  */
+@Slf4j
 public class FlowableUtils {
 
     // ========== User 相关的工具方法 ==========
@@ -247,8 +249,14 @@ public class FlowableUtils {
         // 解析表单配置
         Map<String, BpmFormFieldVO> formFieldsMap = new HashMap<>();
         processDefinitionInfo.getFormFields().forEach(formFieldStr -> {
-            BpmFormFieldVO formField = JsonUtils.parseObject(formFieldStr, BpmFormFieldVO.class);
-            parseFormField(formField, formFieldsMap);
+            try {
+                BpmFormFieldVO formField = JsonUtils.parseObject(formFieldStr, BpmFormFieldVO.class);
+                parseFormField(formField, formFieldsMap);
+            } catch (RuntimeException ex) {
+                // 容错跳过非法表单节点，避免待办/我的流程等摘要查询被单个坏节点拖挂
+                log.warn("[getSummary][跳过非法表单字段][processDefinitionId({}) field({})]",
+                        processDefinitionInfo.getProcessDefinitionId(), formFieldStr, ex);
+            }
         });
 
         // 情况一：当自定义了摘要
@@ -377,5 +385,4 @@ public class FlowableUtils {
         VariableContainer variableContainer = new MapDelegateVariableContainer(variable, VariableContainer.empty());
         return getExpressionValue(variableContainer, expressionString);
     }
-
 }

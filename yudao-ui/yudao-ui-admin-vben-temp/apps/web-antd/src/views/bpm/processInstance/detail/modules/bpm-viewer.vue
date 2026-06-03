@@ -33,6 +33,7 @@ watch(
       view.value = newModelView;
     }
   },
+  { immediate: true },
 );
 
 /** 监听 bpmnXml */
@@ -41,6 +42,7 @@ watch(
   (value) => {
     view.value.bpmnXml = value;
   },
+  { immediate: true },
 );
 </script>
 

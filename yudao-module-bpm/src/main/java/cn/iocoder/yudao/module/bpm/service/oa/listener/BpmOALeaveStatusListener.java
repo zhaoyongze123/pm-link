@@ -26,6 +26,10 @@ public class BpmOALeaveStatusListener extends BpmProcessInstanceStatusEventListe
 
     @Override
     protected void onEvent(BpmProcessInstanceStatusEvent event) {
+        // 如果 businessKey 为空，说明该流程实例不是通过请假功能创建的，直接返回
+        if (event.getBusinessKey() == null) {
+            return;
+        }
         leaveService.updateLeaveStatus(Long.parseLong(event.getBusinessKey()), event.getStatus());
     }
 

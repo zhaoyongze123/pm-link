@@ -4,10 +4,9 @@ import type { SystemUserProfileApi } from '#/api/system/user/profile';
 import { computed } from 'vue';
 
 import { IconifyIcon } from '@vben/icons';
-import { preferences } from '@vben/preferences';
 import { formatDateTime } from '@vben/utils';
 
-import { Descriptions, DescriptionsItem, Tooltip } from 'ant-design-vue';
+import { Descriptions, DescriptionsItem, Tooltip, message } from 'ant-design-vue';
 
 import { updateUserProfile } from '#/api/system/user/profile';
 import { CropperAvatar } from '#/components/cropper';
@@ -21,9 +20,7 @@ const emit = defineEmits<{
   (e: 'success'): void;
 }>();
 
-const avatar = computed(
-  () => props.profile?.avatar || preferences.app.defaultAvatar,
-);
+const avatar = computed(() => props.profile?.avatar || '');
 
 async function handelUpload({
   file,
@@ -36,7 +33,13 @@ async function handelUpload({
   const { httpRequest } = useUpload();
   // 将 Blob 转换为 File
   const fileObj = new File([file], filename, { type: file.type });
-  const avatar = await httpRequest(fileObj);
+  const uploadResult = await httpRequest(fileObj);
+  const avatar =
+    typeof uploadResult === 'string' ? uploadResult : uploadResult?.url;
+  if (!avatar) {
+    message.error('头像上传结果异常，请稍后重试');
+    throw new Error('头像上传结果未返回可用的 URL');
+  }
   // 2. 更新用户头像
   await updateUserProfile({ avatar });
 }

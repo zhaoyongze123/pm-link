@@ -7,6 +7,7 @@ import { $t } from '#/locales';
 
 const BasicLayout = () => import('#/layouts/basic.vue');
 const AuthPageLayout = () => import('#/layouts/auth.vue');
+const OALitePage = () => import('#/views/oa-lite/index.vue');
 /** 全局404页面 */
 const fallbackNotFoundRoute: RouteRecordRaw = {
   component: () => import('#/views/_core/fallback/not-found.vue'),
@@ -123,6 +124,18 @@ const coreRoutes: RouteRecordRaw[] = [
     },
     name: 'BpmMobileFormPreview',
     path: '/bpm/mobile/form-preview',
+  },
+  {
+    component: OALitePage,
+    meta: {
+      hideInBreadcrumb: true,
+      hideInMenu: true,
+      hideInTab: true,
+      ignoreAccess: true,
+      title: 'OA 审批',
+    },
+    name: 'OALite',
+    path: '/oa-lite',
   },
 ];
 

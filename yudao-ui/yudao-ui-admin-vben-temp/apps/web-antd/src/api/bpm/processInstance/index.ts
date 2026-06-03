@@ -174,7 +174,9 @@ export async function getProcessInstance(id: number) {
 
 /** 查询复制流程实例分页 */
 export async function getProcessInstanceCopyPage(params: PageParam) {
-  return requestClient.get<PageResult<BpmProcessInstanceApi.ProcessInstance>>(
+  return requestClient.get<
+    PageResult<BpmProcessInstanceApi.ProcessInstanceCopyRespVO>
+  >(
     '/bpm/process-instance/copy/page',
     { params },
   );

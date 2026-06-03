@@ -124,7 +124,7 @@ async function onBind(bind: any) {
   try {
     // 计算 redirectUri
     // tricky: type 需要先 encode 一次，否则钉钉回调会丢失。配合 getUrlValue() 使用
-    const redirectUri = `${location.origin}/profile?${encodeURIComponent(`type=${type}`)}`;
+    const redirectUri = `${location.origin}${location.pathname}?${encodeURIComponent(`type=${type}`)}`;
 
     // 进行跳转
     window.location.href = await socialAuthRedirect(type, redirectUri);

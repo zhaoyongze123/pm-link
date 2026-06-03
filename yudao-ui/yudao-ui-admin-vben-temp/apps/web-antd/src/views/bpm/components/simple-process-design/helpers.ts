@@ -37,12 +37,13 @@ import {
 export function useWatchNode(props: {
   flowNode: SimpleFlowNode;
 }): Ref<SimpleFlowNode> {
-  const node = ref<SimpleFlowNode>(props.flowNode);
+  const node = ref<SimpleFlowNode>(unref(props.flowNode) as SimpleFlowNode);
   watch(
     () => props.flowNode,
     (newValue) => {
-      node.value = newValue;
+      node.value = unref(newValue) as SimpleFlowNode;
     },
+    { immediate: true },
   );
   return node;
 }

@@ -22,6 +22,14 @@ import {
 } from '#/api';
 import { $t } from '#/locales';
 
+const MENU_WHITELIST = new Set(['系统管理', '基础设施', '工作流程']);
+
+function filterTopLevelMenus<T extends { children?: T[]; name?: string }>(
+  menus: T[],
+) {
+  return menus.filter((menu) => MENU_WHITELIST.has(menu.name ?? ''));
+}
+
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();
   const userStore = useUserStore();
@@ -134,13 +142,17 @@ export const useAuthStore = defineStore('auth', () => {
     // 加载
     const authPermissionInfo: AuthPermissionInfo | null =
       await getAuthPermissionInfoApi();
+    const filteredMenus = filterTopLevelMenus(authPermissionInfo.menus || []);
     // userStore
     userStore.setUserInfo(authPermissionInfo.user);
     userStore.setUserRoles(authPermissionInfo.roles);
     // accessStore
-    accessStore.setAccessMenus(authPermissionInfo.menus);
+    accessStore.setAccessMenus(filteredMenus);
     accessStore.setAccessCodes(authPermissionInfo.permissions);
-    return authPermissionInfo;
+    return {
+      ...authPermissionInfo,
+      menus: filteredMenus,
+    };
   }
 
   function $reset() {

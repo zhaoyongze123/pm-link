@@ -20,7 +20,17 @@ import {
   smsLogin,
   socialLogin,
 } from '#/api';
+import { getUserProfile } from '#/api/system/user/profile';
 import { $t } from '#/locales';
+import { resolveUserHomePath } from '#/utils/oa-user';
+
+const MENU_WHITELIST = new Set(['系统管理', '基础设施', '工作流程']);
+
+function filterTopLevelMenus<T extends { children?: T[]; name?: string }>(
+  menus: T[],
+) {
+  return menus.filter((menu) => MENU_WHITELIST.has(menu.name ?? ''));
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();
@@ -87,7 +97,11 @@ export const useAuthStore = defineStore('auth', () => {
           onSuccess
             ? await onSuccess?.()
             : await router.push(
-                userInfo.homePath || preferences.app.defaultHomePath,
+                resolveUserHomePath(
+                  preferences.app.defaultHomePath,
+                  userInfo.homePath,
+                  userStore.userRoles,
+                ),
               );
         }
 
@@ -135,14 +149,36 @@ export const useAuthStore = defineStore('auth', () => {
     // 加载
     // eslint-disable-next-line no-useless-assignment
     let authPermissionInfo: AuthPermissionInfo | null = null;
-    authPermissionInfo = await getAuthPermissionInfoApi();
+    const [permissionInfo, profile] = await Promise.all([
+      getAuthPermissionInfoApi(),
+      getUserProfile().catch(() => null),
+    ]);
+    authPermissionInfo = permissionInfo;
+    const filteredMenus = filterTopLevelMenus(authPermissionInfo.menus || []);
+    const userRoles = authPermissionInfo.roles || [];
+    const normalizedUser = {
+      ...authPermissionInfo.user,
+      avatar: profile?.avatar || authPermissionInfo.user?.avatar || '',
+      email: profile?.email ?? authPermissionInfo.user?.email,
+      homePath: resolveUserHomePath(
+        preferences.app.defaultHomePath,
+        authPermissionInfo.user?.homePath,
+        userRoles,
+      ),
+      nickname: profile?.nickname ?? authPermissionInfo.user?.nickname,
+      username: profile?.username ?? authPermissionInfo.user?.username,
+    };
     // userStore
-    userStore.setUserInfo(authPermissionInfo.user);
-    userStore.setUserRoles(authPermissionInfo.roles);
+    userStore.setUserInfo(normalizedUser);
+    userStore.setUserRoles(userRoles);
     // accessStore
-    accessStore.setAccessMenus(authPermissionInfo.menus);
+    accessStore.setAccessMenus(filteredMenus);
     accessStore.setAccessCodes(authPermissionInfo.permissions);
-    return authPermissionInfo;
+    return {
+      ...authPermissionInfo,
+      user: normalizedUser,
+      menus: filteredMenus,
+    };
   }
 
   function $reset() {

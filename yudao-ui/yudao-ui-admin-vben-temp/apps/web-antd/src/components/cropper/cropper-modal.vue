@@ -88,6 +88,10 @@ function handleReady(cropperInstance: CropperType) {
 
 function handleCropperError() {
   modalLoading(false);
+  if (src.value) {
+    previewSource.value = '';
+    message.warning('当前头像无法直接编辑，请重新选择图片');
+  }
 }
 
 function handlerToolbar(event: string, arg?: number) {

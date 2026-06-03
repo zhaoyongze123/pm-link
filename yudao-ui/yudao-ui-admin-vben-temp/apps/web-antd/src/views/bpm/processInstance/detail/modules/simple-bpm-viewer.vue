@@ -31,31 +31,44 @@ watch(
   () => props.modelView,
   async (newModelView) => {
     if (newModelView) {
-      tasks.value = newModelView.tasks;
+      tasks.value = Array.isArray(newModelView.tasks) ? newModelView.tasks : [];
       processInstance.value = newModelView.processInstance;
+      simpleModel.value = newModelView.simpleModel || {};
       // 已经拒绝的活动节点编号集合，只包括 UserTask
-      const rejectedTaskActivityIds: string[] =
-        newModelView.rejectedTaskActivityIds;
+      const rejectedTaskActivityIds: string[] = Array.isArray(
+        newModelView.rejectedTaskActivityIds,
+      )
+        ? newModelView.rejectedTaskActivityIds
+        : [];
       // 进行中的活动节点编号集合， 只包括 UserTask
-      const unfinishedTaskActivityIds: string[] =
-        newModelView.unfinishedTaskActivityIds;
+      const unfinishedTaskActivityIds: string[] = Array.isArray(
+        newModelView.unfinishedTaskActivityIds,
+      )
+        ? newModelView.unfinishedTaskActivityIds
+        : [];
       // 已经完成的活动节点编号集合， 包括 UserTask、Gateway 等
-      const finishedActivityIds: string[] =
-        newModelView.finishedTaskActivityIds;
+      const finishedActivityIds: string[] = Array.isArray(
+        newModelView.finishedTaskActivityIds,
+      )
+        ? newModelView.finishedTaskActivityIds
+        : [];
       // 已经完成的连线节点编号集合，只包括 SequenceFlow
-      const finishedSequenceFlowActivityIds: string[] =
-        newModelView.finishedSequenceFlowActivityIds;
+      const finishedSequenceFlowActivityIds: string[] = Array.isArray(
+        newModelView.finishedSequenceFlowActivityIds,
+      )
+        ? newModelView.finishedSequenceFlowActivityIds
+        : [];
       setSimpleModelNodeTaskStatus(
-        newModelView.simpleModel,
+        simpleModel.value,
         newModelView.processInstance?.status,
         rejectedTaskActivityIds,
         unfinishedTaskActivityIds,
         finishedActivityIds,
         finishedSequenceFlowActivityIds,
       );
-      simpleModel.value = newModelView.simpleModel || {};
     }
   },
+  { immediate: true },
 );
 
 /** 监控模型结构数据 */
@@ -66,6 +79,7 @@ watch(
       simpleModel.value = JSON.parse(value);
     }
   },
+  { immediate: true },
 );
 
 const setSimpleModelNodeTaskStatus = (
