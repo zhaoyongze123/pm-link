@@ -34,6 +34,7 @@ import {
   TimezoneButton,
   UserDropdown,
 } from '@vben/layouts';
+import { useI18n } from '@vben/locales';
 import { preferences } from '@vben/preferences';
 import { useUserStore } from '@vben/stores';
 import { formatDateTime, formatPast2 } from '@vben/utils';
@@ -127,6 +128,7 @@ const listTabs: ListTab[] = ['initiated', 'pending', 'processed', 'copied'];
 
 const authStore = useAuthStore();
 const userStore = useUserStore();
+const { t } = useI18n();
 
 const loading = ref(false);
 const leaveSubmitting = ref(false);
@@ -181,7 +183,7 @@ const headerMenus = computed(() => [
       openProfileCenter();
     },
     icon: AntdProfileOutlined,
-    text: '个人中心',
+    text: t('page.oaLite.profileCenter.title'),
   },
 ]);
 
@@ -318,6 +320,9 @@ const currentStatusOptions = computed<SelectOption[]>(() =>
     ? taskStatusOptions.value
     : processStatusOptions.value,
 );
+const selectApproverLabel = computed(() =>
+  JSON.stringify(t('page.oaLite.timeline.selectApprover')),
+);
 const currentProcessOptions = computed<SelectOption[]>(() =>
   activeTab.value === 'copied'
     ? processTemplateIdOptions.value
@@ -375,7 +380,7 @@ const createCategoryTabs = computed<BpmCategoryApi.Category[]>(() => {
       code: leaveCategoryCode,
       description: undefined,
       id: -1,
-      name: leaveProcessDefinition.value?.categoryName || '未分类',
+      name: leaveProcessDefinition.value?.categoryName || t('page.oaLite.misc.uncategorized'),
       sort: list.length,
       status: 0,
     });
@@ -394,7 +399,7 @@ const currentCreateCategoryName = computed(() => {
   if (currentCategory) {
     return currentCategory.name;
   }
-  return leaveProcessDefinition.value?.categoryName || '流程分类';
+  return leaveProcessDefinition.value?.categoryName || t('page.oaLite.filters.categoryPlaceholder');
 });
 
 const showLeaveCreateCard = computed(() => {
@@ -413,25 +418,25 @@ const dashboardNavItems = computed(() => [
     count: stats.value.pending,
     icon: 'lucide:list-todo',
     key: 'pending' as ListTab,
-    label: '待处理的',
+    label: t('page.oaLite.nav.pending'),
   },
   {
     count: stats.value.processed,
     icon: 'lucide:badge-check',
     key: 'processed' as ListTab,
-    label: '已处理的',
+    label: t('page.oaLite.nav.processed'),
   },
   {
     count: stats.value.initiated,
     icon: 'lucide:file-text',
     key: 'initiated' as ListTab,
-    label: '我发起的',
+    label: t('page.oaLite.nav.initiated'),
   },
   {
     count: stats.value.copied,
     icon: 'lucide:send',
     key: 'copied' as ListTab,
-    label: '抄送我的',
+    label: t('page.oaLite.nav.copied'),
   },
 ]);
 
@@ -442,19 +447,19 @@ const topNavKey = computed<'center' | 'create'>(() =>
 const currentListTitle = computed(() => {
   switch (activeTab.value) {
     case 'copied': {
-      return '抄送我的';
+      return t('page.oaLite.center.copiedTitle');
     }
     case 'initiated': {
-      return '我的流程';
+      return t('page.oaLite.center.initiatedTitle');
     }
     case 'pending': {
-      return '待办任务';
+      return t('page.oaLite.center.pendingTitle');
     }
     case 'processed': {
-      return '已办任务';
+      return t('page.oaLite.center.processedTitle');
     }
     default: {
-      return '发起流程';
+      return t('page.oaLite.center.createTitle');
     }
   }
 });
@@ -462,19 +467,19 @@ const currentListTitle = computed(() => {
 const currentListSubtitle = computed(() => {
   switch (activeTab.value) {
     case 'copied': {
-      return '保留管理端抄送能力，支持查看抄送节点、意见和时间';
+      return t('page.oaLite.center.copiedSubtitle');
     }
     case 'initiated': {
-      return '保留管理端我的流程能力，支持状态筛选、取消和重新发起';
+      return t('page.oaLite.center.initiatedSubtitle');
     }
     case 'pending': {
-      return '保留管理端待办能力，支持进入真实审批详情并办理';
+      return t('page.oaLite.center.pendingSubtitle');
     }
     case 'processed': {
-      return '保留管理端已办能力，支持查看历史和撤回任务';
+      return t('page.oaLite.center.processedSubtitle');
     }
     default: {
-      return '选择模板并发起真实审批流程';
+      return t('page.oaLite.center.createSubtitle');
     }
   }
 });
@@ -579,7 +584,7 @@ function syncSelectedItem(tab: ListTab) {
 
 function getSummaryText(summary?: { key: string; value: string }[]) {
   if (!summary?.length) {
-    return '暂无摘要';
+    return t('page.oaLite.misc.emptySummary');
   }
   return summary.map((item) => `${item.key}：${item.value}`).join(' / ');
 }
@@ -587,26 +592,26 @@ function getSummaryText(summary?: { key: string; value: string }[]) {
 function getProcessStatusText(status?: number) {
   switch (status) {
     case BpmProcessInstanceStatus.APPROVE: {
-      return '已通过';
+      return t('page.oaLite.status.approved');
     }
     case BpmProcessInstanceStatus.CANCEL: {
-      return '已取消';
+      return t('page.oaLite.status.cancelled');
     }
     case BpmProcessInstanceStatus.REJECT: {
-      return '已驳回';
+      return t('page.oaLite.status.rejected');
     }
     case BpmProcessInstanceStatus.RUNNING: {
-      return '审批中';
+      return t('page.oaLite.status.running');
     }
     default: {
-      return '处理中';
+      return t('page.oaLite.status.processing');
     }
   }
 }
 
 function getTaskStatusText(status?: number) {
   const option = taskStatusOptions.value.find((item) => item.value === status);
-  return option?.label || '已处理';
+  return option?.label || t('page.oaLite.status.processed');
 }
 
 function getItemStatus(item: DetailPayload) {
@@ -668,10 +673,10 @@ function getItemMetaLeft(item: DetailPayload) {
     return '';
   }
   if (isTaskItem(item)) {
-    return `当前任务：${item.name}`;
+    return `${t('page.oaLite.item.currentTask')}：${item.name}`;
   }
   if (isCopiedItem(item)) {
-    return `抄送节点：${item.activityName || '-'}`;
+    return `${t('page.oaLite.item.copyNode')}：${item.activityName || '-'}`;
   }
   if (
     item.status === BpmProcessInstanceStatus.RUNNING &&
@@ -683,9 +688,9 @@ function getItemMetaLeft(item: DetailPayload) {
       return getProcessStatusText(item.status);
     }
     if (item.tasks.length === 1) {
-      return `${firstTask.assigneeUser?.nickname || '审批人'}（${firstTask.name}）审批中`;
+      return `${firstTask.assigneeUser?.nickname || t('page.oaLite.item.approver')}（${firstTask.name}）${t('page.oaLite.status.running')}`;
     }
-    return `${firstTask.assigneeUser?.nickname || '审批人'} 等 ${item.tasks.length} 人（${firstTask.name}）审批中`;
+    return `${firstTask.assigneeUser?.nickname || t('page.oaLite.item.approver')} ${t('page.oaLite.item.andCount', [item.tasks.length])}（${firstTask.name}）${t('page.oaLite.status.running')}`;
   }
   return getProcessStatusText(item.status);
 }
@@ -696,15 +701,15 @@ function getItemMetaRight(item: DetailPayload) {
   }
   if (isTaskItem(item)) {
     return activeTab.value === 'processed'
-      ? `完成时间：${formatDateTime(item.endTime || item.createTime)}`
-      : `任务时间：${formatDateTime(item.createTime)}`;
+      ? `${t('page.oaLite.item.finishTime')}：${formatDateTime(item.endTime || item.createTime)}`
+      : `${t('page.oaLite.item.taskTime')}：${formatDateTime(item.createTime)}`;
   }
   if (isCopiedItem(item)) {
-    return `抄送时间：${formatDateTime(item.createTime)}`;
+    return `${t('page.oaLite.item.copyTime')}：${formatDateTime(item.createTime)}`;
   }
   return activeTab.value === 'initiated'
-    ? `发起时间：${formatDateTime(item.startTime || item.createTime)}`
-    : `结束时间：${formatDateTime(item.endTime || item.createTime)}`;
+    ? `${t('page.oaLite.item.startTime')}：${formatDateTime(item.startTime || item.createTime)}`
+    : `${t('page.oaLite.item.endTime')}：${formatDateTime(item.endTime || item.createTime)}`;
 }
 
 function getExtraMetaRows(item: DetailPayload) {
@@ -713,71 +718,71 @@ function getExtraMetaRows(item: DetailPayload) {
   }
   if (isCopiedItem(item)) {
     return [
-      `流程发起人：${item.startUser?.nickname || '-'}`,
-      `抄送人：${item.createUser?.nickname || '-'}`,
-      `抄送意见：${item.reason || '-'}`,
+      `${t('page.oaLite.item.processStarter')}：${item.startUser?.nickname || '-'}`,
+      `${t('page.oaLite.item.copyUser')}：${item.createUser?.nickname || '-'}`,
+      `${t('page.oaLite.item.copyReason')}：${item.reason || '-'}`,
     ];
   }
   if (isTaskItem(item)) {
     if (activeTab.value === 'processed') {
       return [
-        `发起人：${item.processInstance?.startUser?.nickname || '-'}`,
-        `审批意见：${item.reason || '-'}`,
-        `耗时：${formatPast2(item.durationInMillis || 0)}`,
+        `${t('page.oaLite.processDetail.startUser')}：${item.processInstance?.startUser?.nickname || '-'}`,
+        `${t('page.oaLite.item.approvalComment')}：${item.reason || '-'}`,
+        `${t('page.oaLite.item.duration')}：${formatPast2(item.durationInMillis || 0)}`,
       ];
     }
     return [
-      `发起人：${item.processInstance?.startUser?.nickname || '-'}`,
-      `流程编号：${item.processInstanceId}`,
-      `任务编号：${item.id}`,
+      `${t('page.oaLite.processDetail.startUser')}：${item.processInstance?.startUser?.nickname || '-'}`,
+      `${t('page.oaLite.processDetail.processNo')}：${item.processInstanceId}`,
+      `${t('page.oaLite.item.taskNo')}：${item.id}`,
     ];
   }
   return [
-    `流程分类：${item.categoryName || item.category || '-'}`,
-    `业务标识：${item.businessKey || '-'}`,
-    `流程编号：${item.id}`,
+    `${t('page.oaLite.filters.categoryPlaceholder')}：${item.categoryName || item.category || '-'}`,
+    `${t('page.oaLite.processDetail.businessKey')}：${item.businessKey || '-'}`,
+    `${t('page.oaLite.processDetail.processNo')}：${item.id}`,
   ];
 }
 
 function getKeywordPlaceholder() {
   switch (activeTab.value) {
     case 'copied': {
-      return '请输入流程名称';
+      return t('page.oaLite.filters.processNamePlaceholder');
     }
     case 'initiated': {
-      return '请输入流程名称';
+      return t('page.oaLite.filters.processNamePlaceholder');
     }
     case 'pending': {
-      return '请输入任务名称';
+      return t('page.oaLite.filters.taskNamePlaceholder');
     }
     case 'processed': {
-      return '请输入任务名称';
+      return t('page.oaLite.filters.taskNamePlaceholder');
     }
     default: {
-      return '请输入关键字';
+      return t('page.oaLite.filters.keywordPlaceholder');
     }
   }
 }
 
 function getCreateTimePlaceholder(): [string, string] {
   return activeTab.value === 'copied'
-    ? ['开始抄送时间', '结束抄送时间']
-    : ['开始发起时间', '结束发起时间'];
+    ? [t('page.oaLite.filters.copyStartTime'), t('page.oaLite.filters.copyEndTime')]
+    : [t('page.oaLite.filters.startLaunchTime'), t('page.oaLite.filters.endLaunchTime')];
 }
 
 function getTabErrorMessage(tab: ListTab) {
   switch (tab) {
     case 'copied': {
-      return '加载抄送流程失败';
+      return t('page.oaLite.messages.loadCopiedFailed');
     }
     case 'initiated': {
-      return '加载我的流程失败';
+      return t('page.oaLite.messages.loadInitiatedFailed');
     }
     case 'pending': {
-      return '加载待办任务失败';
+      return t('page.oaLite.messages.loadPendingFailed');
     }
     case 'processed': {
-      return '加载已办任务失败';
+      return t('page.oaLite.messages.loadProcessedFailed');
     }
   }
 }
@@ -981,7 +986,7 @@ async function openLeaveForm(businessKey?: string) {
     await loadLeaveDefinition();
   }
   if (!leaveProcessDefinition.value) {
-    message.error('OA 请假的流程模型未配置，请检查！');
+    message.error(t('page.oaLite.messages.leaveModelMissing'));
     return;
   }
   resetLeaveForm();
@@ -1006,7 +1011,7 @@ async function openLeaveForm(businessKey?: string) {
 
 async function submitLeave() {
   if (!leaveProcessDefinition.value) {
-    message.error('OA 请假的流程模型未配置，无法发起流程');
+    message.error(t('page.oaLite.messages.leaveModelCannotStart'));
     return;
   }
   if (
@@ -1015,7 +1020,7 @@ async function submitLeave() {
     !leaveForm.endTime ||
     !leaveForm.reason.trim()
   ) {
-    message.warning('请完整填写请假信息');
+    message.warning(t('page.oaLite.messages.fillLeaveForm'));
     return;
   }
   for (const node of startUserSelectTasks.value) {
@@ -1024,7 +1029,7 @@ async function submitLeave() {
       isStartUserSelectableNode(node) &&
       assignees.length === 0
     ) {
-      message.warning(`请选择${node.name}的审批人`);
+      message.warning(t('ui.selectRequired', [`${node.name}${t('page.oaLite.item.approver')}`]));
       return;
     }
   }
@@ -1037,7 +1042,7 @@ async function submitLeave() {
       startUserSelectAssignees: leaveForm.startUserSelectAssignees,
       type: leaveForm.type,
     });
-    message.success('请假流程已发起');
+    message.success(t('page.oaLite.messages.leaveStarted'));
     viewState.value = 'main';
     activeTab.value = 'initiated';
     tabPages.initiated.pageNo = 1;
@@ -1226,13 +1231,13 @@ onMounted(async () => {
       }
     }, 1000 * 60 * 2);
     if (!leaveProcessDefinition.value) {
-      message.error('OA 请假的流程模型未配置，请检查！');
+      message.error(t('page.oaLite.messages.leaveModelMissing'));
       return;
     }
     applyLeaveDefinitionFilterDefaults();
     await refreshAllTabs();
   } catch (error: any) {
-    message.error(error?.message || '加载 OA 用户审批页失败');
+    message.error(error?.message || t('page.oaLite.messages.loadPageFailed'));
   }
 });
 
@@ -1260,7 +1265,7 @@ onUnmounted(() => {
                 <IconifyIcon icon="lucide:chevron-left" />
               </button>
               <div class="oa-lite-leave-header-tabs">
-                <div class="oa-lite-leave-header-tab active">发起审批</div>
+                <div class="oa-lite-leave-header-tab active">{{ t('page.oaLite.topbar.create') }}</div>
               </div>
             </div>
           </header>
@@ -1270,8 +1275,8 @@ onUnmounted(() => {
               <div class="oa-lite-leave-card">
                 <div class="oa-lite-leave-title-row">
                   <div>
-                    <h1 class="oa-lite-leave-title">请假</h1>
-                    <p class="oa-lite-leave-subtitle">真实 BPM 流程发起</p>
+                    <h1 class="oa-lite-leave-title">{{ t('page.oaLite.leaveForm.title') }}</h1>
+                    <p class="oa-lite-leave-subtitle">{{ t('page.oaLite.leaveForm.subtitle') }}</p>
                   </div>
                   <IconifyIcon icon="lucide:file-heart" class="oa-lite-leave-qr" />
                 </div>
@@ -1279,40 +1284,40 @@ onUnmounted(() => {
                 <div class="oa-lite-leave-divider"></div>
 
                 <Form layout="vertical">
-                  <Form.Item label="请假类型" required>
+                  <Form.Item :label="t('page.oaLite.leaveForm.type')" required>
                     <Select
                       v-model:value="leaveForm.type"
                       :options="leaveTypeOptions"
-                      placeholder="请选择请假类型"
+                      :placeholder="t('page.oaLite.leaveForm.typePlaceholder')"
                       popup-class-name="oa-lite-select-popup"
                       :get-popup-container="(triggerNode) => triggerNode.parentNode"
                     />
                   </Form.Item>
-                  <Form.Item label="开始时间" required>
+                  <Form.Item :label="t('page.oaLite.leaveForm.startTime')" required>
                     <DatePicker
                       v-model:value="leaveForm.startTime"
                       show-time
                       value-format="x"
                       format="YYYY-MM-DD HH:mm:ss"
                       class="w-full"
-                      placeholder="请选择开始时间"
+                      :placeholder="t('page.oaLite.leaveForm.startTimePlaceholder')"
                     />
                   </Form.Item>
-                  <Form.Item label="结束时间" required>
+                  <Form.Item :label="t('page.oaLite.leaveForm.endTime')" required>
                     <DatePicker
                       v-model:value="leaveForm.endTime"
                       show-time
                       value-format="x"
                       format="YYYY-MM-DD HH:mm:ss"
                       class="w-full"
-                      placeholder="请选择结束时间"
+                      :placeholder="t('page.oaLite.leaveForm.endTimePlaceholder')"
                     />
                   </Form.Item>
-                  <Form.Item label="请假原因" required>
+                  <Form.Item :label="t('page.oaLite.leaveForm.reason')" required>
                     <Input.TextArea
                       v-model:value="leaveForm.reason"
                       :rows="4"
-                      placeholder="请输入请假原因"
+                      :placeholder="t('page.oaLite.leaveForm.reasonPlaceholder')"
                     />
                   </Form.Item>
                 </Form>
@@ -1320,8 +1325,8 @@ onUnmounted(() => {
 
               <div class="oa-lite-leave-card">
                 <div class="oa-lite-leave-flow-head">
-                  <div class="oa-lite-leave-flow-title">流程</div>
-                  <div class="oa-lite-leave-flow-tag">按管理端真实配置加载</div>
+                  <div class="oa-lite-leave-flow-title">{{ t('page.oaLite.leaveForm.flowTitle') }}</div>
+                  <div class="oa-lite-leave-flow-tag">{{ t('page.oaLite.leaveForm.flowTag') }}</div>
                 </div>
 
                 <div class="oa-lite-leave-flow-body">
@@ -1335,7 +1340,7 @@ onUnmounted(() => {
 
                 <div class="oa-lite-leave-submit-row">
                   <Button type="primary" :loading="leaveSubmitting" @click="submitLeave">
-                    提交
+                    {{ t('page.oaLite.leaveForm.submit') }}
                   </Button>
                 </div>
               </div>
@@ -1352,8 +1357,8 @@ onUnmounted(() => {
                 <IconifyIcon icon="lucide:file-heart" />
               </div>
               <div>
-                <div class="oa-lite-brand-title">OA 审批</div>
-                <div class="oa-lite-brand-subtitle">普通用户审批工作台</div>
+                <div class="oa-lite-brand-title">{{ t('page.oaLite.brand.title') }}</div>
+                <div class="oa-lite-brand-subtitle">{{ t('page.oaLite.brand.subtitle') }}</div>
               </div>
             </div>
 
@@ -1363,21 +1368,21 @@ onUnmounted(() => {
                 :class="{ active: topNavKey === 'create' }"
                 @click="openMainNav('create')"
               >
-                发起审批
+                {{ t('page.oaLite.topbar.create') }}
               </button>
               <button
                 class="oa-lite-topnav-tab"
                 :class="{ active: topNavKey === 'center' }"
                 @click="openMainNav('center')"
               >
-                审批中心
+                {{ t('page.oaLite.topbar.center') }}
               </button>
             </nav>
 
             <div class="oa-lite-user-actions">
               <Button class="oa-lite-white-button oa-lite-refresh-button" @click="handleDetailRefresh">
                 <IconifyIcon icon="lucide:refresh-cw" />
-                刷新
+                {{ t('page.oaLite.topbar.refresh') }}
               </Button>
               <div class="oa-lite-header-widget-bar">
                 <ThemeToggle class="oa-lite-header-widget" />
@@ -1414,9 +1419,9 @@ onUnmounted(() => {
               <section class="oa-lite-profile-shell">
                 <div class="oa-lite-profile-header">
                   <div>
-                    <div class="oa-lite-section-title">个人中心</div>
+                    <div class="oa-lite-section-title">{{ t('page.oaLite.profileCenter.title') }}</div>
                     <div class="oa-lite-section-desc">
-                      当前账号资料、基础信息、密码设置和社交绑定
+                      {{ t('page.oaLite.profileCenter.subtitle') }}
                     </div>
                   </div>
                 </div>
@@ -1474,16 +1479,16 @@ onUnmounted(() => {
                         <IconifyIcon icon="lucide:file-heart" />
                       </div>
                       <div class="oa-lite-template-body">
-                        <div class="oa-lite-template-name">请假</div>
+                        <div class="oa-lite-template-name">{{ t('page.oaLite.leaveForm.title') }}</div>
                         <div class="oa-lite-template-desc">
-                          发起真实请假审批流程
+                          {{ t('page.oaLite.createCard.leaveDesc') }}
                         </div>
                       </div>
                     </button>
                   </div>
                   <Empty
                     v-else
-                    description="当前分类暂无可发起流程"
+                    :description="t('page.oaLite.createCard.emptyCategory')"
                     :image-style="{ height: '80px' }"
                   />
                 </div>
@@ -1517,7 +1522,7 @@ onUnmounted(() => {
                         <div class="oa-lite-section-title">{{ currentListTitle }}</div>
                         <div class="oa-lite-section-desc">{{ currentListSubtitle }}</div>
                       </div>
-                      <Button type="link" @click="resetCurrentFilter">重置筛选</Button>
+                      <Button type="link" @click="resetCurrentFilter">{{ t('page.oaLite.filters.resetFilters') }}</Button>
                     </div>
 
                     <div class="oa-lite-filters">
@@ -1536,7 +1541,7 @@ onUnmounted(() => {
                         v-if="showProcessFilter"
                         v-model:value="currentProcessFilterValue"
                         class="oa-lite-filter-control"
-                        placeholder="所属流程"
+                        :placeholder="t('page.oaLite.filters.processPlaceholder')"
                         allow-clear
                         :options="currentProcessOptions"
                         popup-class-name="oa-lite-status-popup"
@@ -1547,7 +1552,7 @@ onUnmounted(() => {
                         v-if="showCategoryFilter"
                         v-model:value="currentFilter!.category"
                         class="oa-lite-filter-control"
-                        placeholder="流程分类"
+                        :placeholder="t('page.oaLite.filters.categoryPlaceholder')"
                         allow-clear
                         :options="categoryOptions"
                         popup-class-name="oa-lite-status-popup"
@@ -1558,7 +1563,7 @@ onUnmounted(() => {
                         v-if="showStatusFilter"
                         v-model:value="currentFilter!.status"
                         class="oa-lite-filter-control"
-                        :placeholder="activeTab === 'processed' ? '审批状态' : '流程状态'"
+                        :placeholder="activeTab === 'processed' ? t('page.oaLite.filters.approvalStatusPlaceholder') : t('page.oaLite.filters.processStatusPlaceholder')"
                         allow-clear
                         :options="currentStatusOptions"
                         popup-class-name="oa-lite-status-popup"
@@ -1576,9 +1581,9 @@ onUnmounted(() => {
                     </div>
 
                     <div class="oa-lite-filter-actions">
-                      <Button type="primary" @click="handleFilterSubmit">查询</Button>
+                      <Button type="primary" @click="handleFilterSubmit">{{ t('page.oaLite.filters.search') }}</Button>
                       <Button class="oa-lite-white-button" @click="resetCurrentFilter">
-                        重置
+                        {{ t('page.oaLite.filters.reset') }}
                       </Button>
                     </div>
 
@@ -1615,7 +1620,7 @@ onUnmounted(() => {
                           </div>
                         </button>
                       </div>
-                      <Empty v-else :description="`暂无${currentListTitle}数据`" />
+                      <Empty v-else :description="t('page.oaLite.empty.noData', [currentListTitle])" />
                     </Spin>
 
                     <div
@@ -1627,7 +1632,7 @@ onUnmounted(() => {
                         :page-size="currentPageState.pageSize"
                         :total="currentPageState.total"
                         :show-size-changer="true"
-                        :show-total="(total) => `共 ${total} 条`"
+                        :show-total="(total) => t('page.oaLite.pagination.total', [total])"
                         @change="handlePageChange"
                       />
                     </div>
@@ -1642,7 +1647,7 @@ onUnmounted(() => {
                       @recreate="openLeaveForm"
                     />
                     <div v-else class="oa-lite-detail-empty">
-                      <Empty :description="`请选择${currentListTitle}查看详情`" />
+                      <Empty :description="t('page.oaLite.empty.selectDetail', [currentListTitle])" />
                     </div>
                   </div>
                 </div>
@@ -2681,7 +2686,7 @@ onUnmounted(() => {
   }
 
   :deep(.ant-btn.ant-btn-icon-only.ant-btn-background-ghost.ant-btn-primary::after) {
-    content: '选择审批人';
+    content: v-bind(selectApproverLabel);
     margin-left: 6px;
     font-size: 13px;
     font-weight: 600;

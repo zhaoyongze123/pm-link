@@ -12,6 +12,7 @@ import {
   BpmProcessInstanceStatus,
 } from '@vben/constants';
 import { formatDateTime } from '@vben/utils';
+import { useI18n } from '@vben/locales';
 
 import { Button, Empty, message, Spin, Tag, Textarea } from 'ant-design-vue';
 
@@ -54,6 +55,7 @@ const emit = defineEmits<{
   recreate: [businessKey: string];
   refresh: [];
 }>();
+const { t } = useI18n();
 
 const loading = ref(false);
 const activeTab = ref<'diagram' | 'form' | 'record'>('form');
@@ -102,19 +104,19 @@ const showOperationButton = computed(
 function getStatusText(status?: number) {
   switch (status) {
     case BpmProcessInstanceStatus.APPROVE: {
-      return '已通过';
+      return t('page.oaLite.status.approved');
     }
     case BpmProcessInstanceStatus.CANCEL: {
-      return '已取消';
+      return t('page.oaLite.status.cancelled');
     }
     case BpmProcessInstanceStatus.REJECT: {
-      return '已驳回';
+      return t('page.oaLite.status.rejected');
     }
     case BpmProcessInstanceStatus.RUNNING: {
-      return '审批中';
+      return t('page.oaLite.status.running');
     }
     default: {
-      return '处理中';
+      return t('page.oaLite.status.processing');
     }
   }
 }
@@ -234,7 +236,7 @@ async function handleWithdraw() {
     return;
   }
   await withdrawTask(props.request.taskId);
-  message.success('撤回成功');
+  message.success(t('page.oaLite.messages.withdrawSuccess'));
   emit('refresh');
 }
 
@@ -246,18 +248,18 @@ function handleCancelProcess() {
     component: () =>
       h(Textarea, {
         allowClear: true,
-        placeholder: '请输入取消原因',
+        placeholder: t('page.oaLite.processDetail.cancelReasonPlaceholder'),
         rows: 2,
       }),
-    content: '请输入取消原因',
+    content: t('page.oaLite.processDetail.cancelReasonPlaceholder'),
     modelPropName: 'value',
-    title: '取消流程',
+    title: t('page.oaLite.processDetail.cancelProcess'),
   }).then(async (reason) => {
     if (!reason) {
       return;
     }
     await cancelProcessInstanceByStartUser(processInstance.value!.id, reason);
-    message.success('取消成功');
+    message.success(t('page.oaLite.messages.cancelSuccess'));
     emit('refresh');
   });
 }
@@ -311,16 +313,16 @@ watch(
             </div>
             <div class="oa-lite-process-desc-row">
               <span>
-                发起人：{{ processInstance.startUser?.nickname || '-' }}
+                {{ t('page.oaLite.processDetail.startUser') }}：{{ processInstance.startUser?.nickname || '-' }}
               </span>
               <span>
-                提交时间：{{ formatDateTime(processInstance.startTime || processInstance.createTime) }}
+                {{ t('page.oaLite.processDetail.submitTime') }}：{{ formatDateTime(processInstance.startTime || processInstance.createTime) }}
               </span>
             </div>
             <div class="oa-lite-process-id">
-              流程编号：{{ processInstance.id || '-' }}
+              {{ t('page.oaLite.processDetail.processNo') }}：{{ processInstance.id || '-' }}
               <span class="oa-lite-process-id-divider">|</span>
-              业务标识：{{ processInstance.businessKey || '-' }}
+              {{ t('page.oaLite.processDetail.businessKey') }}：{{ processInstance.businessKey || '-' }}
             </div>
           </div>
 
@@ -330,14 +332,14 @@ watch(
               class="oa-lite-white-button"
               @click="handleWithdraw"
             >
-              撤回任务
+              {{ t('page.oaLite.processDetail.withdrawTask') }}
             </Button>
             <Button
               v-if="canCancelProcess"
               class="oa-lite-white-button"
               @click="handleCancelProcess"
             >
-              取消流程
+              {{ t('page.oaLite.processDetail.cancelProcess') }}
             </Button>
             <Button
               v-if="canRecreateProcess"
@@ -345,10 +347,10 @@ watch(
               class="oa-lite-white-primary"
               @click="handleRecreate"
             >
-              重新发起
+              {{ t('page.oaLite.processDetail.restartProcess') }}
             </Button>
             <Tag v-if="showReadonlyChip" class="oa-lite-readonly-tag">
-              仅查看
+              {{ t('page.oaLite.processDetail.readonly') }}
             </Tag>
           </div>
         </div>
@@ -359,27 +361,27 @@ watch(
             :class="{ active: activeTab === 'form' }"
             @click="activeTab = 'form'"
           >
-            审批详情
+            {{ t('page.oaLite.processDetail.tabs.detail') }}
           </button>
           <button
             class="oa-lite-process-tab"
             :class="{ active: activeTab === 'diagram' }"
             @click="activeTab = 'diagram'"
           >
-            流程图
+            {{ t('page.oaLite.processDetail.tabs.diagram') }}
           </button>
           <button
             class="oa-lite-process-tab"
             :class="{ active: activeTab === 'record' }"
             @click="activeTab = 'record'"
           >
-            流转记录
+            {{ t('page.oaLite.processDetail.tabs.record') }}
           </button>
         </div>
 
         <div v-if="activeTab === 'form'" class="oa-lite-detail-grid">
           <section class="oa-lite-detail-card oa-lite-detail-card-form">
-            <div class="oa-lite-detail-card-title">业务表单</div>
+            <div class="oa-lite-detail-card-title">{{ t('page.oaLite.processDetail.businessForm') }}</div>
             <component
               :is="businessFormComponent"
               v-if="
@@ -396,17 +398,17 @@ watch(
               :option="normalForm.option"
               :rule="normalForm.rule"
             />
-            <Empty v-else description="暂无业务表单信息" />
+            <Empty v-else :description="t('page.oaLite.processDetail.emptyBusinessForm')" />
           </section>
 
           <aside class="oa-lite-detail-card">
-            <div class="oa-lite-detail-card-title">流程时间线</div>
+            <div class="oa-lite-detail-card-title">{{ t('page.oaLite.processDetail.timeline') }}</div>
             <ProcessInstanceTimeline :activity-nodes="activityNodes" />
           </aside>
         </div>
 
         <div v-else-if="activeTab === 'diagram'" class="oa-lite-detail-card">
-          <div class="oa-lite-detail-card-title">流程图</div>
+          <div class="oa-lite-detail-card-title">{{ t('page.oaLite.processDetail.tabs.diagram') }}</div>
           <ProcessInstanceSimpleViewer
             v-if="processDefinition.modelType === BpmModelType.SIMPLE"
             :loading="loading"
@@ -420,7 +422,7 @@ watch(
         </div>
 
         <div v-else class="oa-lite-detail-card">
-          <div class="oa-lite-detail-card-title">流转记录</div>
+          <div class="oa-lite-detail-card-title">{{ t('page.oaLite.processDetail.tabs.record') }}</div>
           <BpmProcessInstanceTaskList
             ref="taskListRef"
             :id="String(processInstance.id)"
@@ -432,7 +434,7 @@ watch(
           v-if="showOperationButton"
           class="oa-lite-detail-card oa-lite-operation-card"
         >
-          <div class="oa-lite-detail-card-title">审批操作</div>
+          <div class="oa-lite-detail-card-title">{{ t('page.oaLite.processDetail.approvalAction') }}</div>
           <div class="oa-lite-operation-bar">
             <ProcessInstanceOperationButton
               ref="operationButtonRef"
@@ -449,7 +451,7 @@ watch(
       </template>
 
       <div v-else class="oa-lite-detail-empty">
-        <Empty description="请选择流程查看详情" />
+        <Empty :description="t('page.oaLite.processDetail.emptySelect')" />
       </div>
     </Spin>
   </div>
