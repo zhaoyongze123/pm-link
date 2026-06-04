@@ -5944,3 +5944,43 @@ DROP SEQUENCE IF EXISTS yudao_demo03_student_seq;
 CREATE SEQUENCE yudao_demo03_student_seq
     START 10;
 
+-- ----------------------------
+-- 客户交付版：基础设施仅保留 API 日志、文件管理、代码生成
+-- 说明：数据源配置保留为代码生成的支撑能力；业务定时任务与 WebSocket 运行底座不在此处误删
+-- ----------------------------
+BEGIN;
+DELETE FROM system_role_menu
+WHERE menu_id IN (
+  106, 110, 111, 112, 113, 114, 116,
+  1031, 1032, 1033, 1034, 1035,
+  1050, 1051, 1052, 1053, 1054, 1066, 1067,
+  1070, 1075, 1077, 1087,
+  1255, 1256, 1257, 1258, 1259, 1260,
+  2472, 2478, 2479, 2480, 2481, 2482, 2483, 2484, 2485, 2486, 2487, 2488, 2489,
+  2490, 2491, 2492, 2493, 2494, 2495,
+  2525, 2740
+);
+DELETE FROM system_menu
+WHERE id IN (
+  106, 110, 111, 112, 113, 114, 116,
+  1031, 1032, 1033, 1034, 1035,
+  1050, 1051, 1052, 1053, 1054, 1066, 1067,
+  1070, 1075, 1077, 1087,
+  1255, 1256, 1257, 1258, 1259, 1260,
+  2472, 2478, 2479, 2480, 2481, 2482, 2483, 2484, 2485, 2486, 2487, 2488, 2489,
+  2490, 2491, 2492, 2493, 2494, 2495,
+  2525, 2740
+);
+DELETE FROM infra_config WHERE id IN (7, 8, 9, 10, 12);
+COMMIT;
+
+DROP TABLE IF EXISTS yudao_demo01_contact;
+DROP TABLE IF EXISTS yudao_demo02_category;
+DROP TABLE IF EXISTS yudao_demo03_course;
+DROP TABLE IF EXISTS yudao_demo03_grade;
+DROP TABLE IF EXISTS yudao_demo03_student;
+DROP SEQUENCE IF EXISTS yudao_demo01_contact_seq;
+DROP SEQUENCE IF EXISTS yudao_demo02_category_seq;
+DROP SEQUENCE IF EXISTS yudao_demo03_course_seq;
+DROP SEQUENCE IF EXISTS yudao_demo03_grade_seq;
+DROP SEQUENCE IF EXISTS yudao_demo03_student_seq;

@@ -10,6 +10,9 @@ import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenProcess
 import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenTaskCreatedReqDTO;
 import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenTaskTimeoutReqDTO;
 import cn.iocoder.yudao.module.bpm.service.message.dto.BpmTaskAssignedWebSocketMessage;
+import cn.iocoder.yudao.module.system.dal.dataobject.notify.NotifyTemplateDO;
+import cn.iocoder.yudao.module.system.service.notify.NotifyMessageService;
+import cn.iocoder.yudao.module.system.service.notify.NotifyTemplateService;
 import cn.iocoder.yudao.module.system.api.sms.SmsSendApi;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -30,8 +33,16 @@ import java.util.Map;
 @Slf4j
 public class BpmMessageServiceImpl implements BpmMessageService {
 
+    private static final String TASK_ASSIGNED_NOTIFY_TEMPLATE_CODE = BpmMessageEnum.TASK_ASSIGNED.getSmsTemplateCode();
+
     @Resource
     private SmsSendApi smsSendApi;
+
+    @Resource
+    private NotifyTemplateService notifyTemplateService;
+
+    @Resource
+    private NotifyMessageService notifyMessageService;
 
     @Resource
     private WebProperties webProperties;
@@ -68,6 +79,7 @@ public class BpmMessageServiceImpl implements BpmMessageService {
         templateParams.put("detailUrl", getProcessInstanceDetailUrl(reqDTO.getProcessInstanceId()));
         smsSendApi.sendSingleSmsToAdmin(BpmMessageConvert.INSTANCE.convert(reqDTO.getAssigneeUserId(),
                 BpmMessageEnum.TASK_ASSIGNED.getSmsTemplateCode(), templateParams));
+        sendTaskAssignedNotifyMessage(reqDTO, templateParams);
         if (webSocketMessageSender != null) {
             webSocketMessageSender.sendObject(UserTypeEnum.ADMIN.getValue(), reqDTO.getAssigneeUserId(),
                     "task-assigned", buildTaskAssignedWebSocketMessage(reqDTO));
@@ -86,6 +98,31 @@ public class BpmMessageServiceImpl implements BpmMessageService {
 
     private String getProcessInstanceDetailUrl(String taskId) {
         return webProperties.getAdminUi().getUrl() + "/bpm/process-instance/detail?id=" + taskId;
+    }
+
+    private void sendTaskAssignedNotifyMessage(BpmMessageSendWhenTaskCreatedReqDTO reqDTO,
+                                               Map<String, Object> templateParams) {
+        Map<String, Object> notifyContentParams = new HashMap<>(templateParams);
+        notifyContentParams.put("processInstanceId", reqDTO.getProcessInstanceId());
+        notifyContentParams.put("taskId", reqDTO.getTaskId());
+        Map<String, Object> notifyPersistParams = new HashMap<>();
+        notifyPersistParams.put("processInstanceId", reqDTO.getProcessInstanceId());
+        notifyPersistParams.put("taskId", reqDTO.getTaskId());
+        try {
+            NotifyTemplateDO template = notifyTemplateService.getNotifyTemplateByCodeFromCache(
+                    TASK_ASSIGNED_NOTIFY_TEMPLATE_CODE);
+            if (template == null) {
+                log.error("[sendTaskAssignedNotifyMessage][流程任务({}) 的站内信模板({})不存在]",
+                        reqDTO.getTaskId(), TASK_ASSIGNED_NOTIFY_TEMPLATE_CODE);
+                return;
+            }
+            String content = notifyTemplateService.formatNotifyTemplateContent(
+                    template.getContent(), notifyContentParams);
+            notifyMessageService.createNotifyMessage(reqDTO.getAssigneeUserId(),
+                    UserTypeEnum.ADMIN.getValue(), template, content, notifyPersistParams);
+        } catch (Exception ex) {
+            log.error("[sendTaskAssignedNotifyMessage][流程任务({}) 发送站内信失败]", reqDTO.getTaskId(), ex);
+        }
     }
 
     private BpmTaskAssignedWebSocketMessage buildTaskAssignedWebSocketMessage(BpmMessageSendWhenTaskCreatedReqDTO reqDTO) {

@@ -8,6 +8,7 @@ import { $t } from '#/locales';
 const BasicLayout = () => import('#/layouts/basic.vue');
 const AuthPageLayout = () => import('#/layouts/auth.vue');
 const OALitePage = () => import('#/views/oa-lite/index.vue');
+const OALiteNotificationsPage = () => import('#/views/oa-lite/notifications.vue');
 /** 全局404页面 */
 const fallbackNotFoundRoute: RouteRecordRaw = {
   component: () => import('#/views/_core/fallback/not-found.vue'),
@@ -136,6 +137,18 @@ const coreRoutes: RouteRecordRaw[] = [
     },
     name: 'OALite',
     path: '/oa-lite',
+  },
+  {
+    component: OALiteNotificationsPage,
+    meta: {
+      hideInBreadcrumb: true,
+      hideInMenu: true,
+      hideInTab: true,
+      ignoreAccess: true,
+      title: 'OA 通知中心',
+    },
+    name: 'OALiteNotifications',
+    path: '/oa-lite/notifications',
   },
 ];
 

@@ -443,20 +443,15 @@ const initiatedItems = ref<BpmProcessInstanceApi.ProcessInstance[]>([]);
 const copiedItems = ref<BpmProcessInstanceApi.ProcessInstanceCopyRespVO[]>([]);
 const OA_LITE_BODY_THEME_CLASS = 'oa-lite-light-theme';
 const OA_LITE_TASK_ASSIGNED_MESSAGE_TYPE = 'task-assigned';
+const OA_LITE_TASK_ASSIGNED_NOTIFY_TEMPLATE_CODE = 'bpm_task_assigned';
 const OA_LITE_TASK_ASSIGNED_TOAST_KEY = 'oa-lite-task-assigned';
-const OA_LITE_TASK_ASSIGNED_NOTIFICATION_PREFIX = 'oa-lite-task-assigned:';
-const headerNotifications = ref<NotificationItem[]>([]);
-const realtimeNotifications = ref<NotificationItem[]>([]);
+type OaHeaderNotificationItem = NotificationItem & {
+  templateCode?: string;
+  templateParams?: Record<string, any>;
+};
+const headerNotifications = ref<OaHeaderNotificationItem[]>([]);
 const headerUnreadCount = ref(0);
-const mergedNotifications = computed(() => [
-  ...realtimeNotifications.value,
-  ...headerNotifications.value,
-]);
-const showNotificationDot = computed(
-  () =>
-    realtimeNotifications.value.some((item) => !item.isRead) ||
-    headerUnreadCount.value > 0,
-);
+const showNotificationDot = computed(() => headerUnreadCount.value > 0);
 let notificationPollingTimer: null | ReturnType<typeof setInterval> = null;
 const webSocketServer = `${`${import.meta.env.VITE_BASE_URL}/infra/ws`.replace(
   'http',
@@ -1496,18 +1491,19 @@ async function handleNotificationGetList() {
     id: item.id,
     isRead: false,
     message: item.templateContent,
+    templateCode: item.templateCode,
+    templateParams: item.templateParams,
     title: item.templateNickname,
   }));
 }
 
 function handleNotificationViewAll() {
   router.push({
-    name: 'MyNotifyMessage',
+    name: 'OALiteNotifications',
   });
 }
 
 async function handleNotificationMakeAll() {
-  realtimeNotifications.value = [];
   await updateAllNotifyMessageRead();
   headerUnreadCount.value = 0;
   headerNotifications.value = [];
@@ -1521,15 +1517,12 @@ async function handleNotificationRead(item: NotificationItem) {
   if (!item.id) {
     return;
   }
-  if (isRealtimeNotificationItem(item)) {
-    removeRealtimeNotification(item.id);
-    return;
-  }
   await updateNotifyMessageRead([item.id]);
   await handleNotificationGetUnreadCount();
   headerNotifications.value = headerNotifications.value.filter(
     (notificationItem) => notificationItem.id !== item.id,
   );
+  await handleNotifyMessageClick(item as OaHeaderNotificationItem);
 }
 
 function handleNotificationOpen(open: boolean) {
@@ -1553,32 +1546,14 @@ function parseTaskAssignedWebSocketMessage(
   return JSON.parse(envelope.content) as OaTaskAssignedWebSocketMessage;
 }
 
-function isRealtimeNotificationItem(item: NotificationItem) {
-  return String(item.id).startsWith(OA_LITE_TASK_ASSIGNED_NOTIFICATION_PREFIX);
-}
-
-function removeRealtimeNotification(id: NotificationItem['id']) {
-  realtimeNotifications.value = realtimeNotifications.value.filter(
-    (item) => item.id !== id,
-  );
-}
-
-function upsertRealtimeTaskAssignedNotification(
-  messagePayload: OaTaskAssignedWebSocketMessage,
-) {
-  const notificationId = `${OA_LITE_TASK_ASSIGNED_NOTIFICATION_PREFIX}${messagePayload.taskId}`;
-  const notification: NotificationItem = {
-    avatar: preferences.app.defaultAvatar,
-    date: formatDateTime(Date.now()) as string,
-    id: notificationId,
-    isRead: false,
-    message: `${messagePayload.startUserNickname} 提交了新的审批待办：${messagePayload.taskName}`,
-    title: '审批待办',
-  };
-  realtimeNotifications.value = [
-    notification,
-    ...realtimeNotifications.value.filter((item) => item.id !== notificationId),
-  ].slice(0, 10);
+async function handleNotifyMessageClick(item: OaHeaderNotificationItem) {
+  if (
+    item.templateCode !== OA_LITE_TASK_ASSIGNED_NOTIFY_TEMPLATE_CODE ||
+    !item.templateParams?.taskId
+  ) {
+    return;
+  }
+  await openPendingTaskDetail(String(item.templateParams.taskId));
 }
 
 async function openPendingTaskDetail(taskId: string) {
@@ -1600,9 +1575,9 @@ async function openPendingTaskDetail(taskId: string) {
 async function handleTaskAssignedWebSocketMessage(
   messagePayload: OaTaskAssignedWebSocketMessage,
 ) {
-  upsertRealtimeTaskAssignedNotification(messagePayload);
   await Promise.all([
     handleNotificationGetUnreadCount(),
+    handleNotificationGetList(),
     loadTabData('pending'),
   ]);
   if (activeTab.value === 'pending') {
@@ -2056,7 +2031,7 @@ onUnmounted(() => {
                 <Notification
                   class="oa-lite-header-widget"
                   :dot="showNotificationDot"
-                  :notifications="mergedNotifications"
+                  :notifications="headerNotifications"
                   @clear="handleNotificationClear"
                   @make-all="handleNotificationMakeAll"
                   @open="handleNotificationOpen"

@@ -3,6 +3,8 @@ import type { PageParam, PageResult } from '@vben/request';
 import { requestClient } from '#/api/request';
 
 export namespace SystemNotifyMessageApi {
+  export type NotifyTemplateParams = Record<string, any>;
+
   /** 站内信消息信息 */
   export interface NotifyMessage {
     id: number;
@@ -13,7 +15,7 @@ export namespace SystemNotifyMessageApi {
     templateNickname: string;
     templateContent: string;
     templateType: number;
-    templateParams: string;
+    templateParams: NotifyTemplateParams;
     readStatus: boolean;
     readTime: Date;
     createTime: Date;
