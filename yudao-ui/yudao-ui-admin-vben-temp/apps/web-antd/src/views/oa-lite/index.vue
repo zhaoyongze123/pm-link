@@ -85,12 +85,13 @@ import ProcessDetail, {
   type OaLiteDetailRequest,
   type OaLiteDetailSection,
 } from './components/process-detail.vue';
+import OaLiteComplexTemplateForm from './components/complex-template-form.vue';
 
 defineOptions({ name: 'OALiteHome' });
 
 type MainTab = 'create' | 'copied' | 'initiated' | 'pending' | 'processed';
 type ListTab = Exclude<MainTab, 'create'>;
-type ViewState = 'leave-form' | 'main' | 'profile';
+type ViewState = 'complex-form' | 'leave-form' | 'main' | 'profile';
 type DateRangeValue = [string, string];
 type OaTemplateKey =
   | 'attendance'
@@ -417,6 +418,7 @@ const refreshToken = accessStore.refreshToken as string;
 const loading = ref(false);
 const leaveSubmitting = ref(false);
 const leavePublishing = ref(false);
+const complexFormBusinessKey = ref<string>();
 const activeTab = ref<MainTab>('create');
 const currentTemplateKey = ref<OaTemplateKey>('leave');
 const lastCenterTab = ref<ListTab>('pending');
@@ -442,9 +444,19 @@ const copiedItems = ref<BpmProcessInstanceApi.ProcessInstanceCopyRespVO[]>([]);
 const OA_LITE_BODY_THEME_CLASS = 'oa-lite-light-theme';
 const OA_LITE_TASK_ASSIGNED_MESSAGE_TYPE = 'task-assigned';
 const OA_LITE_TASK_ASSIGNED_TOAST_KEY = 'oa-lite-task-assigned';
+const OA_LITE_TASK_ASSIGNED_NOTIFICATION_PREFIX = 'oa-lite-task-assigned:';
 const headerNotifications = ref<NotificationItem[]>([]);
+const realtimeNotifications = ref<NotificationItem[]>([]);
 const headerUnreadCount = ref(0);
-const showNotificationDot = computed(() => headerUnreadCount.value > 0);
+const mergedNotifications = computed(() => [
+  ...realtimeNotifications.value,
+  ...headerNotifications.value,
+]);
+const showNotificationDot = computed(
+  () =>
+    realtimeNotifications.value.some((item) => !item.isRead) ||
+    headerUnreadCount.value > 0,
+);
 let notificationPollingTimer: null | ReturnType<typeof setInterval> = null;
 const webSocketServer = `${`${import.meta.env.VITE_BASE_URL}/infra/ws`.replace(
   'http',
@@ -758,28 +770,16 @@ const createCategoryTabs = computed<BpmCategoryApi.Category[]>(() => {
   return [...categoryMap.values()];
 });
 
-const currentCreateCategoryCode = computed(
-  () => selectedCreateCategoryCode.value,
+const currentCreateCategoryCode = computed(() => selectedCreateCategoryCode.value);
+const createCategorySections = computed(() =>
+  createCategoryTabs.value.map((category) => ({
+    ...category,
+    templates: availableTemplateDefinitions.value.filter(
+      (item) => item.definition.category === category.code,
+    ),
+  })),
 );
-
-const currentCreateCategoryName = computed(() => {
-  const currentCategory = createCategoryTabs.value.find(
-    (item) => item.code === currentCreateCategoryCode.value,
-  );
-  if (currentCategory) {
-    return currentCategory.name;
-  }
-  return t('page.oaLite.filters.categoryPlaceholder');
-});
-
-const currentCreateTemplates = computed(() =>
-  availableTemplateDefinitions.value.filter((item) => {
-    if (!currentCreateCategoryCode.value) {
-      return true;
-    }
-    return item.definition.category === currentCreateCategoryCode.value;
-  }),
-);
+const createCategorySectionElements = ref<Record<string, HTMLElement | null>>({});
 
 const dashboardNavItems = computed(() => [
   {
@@ -1397,6 +1397,15 @@ function resetLeaveForm() {
   leaveForm.startUserSelectAssignees = {};
 }
 
+function openComplexForm(
+  templateKey: Extract<OaTemplateKey, 'document' | 'project' | 'seal' | 'staffing'>,
+  businessKey?: string,
+) {
+  currentTemplateKey.value = templateKey;
+  complexFormBusinessKey.value = businessKey;
+  viewState.value = 'complex-form';
+}
+
 async function openLeaveForm(
   businessKey?: string,
   templateKey: OaTemplateKey = 'leave',
@@ -1498,6 +1507,7 @@ function handleNotificationViewAll() {
 }
 
 async function handleNotificationMakeAll() {
+  realtimeNotifications.value = [];
   await updateAllNotifyMessageRead();
   headerUnreadCount.value = 0;
   headerNotifications.value = [];
@@ -1509,6 +1519,10 @@ async function handleNotificationClear() {
 
 async function handleNotificationRead(item: NotificationItem) {
   if (!item.id) {
+    return;
+  }
+  if (isRealtimeNotificationItem(item)) {
+    removeRealtimeNotification(item.id);
     return;
   }
   await updateNotifyMessageRead([item.id]);
@@ -1539,6 +1553,34 @@ function parseTaskAssignedWebSocketMessage(
   return JSON.parse(envelope.content) as OaTaskAssignedWebSocketMessage;
 }
 
+function isRealtimeNotificationItem(item: NotificationItem) {
+  return String(item.id).startsWith(OA_LITE_TASK_ASSIGNED_NOTIFICATION_PREFIX);
+}
+
+function removeRealtimeNotification(id: NotificationItem['id']) {
+  realtimeNotifications.value = realtimeNotifications.value.filter(
+    (item) => item.id !== id,
+  );
+}
+
+function upsertRealtimeTaskAssignedNotification(
+  messagePayload: OaTaskAssignedWebSocketMessage,
+) {
+  const notificationId = `${OA_LITE_TASK_ASSIGNED_NOTIFICATION_PREFIX}${messagePayload.taskId}`;
+  const notification: NotificationItem = {
+    avatar: preferences.app.defaultAvatar,
+    date: formatDateTime(Date.now()) as string,
+    id: notificationId,
+    isRead: false,
+    message: `${messagePayload.startUserNickname} 提交了新的审批待办：${messagePayload.taskName}`,
+    title: '审批待办',
+  };
+  realtimeNotifications.value = [
+    notification,
+    ...realtimeNotifications.value.filter((item) => item.id !== notificationId),
+  ].slice(0, 10);
+}
+
 async function openPendingTaskDetail(taskId: string) {
   activeTab.value = 'pending';
   viewState.value = 'main';
@@ -1558,6 +1600,7 @@ async function openPendingTaskDetail(taskId: string) {
 async function handleTaskAssignedWebSocketMessage(
   messagePayload: OaTaskAssignedWebSocketMessage,
 ) {
+  upsertRealtimeTaskAssignedNotification(messagePayload);
   await Promise.all([
     handleNotificationGetUnreadCount(),
     loadTabData('pending'),
@@ -1591,11 +1634,13 @@ function openTemplateCreate(
   const targetConfig =
     OA_TEMPLATE_CONFIGS.find((item) => item.key === templateKey) ||
     OA_TEMPLATE_CONFIGS[0];
-  if (targetConfig.createMode === 'route' && targetConfig.routeName) {
-    router.push({
-      name: targetConfig.routeName,
-      query: businessKey ? { id: businessKey } : undefined,
-    });
+  if (
+    targetConfig.key === 'document' ||
+    targetConfig.key === 'project' ||
+    targetConfig.key === 'seal' ||
+    targetConfig.key === 'staffing'
+  ) {
+    openComplexForm(targetConfig.key, businessKey);
     return;
   }
   openLeaveForm(businessKey, templateKey);
@@ -1609,11 +1654,13 @@ function handleProcessRecreate(
   const targetConfig = OA_TEMPLATE_CONFIGS.find(
     (item) => item.processKey === processDefinitionKey,
   );
-  if (targetConfig?.createMode === 'route' && targetConfig.routeName) {
-    router.push({
-      name: targetConfig.routeName,
-      query: { id: businessKey },
-    });
+  if (
+    targetConfig?.key === 'document' ||
+    targetConfig?.key === 'project' ||
+    targetConfig?.key === 'seal' ||
+    targetConfig?.key === 'staffing'
+  ) {
+    openComplexForm(targetConfig.key, businessKey);
     return;
   }
   if (formCustomCreatePath) {
@@ -1628,6 +1675,58 @@ function handleProcessRecreate(
 
 function selectCreateCategory(code: string) {
   selectedCreateCategoryCode.value = code;
+  const target = createCategorySectionElements.value[code];
+  if (!target || typeof window === 'undefined') {
+    return;
+  }
+  const top = target.getBoundingClientRect().top + window.scrollY - 132;
+  window.scrollTo({
+    behavior: 'smooth',
+    top: Math.max(top, 0),
+  });
+}
+
+function setCreateCategorySectionRef(code: string, element: HTMLElement | null) {
+  if (!element) {
+    delete createCategorySectionElements.value[code];
+    return;
+  }
+  createCategorySectionElements.value[code] = element;
+}
+
+function syncCreateCategoryByScroll() {
+  if (
+    typeof window === 'undefined' ||
+    activeTab.value !== 'create' ||
+    viewState.value !== 'main'
+  ) {
+    return;
+  }
+  const sections = createCategorySections.value
+    .map((item) => ({
+      code: item.code,
+      element: createCategorySectionElements.value[item.code],
+    }))
+    .filter(
+      (
+        item,
+      ): item is {
+        code: string;
+        element: HTMLElement;
+      } => Boolean(item.element),
+    );
+  if (sections.length === 0) {
+    return;
+  }
+  const threshold = 156;
+  let matchedCode = sections[0]?.code;
+  sections.forEach((section) => {
+    const top = section.element.getBoundingClientRect().top;
+    if (top <= threshold) {
+      matchedCode = section.code;
+    }
+  });
+  selectedCreateCategoryCode.value = matchedCode;
 }
 
 function openTab(tab: MainTab) {
@@ -1691,10 +1790,23 @@ watch(
       return;
     }
     selectedCreateCategoryCode.value = tabs[0].code;
+    nextTick(() => {
+      syncCreateCategoryByScroll();
+    });
   },
   {
     immediate: true,
   },
+);
+
+watch(
+  [activeTab, viewState, createCategorySections],
+  () => {
+    nextTick(() => {
+      syncCreateCategoryByScroll();
+    });
+  },
+  { deep: true },
 );
 
 watch(
@@ -1768,6 +1880,9 @@ onMounted(async () => {
   } catch (error: any) {
     message.error(error?.message || t('page.oaLite.messages.loadPageFailed'));
   }
+  if (typeof window !== 'undefined') {
+    window.addEventListener('scroll', syncCreateCategoryByScroll, { passive: true });
+  }
 });
 
 onUnmounted(() => {
@@ -1778,6 +1893,9 @@ onUnmounted(() => {
     clearInterval(notificationPollingTimer);
     notificationPollingTimer = null;
   }
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('scroll', syncCreateCategoryByScroll);
+  }
   closeWebSocket();
 });
 </script>
@@ -1787,7 +1905,7 @@ onUnmounted(() => {
     <div class="oa-lite-page">
       <div class="oa-lite-bg"></div>
 
-      <template v-if="viewState === 'leave-form'">
+      <template v-if="viewState === 'leave-form' || viewState === 'complex-form'">
         <div class="oa-lite-leave-page">
           <header class="oa-lite-leave-header">
             <div class="oa-lite-leave-left">
@@ -1800,82 +1918,98 @@ onUnmounted(() => {
             </div>
           </header>
 
-          <main class="oa-lite-leave-main">
-            <div class="oa-lite-leave-shell">
-              <div class="oa-lite-leave-card">
-                <div class="oa-lite-leave-title-row">
-                  <div>
-                    <h1 class="oa-lite-leave-title">{{ currentTemplateConfig.title }}</h1>
-                    <p class="oa-lite-leave-subtitle">{{ currentTemplateConfig.subtitle }}</p>
+          <template v-if="viewState === 'leave-form'">
+            <main class="oa-lite-leave-main">
+              <div class="oa-lite-leave-shell">
+                <div class="oa-lite-leave-card">
+                  <div class="oa-lite-leave-title-row">
+                    <div>
+                      <h1 class="oa-lite-leave-title">{{ currentTemplateConfig.title }}</h1>
+                      <p class="oa-lite-leave-subtitle">{{ currentTemplateConfig.subtitle }}</p>
+                    </div>
+                    <IconifyIcon :icon="currentTemplateConfig.icon" class="oa-lite-leave-qr" />
                   </div>
-                  <IconifyIcon :icon="currentTemplateConfig.icon" class="oa-lite-leave-qr" />
+
+                  <div class="oa-lite-leave-divider"></div>
+
+                  <Form layout="vertical">
+                    <Form.Item :label="currentTemplateConfig.typeLabel" required>
+                      <Select
+                        v-model:value="leaveForm.type"
+                        :options="currentTemplateTypeOptions"
+                        :placeholder="currentTemplateConfig.typePlaceholder"
+                        popup-class-name="oa-lite-select-popup"
+                        :get-popup-container="(triggerNode) => triggerNode.parentNode"
+                      />
+                    </Form.Item>
+                    <Form.Item :label="currentTemplateConfig.startTimeLabel" required>
+                      <DatePicker
+                        v-model:value="leaveForm.startTime"
+                        show-time
+                        value-format="x"
+                        format="YYYY-MM-DD HH:mm:ss"
+                        class="w-full"
+                        :placeholder="currentTemplateConfig.startTimePlaceholder"
+                      />
+                    </Form.Item>
+                    <Form.Item :label="currentTemplateConfig.endTimeLabel" required>
+                      <DatePicker
+                        v-model:value="leaveForm.endTime"
+                        show-time
+                        value-format="x"
+                        format="YYYY-MM-DD HH:mm:ss"
+                        class="w-full"
+                        :placeholder="currentTemplateConfig.endTimePlaceholder"
+                      />
+                    </Form.Item>
+                    <Form.Item :label="currentTemplateConfig.reasonLabel" required>
+                      <Input.TextArea
+                        v-model:value="leaveForm.reason"
+                        :rows="4"
+                        :placeholder="currentTemplateConfig.reasonPlaceholder"
+                      />
+                    </Form.Item>
+                  </Form>
                 </div>
 
-                <div class="oa-lite-leave-divider"></div>
+                <div class="oa-lite-leave-card">
+                  <div class="oa-lite-leave-flow-head">
+                    <div class="oa-lite-leave-flow-title">{{ t('page.oaLite.leaveForm.flowTitle') }}</div>
+                    <div class="oa-lite-leave-flow-tag">{{ t('page.oaLite.leaveForm.flowTag') }}</div>
+                  </div>
 
-                <Form layout="vertical">
-                  <Form.Item :label="currentTemplateConfig.typeLabel" required>
-                    <Select
-                      v-model:value="leaveForm.type"
-                      :options="currentTemplateTypeOptions"
-                      :placeholder="currentTemplateConfig.typePlaceholder"
-                      popup-class-name="oa-lite-select-popup"
-                      :get-popup-container="(triggerNode) => triggerNode.parentNode"
+                  <div class="oa-lite-leave-flow-body">
+                    <ProcessInstanceTimeline
+                      ref="timelineRef"
+                      :activity-nodes="activityNodes"
+                      :show-status-icon="false"
+                      @select-user-confirm="handleStartUserSelectConfirm"
                     />
-                  </Form.Item>
-                  <Form.Item :label="currentTemplateConfig.startTimeLabel" required>
-                    <DatePicker
-                      v-model:value="leaveForm.startTime"
-                      show-time
-                      value-format="x"
-                      format="YYYY-MM-DD HH:mm:ss"
-                      class="w-full"
-                      :placeholder="currentTemplateConfig.startTimePlaceholder"
-                    />
-                  </Form.Item>
-                  <Form.Item :label="currentTemplateConfig.endTimeLabel" required>
-                    <DatePicker
-                      v-model:value="leaveForm.endTime"
-                      show-time
-                      value-format="x"
-                      format="YYYY-MM-DD HH:mm:ss"
-                      class="w-full"
-                      :placeholder="currentTemplateConfig.endTimePlaceholder"
-                    />
-                  </Form.Item>
-                  <Form.Item :label="currentTemplateConfig.reasonLabel" required>
-                    <Input.TextArea
-                      v-model:value="leaveForm.reason"
-                      :rows="4"
-                      :placeholder="currentTemplateConfig.reasonPlaceholder"
-                    />
-                  </Form.Item>
-                </Form>
+                  </div>
+
+                  <div class="oa-lite-leave-submit-row">
+                    <Button type="primary" :loading="leaveSubmitting" @click="submitLeave">
+                      {{ currentTemplateConfig.submitLabel }}
+                    </Button>
+                  </div>
+                </div>
               </div>
+            </main>
+          </template>
 
-              <div class="oa-lite-leave-card">
-                <div class="oa-lite-leave-flow-head">
-                  <div class="oa-lite-leave-flow-title">{{ t('page.oaLite.leaveForm.flowTitle') }}</div>
-                  <div class="oa-lite-leave-flow-tag">{{ t('page.oaLite.leaveForm.flowTag') }}</div>
-                </div>
-
-                <div class="oa-lite-leave-flow-body">
-                  <ProcessInstanceTimeline
-                    ref="timelineRef"
-                    :activity-nodes="activityNodes"
-                    :show-status-icon="false"
-                    @select-user-confirm="handleStartUserSelectConfirm"
-                  />
-                </div>
-
-                <div class="oa-lite-leave-submit-row">
-                  <Button type="primary" :loading="leaveSubmitting" @click="submitLeave">
-                    {{ currentTemplateConfig.submitLabel }}
-                  </Button>
-                </div>
-              </div>
-            </div>
-          </main>
+          <OaLiteComplexTemplateForm
+            v-else
+            :key="`${currentTemplateKey}-${complexFormBusinessKey || 'create'}`"
+            :business-key="complexFormBusinessKey"
+            :template-key="currentTemplateKey as 'document' | 'project' | 'seal' | 'staffing'"
+            @back="viewState = 'main'"
+            @success="
+              viewState = 'main';
+              activeTab = 'initiated';
+              tabPages.initiated.pageNo = 1;
+              refreshAllTabs();
+            "
+          />
         </div>
       </template>
 
@@ -1922,7 +2056,7 @@ onUnmounted(() => {
                 <Notification
                   class="oa-lite-header-widget"
                   :dot="showNotificationDot"
-                  :notifications="headerNotifications"
+                  :notifications="mergedNotifications"
                   @clear="handleNotificationClear"
                   @make-all="handleNotificationMakeAll"
                   @open="handleNotificationOpen"
@@ -1976,55 +2110,62 @@ onUnmounted(() => {
                 </button>
               </section>
 
-              <section class="oa-lite-create-shell">
-                <div class="oa-lite-create-toolbar">
-                  <div v-if="createCategoryTabs.length > 0" class="oa-lite-category-tabs">
-                    <button
+	              <section class="oa-lite-create-shell">
+	                <div class="oa-lite-create-toolbar">
+	                  <div v-if="createCategoryTabs.length > 0" class="oa-lite-category-tabs">
+	                    <button
                       v-for="item in createCategoryTabs"
                       :key="item.code"
                       class="oa-lite-category-tab"
                       :class="{ active: currentCreateCategoryCode === item.code }"
                       @click="selectCreateCategory(item.code)"
                     >
-                      {{ item.name }}
-                    </button>
-                  </div>
-                </div>
+	                      {{ item.name }}
+	                    </button>
+	                  </div>
+	                </div>
 
-                <div class="oa-lite-template-section">
-                  <div class="oa-lite-template-section-head">
-                    <span class="oa-lite-template-section-title">
-                      {{ currentCreateCategoryName }}
-                    </span>
-                    <IconifyIcon icon="lucide:chevron-right" class="oa-lite-template-section-arrow" />
-                  </div>
+	                <div class="oa-lite-create-sections">
+	                  <section
+	                    v-for="section in createCategorySections"
+	                    :key="section.code"
+	                    :ref="(element) => setCreateCategorySectionRef(section.code, element as HTMLElement | null)"
+	                    class="oa-lite-template-section"
+	                  >
+	                    <div class="oa-lite-template-section-head">
+	                      <span class="oa-lite-template-section-title">
+	                        {{ section.name }}
+	                      </span>
+	                      <IconifyIcon icon="lucide:hash" class="oa-lite-template-section-arrow" />
+	                    </div>
 
-                  <div v-if="currentCreateTemplates.length > 0" class="oa-lite-template-grid">
-                    <button
-                      v-for="item in currentCreateTemplates"
-                      :key="item.key"
-                      class="oa-lite-template-card"
-                      @click="openTemplateCreate(item.key)"
-                    >
-                      <div class="oa-lite-template-icon">
-                        <IconifyIcon :icon="item.icon" />
-                      </div>
-                      <div class="oa-lite-template-body">
-                        <div class="oa-lite-template-name">{{ item.title }}</div>
-                        <div class="oa-lite-template-desc">
-                          {{ item.description }}
-                        </div>
-                      </div>
-                    </button>
-                  </div>
-                  <Empty
-                    v-else
-                    :description="t('page.oaLite.createCard.emptyCategory')"
-                    :image-style="{ height: '80px' }"
-                  />
-                </div>
-              </section>
-            </template>
+	                    <div v-if="section.templates.length > 0" class="oa-lite-template-grid">
+	                      <button
+	                        v-for="item in section.templates"
+	                        :key="item.key"
+	                        class="oa-lite-template-card"
+	                        @click="openTemplateCreate(item.key)"
+	                      >
+	                        <div class="oa-lite-template-icon">
+	                          <IconifyIcon :icon="item.icon" />
+	                        </div>
+	                        <div class="oa-lite-template-body">
+	                          <div class="oa-lite-template-name">{{ item.title }}</div>
+	                          <div class="oa-lite-template-desc">
+	                            {{ item.description }}
+	                          </div>
+	                        </div>
+	                      </button>
+	                    </div>
+	                    <Empty
+	                      v-else
+	                      :description="t('page.oaLite.createCard.emptyCategory')"
+	                      :image-style="{ height: '80px' }"
+	                    />
+	                  </section>
+	                </div>
+	              </section>
+	            </template>
 
             <template v-else>
               <section class="oa-lite-center-shell">
@@ -2501,6 +2642,12 @@ onUnmounted(() => {
   margin: 0 auto;
 }
 
+.oa-lite-create-sections {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
 .oa-lite-profile-shell {
   width: 100%;
   max-width: 1260px;
@@ -2592,25 +2739,27 @@ onUnmounted(() => {
 }
 
 .oa-lite-template-section {
-  padding-top: 6px;
+  scroll-margin-top: 128px;
 }
 
 .oa-lite-template-section-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #edf2f7;
 }
 
 .oa-lite-template-section-title {
-  font-size: 14px;
-  color: #6b7280;
+  font-size: 18px;
+  color: #111827;
   font-weight: 600;
 }
 
 .oa-lite-template-section-arrow {
   color: #cbd5e1;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .oa-lite-template-grid {
