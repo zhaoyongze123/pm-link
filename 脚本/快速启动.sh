@@ -5,9 +5,9 @@
 
 set -e
 
-PROJECT_ROOT="/Users/mac/项目/若伊部署/repo"
+PROJECT_ROOT="/Users/mac/项目/若伊部署"
 BACKEND_DIR="$PROJECT_ROOT"
-FRONTEND_DIR="$PROJECT_ROOT/yudao-ui/yudao-ui-admin-vue3"
+FRONTEND_DIR="$PROJECT_ROOT/yudao-ui/yudao-ui-admin-vben-temp"
 
 # 颜色定义
 RED='\033[0;31m'
@@ -62,10 +62,15 @@ check_dependencies() {
 
     if [[ "$1" == "frontend" || "$1" == "all" ]]; then
         if ! command -v node &> /dev/null; then
-            print_error "未找到 Node.js，请先安装 Node.js 16.0 或更高版本"
+            print_error "未找到 Node.js，请先安装 Node.js 20.0 或更高版本"
             exit 1
         fi
         print_success "Node.js 已安装"
+        if ! command -v pnpm &> /dev/null; then
+            print_error "未找到 pnpm，请先安装 pnpm 10 或更高版本"
+            exit 1
+        fi
+        print_success "pnpm 已安装"
     fi
 }
 
@@ -109,8 +114,8 @@ start_frontend() {
     cd "$FRONTEND_DIR"
 
     if [ ! -d "node_modules" ]; then
-        print_info "安装 npm 依赖..."
-        npm install
+        print_info "安装 pnpm 依赖..."
+        pnpm install
         print_success "依赖安装成功"
     else
         print_success "依赖已存在"
@@ -122,7 +127,7 @@ start_frontend() {
     print_info "后端 API: http://localhost:8080"
     print_separator
 
-    npm run dev
+    pnpm --filter @vben/web-antd dev
 }
 
 main() {

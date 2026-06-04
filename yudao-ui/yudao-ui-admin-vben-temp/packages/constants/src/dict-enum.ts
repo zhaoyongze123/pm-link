@@ -44,6 +44,7 @@ const BPM_DICT = {
   BPM_MODEL_FORM_TYPE: 'bpm_model_form_type', // BPM 模型表单类型
   BPM_MODEL_TYPE: 'bpm_model_type', // BPM 模型类型
   BPM_OA_LEAVE_TYPE: 'bpm_oa_leave_type', // BPM OA 请假类型
+  BPM_OA_TYPE: 'bpm_oa_type', // BPM OA 通用类型
   BPM_PROCESS_INSTANCE_STATUS: 'bpm_process_instance_status', // BPM 流程实例状态
   BPM_PROCESS_LISTENER_TYPE: 'bpm_process_listener_type', // BPM 流程监听器类型
   BPM_PROCESS_LISTENER_VALUE_TYPE: 'bpm_process_listener_value_type', // BPM 流程监听器值类型

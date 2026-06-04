@@ -1,6 +1,7 @@
 <script lang="ts" setup>
 import type { BpmProcessInstanceApi } from '#/api/bpm/processInstance';
 import type { SystemUserApi } from '#/api/system/user';
+import type { OAModuleApiKey } from '#/views/bpm/oa/shared/config';
 
 import { computed, h, nextTick, ref, shallowRef, watch } from 'vue';
 
@@ -52,7 +53,7 @@ const props = defineProps<{
 }>();
 
 const emit = defineEmits<{
-  recreate: [businessKey: string];
+  recreate: [businessKey: string, processDefinitionKey?: string, formCustomCreatePath?: string];
   refresh: [];
 }>();
 const { t } = useI18n();
@@ -79,6 +80,13 @@ const processInstance = computed(() => approvalDetail.value?.processInstance);
 const processDefinition = computed(
   () => approvalDetail.value?.processDefinition || null,
 );
+const businessModuleKey = computed<OAModuleApiKey | undefined>(() => {
+  const key = processDefinition.value?.key || '';
+  if (key.startsWith('oa_')) {
+    return key.slice(3) as OAModuleApiKey;
+  }
+  return undefined;
+});
 const activityNodes = computed(() => approvalDetail.value?.activityNodes || []);
 const todoTask = computed(() => approvalDetail.value?.todoTask);
 
@@ -214,9 +222,12 @@ async function loadDetail() {
         },
       );
     } else {
-      businessFormComponent.value = registerComponent(
-        processDefinitionData.formCustomViewPath || '',
-      );
+      const componentPath = processDefinitionData.formCustomViewPath || '';
+      businessFormComponent.value =
+        registerComponent(componentPath) ||
+        (componentPath.includes('/bpm/oa/')
+          ? registerComponent('/bpm/oa/shared/detail-page')
+          : null);
     }
 
     processModelView.value = await getProcessInstanceBpmnModelView(
@@ -268,7 +279,12 @@ function handleRecreate() {
   if (!processInstance.value?.businessKey) {
     return;
   }
-  emit('recreate', processInstance.value.businessKey);
+  emit(
+    'recreate',
+    processInstance.value.businessKey,
+    processDefinition.value?.key,
+    processDefinition.value?.formCustomCreatePath || undefined,
+  );
 }
 
 function handleRefresh() {
@@ -389,6 +405,7 @@ watch(
                 businessFormComponent
               "
               :id="String(processInstance.businessKey || '')"
+              :module-key="businessModuleKey"
               class="oa-lite-business-form"
             />
             <form-create

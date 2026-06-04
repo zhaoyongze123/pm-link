@@ -71,7 +71,7 @@
 
 ```text
 前端层
-  yudao-ui/*
+  yudao-ui/yudao-ui-admin-vben-temp
 
 接入与容器层
   yudao-server
@@ -631,15 +631,13 @@ Mapper 通过 `BaseMapperX` 获得统一分页和查询能力，实体通过 `Ba
 
 ## 十一、前端在整个仓库里的位置
 
-`yudao-ui` 下当前能看到多个前端实现：
+`yudao-ui` 下当前保留的管理后台前端实现是：
 
-- `yudao-ui-admin-uniapp`
-- `yudao-ui-admin-vue2`
-- `yudao-ui-admin-vue3`
 - `yudao-ui-admin-vben-temp`
-- `yudao-ui-mall-uniapp`
 
-这说明后端不是只服务一种前端，而是通过统一 REST API 面向多个管理端实现。
+这里进一步收敛到 `Vue 3 + TypeScript + Vite + Pinia + Vue Router + Element Plus + Vben Admin` 这一条主线。
+
+这说明当前工作区里的后端接口，主要就是围绕这一套管理后台来组织和验证。
 
 所以后端接口设计强调：
 
@@ -881,4 +879,3 @@ Spring Event 在这里不是装饰，而是业务解耦手段。
 - 新功能必须按体系接入，而不能随便写
 
 你要是按这份文档给出的阅读顺序去走，并且反复跟着三条主链路读代码，这个仓库你就不再只是“看得懂”，而是会开始知道它为什么这么设计、哪里能改、哪里不能乱碰。
-

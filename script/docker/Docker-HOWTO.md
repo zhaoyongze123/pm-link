@@ -12,10 +12,8 @@
 ├── docker.env                      <-- 提供docker-compose环境变量配置
 ├── yudao-server
 │   └── Dockerfile
-└── yudao-ui-admin
-    ├── .dockerignore
-    ├── Dockerfile
-    └── nginx.conf                  <-- 提供基础配置，gzip压缩、api转发
+└── yudao-ui
+    └── yudao-ui-admin-vben-temp    <-- 当前保留的唯一管理后台前端
 ```
 
 ## 构建 jar 包

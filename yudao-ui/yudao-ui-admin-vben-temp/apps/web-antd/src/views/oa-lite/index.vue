@@ -36,8 +36,9 @@ import {
 } from '@vben/layouts';
 import { useI18n } from '@vben/locales';
 import { preferences } from '@vben/preferences';
-import { useUserStore } from '@vben/stores';
+import { useAccessStore, useUserStore } from '@vben/stores';
 import { formatDateTime, formatPast2 } from '@vben/utils';
+import { useWebSocket } from '@vueuse/core';
 
 import {
   Button,
@@ -56,13 +57,17 @@ import {
 import dayjs from 'dayjs';
 
 import { getCategorySimpleList } from '#/api/bpm/category';
-import { getProcessDefinition } from '#/api/bpm/definition';
+import { getProcessDefinition, getProcessDefinitionList } from '#/api/bpm/definition';
+import { createDocument, getDocument } from '#/api/bpm/oa/document';
+import { createProject, getProject } from '#/api/bpm/oa/project';
 import { createLeave, getLeave } from '#/api/bpm/oa/leave';
+import { createStaffing, getStaffing } from '#/api/bpm/oa/staffing';
 import {
   getApprovalDetail,
   getProcessInstanceCopyPage,
   getProcessInstanceMyPage,
 } from '#/api/bpm/processInstance';
+import { requestClient } from '#/api/request';
 import {
   getUnreadNotifyMessageCount,
   getUnreadNotifyMessageList,
@@ -87,6 +92,26 @@ type MainTab = 'create' | 'copied' | 'initiated' | 'pending' | 'processed';
 type ListTab = Exclude<MainTab, 'create'>;
 type ViewState = 'leave-form' | 'main' | 'profile';
 type DateRangeValue = [string, string];
+type OaTemplateKey =
+  | 'attendance'
+  | 'document'
+  | 'expense'
+  | 'leave'
+  | 'overtime'
+  | 'project'
+  | 'seal'
+  | 'staffing'
+  | 'trip';
+
+interface OaTaskAssignedWebSocketMessage {
+  assigneeUserId: number;
+  processInstanceId: string;
+  processInstanceName: string;
+  startUserId: number;
+  startUserNickname: string;
+  taskId: string;
+  taskName: string;
+}
 
 interface ListFilterState {
   category?: string;
@@ -116,6 +141,33 @@ interface SelectOption {
   value: number | string;
 }
 
+interface OaTemplateConfig {
+  createMode?: 'inline' | 'route';
+  createRequest: (data: Record<string, any>) => Promise<unknown>;
+  description: string;
+  endTimeLabel: string;
+  endTimePlaceholder: string;
+  getDetailRequest: (id: number) => Promise<Record<string, any>>;
+  icon: string;
+  key: OaTemplateKey;
+  processKey: string;
+  reasonLabel: string;
+  reasonPlaceholder: string;
+  routeName?: string;
+  submitLabel: string;
+  startTimeLabel: string;
+  startTimePlaceholder: string;
+  subtitle: string;
+  title: string;
+  typeLabel: string;
+  typeOptions: SelectOption[];
+  typePlaceholder: string;
+}
+
+interface OaTemplateCard extends OaTemplateConfig {
+  definition: BpmProcessDefinitionApi.ProcessDefinition;
+}
+
 type DetailPayload =
   | BpmTaskApi.Task
   | BpmProcessInstanceApi.ProcessInstance
@@ -125,15 +177,248 @@ type DetailPayload =
 const LEAVE_PROCESS_KEY = 'oa_leave';
 const DEFAULT_PAGE_SIZE = 20;
 const listTabs: ListTab[] = ['initiated', 'pending', 'processed', 'copied'];
+const createTemplateRequest = (processKey: string, data: Record<string, any>) =>
+  requestClient.post(`/bpm/oa/${processKey}/create`, data);
+const getTemplateDetailRequest = (processKey: string, id: number) =>
+  requestClient.get<Record<string, any>>(`/bpm/oa/${processKey}/get?id=${id}`);
+const OA_TEMPLATE_CONFIGS: OaTemplateConfig[] = [
+  {
+    createRequest: (data) => createTemplateRequest('leave', data),
+    description: '发起真实请假审批流程',
+    endTimeLabel: '结束时间',
+    endTimePlaceholder: '请选择结束时间',
+    getDetailRequest: (id) => getTemplateDetailRequest('leave', id),
+    icon: 'lucide:file-heart',
+    key: 'leave',
+    processKey: 'oa_leave',
+    reasonLabel: '请假原因',
+    reasonPlaceholder: '请输入请假原因',
+    submitLabel: '提交请假审批',
+    startTimeLabel: '开始时间',
+    startTimePlaceholder: '请选择开始时间',
+    subtitle: '真实 BPM 流程发起',
+    title: '请假',
+    typeLabel: '请假类型',
+    typeOptions: [
+      { label: '病假', value: 1 },
+      { label: '事假', value: 2 },
+      { label: '婚假', value: 3 },
+    ],
+    typePlaceholder: '请选择请假类型',
+  },
+  {
+    createRequest: (data) => createTemplateRequest('trip', data),
+    description: '发起出差申请流程',
+    endTimeLabel: '结束时间',
+    endTimePlaceholder: '请选择结束时间',
+    getDetailRequest: (id) => getTemplateDetailRequest('trip', id),
+    icon: 'lucide:map-pinned',
+    key: 'trip',
+    processKey: 'oa_trip',
+    reasonLabel: '出差事由',
+    reasonPlaceholder: '请输入出差事由',
+    submitLabel: '提交出差审批',
+    startTimeLabel: '开始时间',
+    startTimePlaceholder: '请选择开始时间',
+    subtitle: '真实 BPM 流程发起',
+    title: '出差',
+    typeLabel: '出差类型',
+    typeOptions: [
+      { label: '项目调研', value: 1 },
+      { label: '汇报对接', value: 2 },
+      { label: '外地驻场', value: 3 },
+    ],
+    typePlaceholder: '请选择出差类型',
+  },
+  {
+    createRequest: (data) => createTemplateRequest('overtime', data),
+    description: '发起加班申请流程',
+    endTimeLabel: '结束时间',
+    endTimePlaceholder: '请选择结束时间',
+    getDetailRequest: (id) => getTemplateDetailRequest('overtime', id),
+    icon: 'lucide:clock-3',
+    key: 'overtime',
+    processKey: 'oa_overtime',
+    reasonLabel: '加班事由',
+    reasonPlaceholder: '请输入加班事由',
+    submitLabel: '提交加班审批',
+    startTimeLabel: '开始时间',
+    startTimePlaceholder: '请选择开始时间',
+    subtitle: '真实 BPM 流程发起',
+    title: '加班',
+    typeLabel: '加班类型',
+    typeOptions: [
+      { label: '工作日加班', value: 1 },
+      { label: '周末加班', value: 2 },
+      { label: '节假日加班', value: 3 },
+    ],
+    typePlaceholder: '请选择加班类型',
+  },
+  {
+    createRequest: (data) => createTemplateRequest('attendance', data),
+    description: '发起补卡申请流程',
+    endTimeLabel: '补卡时间',
+    endTimePlaceholder: '请选择补卡时间',
+    getDetailRequest: (id) => getTemplateDetailRequest('attendance', id),
+    icon: 'lucide:badge-check',
+    key: 'attendance',
+    processKey: 'oa_attendance',
+    reasonLabel: '补卡说明',
+    reasonPlaceholder: '请输入补卡说明',
+    submitLabel: '提交补卡审批',
+    startTimeLabel: '原打卡时间',
+    startTimePlaceholder: '请选择原打卡时间',
+    subtitle: '真实 BPM 流程发起',
+    title: '补卡',
+    typeLabel: '补卡类型',
+    typeOptions: [
+      { label: '上班漏打卡', value: 1 },
+      { label: '下班漏打卡', value: 2 },
+      { label: '外勤补卡', value: 3 },
+    ],
+    typePlaceholder: '请选择补卡类型',
+  },
+  {
+    createMode: 'route',
+    createRequest: (data) => createDocument(data),
+    description: '进入复杂合同/文件审批表单',
+    endTimeLabel: '结束时间',
+    endTimePlaceholder: '请选择结束时间',
+    getDetailRequest: (id) => getDocument(id),
+    icon: 'lucide:file-signature',
+    key: 'document',
+    processKey: 'oa_document',
+    reasonLabel: '审批事由',
+    reasonPlaceholder: '请输入审批事由',
+    routeName: 'OADocumentCreate',
+    submitLabel: '提交合同/文件审批',
+    startTimeLabel: '开始时间',
+    startTimePlaceholder: '请选择开始时间',
+    subtitle: '复杂业务表单',
+    title: '合同/文件审批',
+    typeLabel: '文件类型',
+    typeOptions: [
+      { label: '合同', value: '合同' },
+      { label: '函件', value: '函件' },
+      { label: '请示', value: '请示' },
+    ],
+    typePlaceholder: '请选择文件类型',
+  },
+  {
+    createRequest: (data) => createTemplateRequest('expense', data),
+    description: '发起报销申请流程',
+    endTimeLabel: '报销结束时间',
+    endTimePlaceholder: '请选择报销结束时间',
+    getDetailRequest: (id) => getTemplateDetailRequest('expense', id),
+    icon: 'lucide:receipt-text',
+    key: 'expense',
+    processKey: 'oa_expense',
+    reasonLabel: '报销说明',
+    reasonPlaceholder: '请输入报销说明',
+    submitLabel: '提交报销审批',
+    startTimeLabel: '报销开始时间',
+    startTimePlaceholder: '请选择报销开始时间',
+    subtitle: '真实 BPM 流程发起',
+    title: '报销',
+    typeLabel: '报销类型',
+    typeOptions: [
+      { label: '差旅费', value: 1 },
+      { label: '办公费', value: 2 },
+      { label: '接待费', value: 3 },
+    ],
+    typePlaceholder: '请选择报销类型',
+  },
+  {
+    createMode: 'route',
+    createRequest: (data) => createProject(data),
+    description: '进入复杂项目立项申请表单',
+    endTimeLabel: '结束时间',
+    endTimePlaceholder: '请选择结束时间',
+    getDetailRequest: (id) => getProject(id),
+    icon: 'lucide:folder-plus',
+    key: 'project',
+    processKey: 'oa_project',
+    reasonLabel: '立项说明',
+    reasonPlaceholder: '请输入立项说明',
+    routeName: 'OAProjectCreate',
+    submitLabel: '提交项目立项申请',
+    startTimeLabel: '开始时间',
+    startTimePlaceholder: '请选择开始时间',
+    subtitle: '复杂业务表单',
+    title: '项目立项申请',
+    typeLabel: '项目类型',
+    typeOptions: [
+      { label: '总体规划', value: '总体规划' },
+      { label: '详细规划', value: '详细规划' },
+      { label: '专项规划', value: '专项规划' },
+    ],
+    typePlaceholder: '请选择项目类型',
+  },
+  {
+    createMode: 'route',
+    createRequest: (data) => createTemplateRequest('seal', data),
+    description: '进入复杂用章申请表单',
+    endTimeLabel: '用章结束时间',
+    endTimePlaceholder: '请选择用章结束时间',
+    getDetailRequest: (id) => getTemplateDetailRequest('seal', id),
+    icon: 'lucide:stamp',
+    key: 'seal',
+    processKey: 'oa_seal',
+    routeName: 'OASealCreate',
+    reasonLabel: '用章事由',
+    reasonPlaceholder: '请输入用章事由',
+    submitLabel: '提交用章审批',
+    startTimeLabel: '用章开始时间',
+    startTimePlaceholder: '请选择用章开始时间',
+    subtitle: '真实 BPM 流程发起',
+    title: '用章',
+    typeLabel: '用章类型',
+    typeOptions: [
+      { label: '公章', value: 1 },
+      { label: '合同章', value: 2 },
+      { label: '财务章', value: 3 },
+    ],
+    typePlaceholder: '请选择用章类型',
+  },
+  {
+    createMode: 'route',
+    createRequest: (data) => createStaffing(data),
+    description: '进入复杂项目人员调配表单',
+    endTimeLabel: '结束时间',
+    endTimePlaceholder: '请选择结束时间',
+    getDetailRequest: (id) => getStaffing(id),
+    icon: 'lucide:users-round',
+    key: 'staffing',
+    processKey: 'oa_staffing',
+    reasonLabel: '调配原因',
+    reasonPlaceholder: '请输入调配原因',
+    routeName: 'OAStaffingCreate',
+    submitLabel: '提交项目人员调配申请',
+    startTimeLabel: '开始时间',
+    startTimePlaceholder: '请选择开始时间',
+    subtitle: '复杂业务表单',
+    title: '项目人员调配申请',
+    typeLabel: '调配类型',
+    typeOptions: [
+      { label: '项目增补', value: 1 },
+      { label: '项目调出', value: 2 },
+      { label: '阶段支援', value: 3 },
+    ],
+    typePlaceholder: '请选择调配类型',
+  },
+];
 
 const authStore = useAuthStore();
+const accessStore = useAccessStore();
 const userStore = useUserStore();
 const { t } = useI18n();
+const refreshToken = accessStore.refreshToken as string;
 
 const loading = ref(false);
 const leaveSubmitting = ref(false);
 const leavePublishing = ref(false);
 const activeTab = ref<MainTab>('create');
+const currentTemplateKey = ref<OaTemplateKey>('leave');
 const lastCenterTab = ref<ListTab>('pending');
 const viewState = ref<ViewState>('main');
 const selectedCreateCategoryCode = ref<string>();
@@ -142,6 +427,10 @@ const categories = ref<BpmCategoryApi.Category[]>([]);
 const leaveProcessDefinition = ref<BpmProcessDefinitionApi.ProcessDefinition | null>(
   null,
 );
+const processDefinitions = ref<
+  Partial<Record<OaTemplateKey, BpmProcessDefinitionApi.ProcessDefinition | null>>
+>({});
+const oaTemplateDefinitions = ref<BpmProcessDefinitionApi.ProcessDefinition[]>([]);
 const selectableUsers = ref<SystemUserApi.User[]>([]);
 const activityNodes = ref<BpmProcessInstanceApi.ApprovalNodeInfo[]>([]);
 const startUserSelectTasks = ref<BpmProcessInstanceApi.ApprovalNodeInfo[]>([]);
@@ -151,10 +440,23 @@ const doneItems = ref<BpmTaskApi.Task[]>([]);
 const initiatedItems = ref<BpmProcessInstanceApi.ProcessInstance[]>([]);
 const copiedItems = ref<BpmProcessInstanceApi.ProcessInstanceCopyRespVO[]>([]);
 const OA_LITE_BODY_THEME_CLASS = 'oa-lite-light-theme';
+const OA_LITE_TASK_ASSIGNED_MESSAGE_TYPE = 'task-assigned';
+const OA_LITE_TASK_ASSIGNED_TOAST_KEY = 'oa-lite-task-assigned';
 const headerNotifications = ref<NotificationItem[]>([]);
 const headerUnreadCount = ref(0);
 const showNotificationDot = computed(() => headerUnreadCount.value > 0);
 let notificationPollingTimer: null | ReturnType<typeof setInterval> = null;
+const webSocketServer = `${`${import.meta.env.VITE_BASE_URL}/infra/ws`.replace(
+  'http',
+  'ws',
+)}?token=${refreshToken}`;
+const { data: webSocketData, close: closeWebSocket } = useWebSocket(
+  webSocketServer,
+  {
+    autoReconnect: true,
+    heartbeat: true,
+  },
+);
 
 const oaLiteTheme = {
   algorithm: [antdTheme.defaultAlgorithm],
@@ -255,8 +557,8 @@ function createDefaultFilter(): ListFilterState {
     category: undefined,
     createTime: undefined,
     name: '',
-    processDefinitionId: leaveProcessDefinition.value?.id,
-    processDefinitionKey: LEAVE_PROCESS_KEY,
+    processDefinitionId: undefined,
+    processDefinitionKey: undefined,
     status: undefined,
   };
 }
@@ -283,11 +585,66 @@ function normalizeDictOptions(dictType: string) {
 const leaveTypeOptions = computed<SelectOption[]>(() =>
   normalizeDictOptions('bpm_oa_leave_type'),
 );
+const processStatusFallbackOptions: SelectOption[] = [
+  {
+    label: t('page.oaLite.status.running'),
+    value: BpmProcessInstanceStatus.RUNNING,
+  },
+  {
+    label: t('page.oaLite.status.approved'),
+    value: BpmProcessInstanceStatus.APPROVE,
+  },
+  {
+    label: t('page.oaLite.status.rejected'),
+    value: BpmProcessInstanceStatus.REJECT,
+  },
+  {
+    label: t('page.oaLite.status.cancelled'),
+    value: BpmProcessInstanceStatus.CANCEL,
+  },
+];
+const taskStatusFallbackOptions: SelectOption[] = [
+  {
+    label: t('page.oaLite.status.running'),
+    value: 1,
+  },
+  {
+    label: t('page.oaLite.status.approved'),
+    value: 2,
+  },
+  {
+    label: t('page.oaLite.status.rejected'),
+    value: 3,
+  },
+  {
+    label: t('page.oaLite.status.cancelled'),
+    value: 4,
+  },
+];
+const currentTemplateConfig = computed(
+  () =>
+    OA_TEMPLATE_CONFIGS.find((item) => item.key === currentTemplateKey.value) ||
+    OA_TEMPLATE_CONFIGS[0],
+);
+const currentTemplateDefinition = computed(
+  () => processDefinitions.value[currentTemplateKey.value] || null,
+);
+const currentTemplateTypeOptions = computed<SelectOption[]>(() =>
+  currentTemplateKey.value === 'leave'
+    ? (leaveTypeOptions.value.length > 0
+        ? leaveTypeOptions.value
+        : currentTemplateConfig.value.typeOptions)
+    : currentTemplateConfig.value.typeOptions,
+);
 const processStatusOptions = computed<SelectOption[]>(() =>
-  normalizeDictOptions('bpm_process_instance_status'),
+  normalizeDictOptions('bpm_process_instance_status').length > 0
+    ? normalizeDictOptions('bpm_process_instance_status')
+    : processStatusFallbackOptions,
 );
 const taskStatusOptions = computed<SelectOption[]>(() =>
-  normalizeDictOptions('bpm_task_status'),
+  normalizeDictOptions('bpm_task_status').length > 0
+    ? normalizeDictOptions('bpm_task_status')
+    : taskStatusFallbackOptions,
 );
 const categoryOptions = computed<SelectOption[]>(() =>
   categories.value.map((item) => ({
@@ -295,25 +652,34 @@ const categoryOptions = computed<SelectOption[]>(() =>
     value: item.code,
   })),
 );
+const availableTemplateDefinitions = computed<OaTemplateCard[]>(() => {
+  const configMap = new Map(
+    OA_TEMPLATE_CONFIGS.map((item) => [item.processKey, item] as const),
+  );
+  return oaTemplateDefinitions.value
+    .map((definition) => {
+      const config = configMap.get(definition.key || '');
+      if (!config) {
+        return null;
+      }
+      return {
+        ...config,
+        definition,
+      } satisfies OaTemplateCard;
+    })
+    .filter(Boolean) as OaTemplateCard[];
+});
 const processTemplateIdOptions = computed<SelectOption[]>(() =>
-  leaveProcessDefinition.value
-    ? [
-        {
-          label: leaveProcessDefinition.value.name,
-          value: leaveProcessDefinition.value.id,
-        },
-      ]
-    : [],
+  availableTemplateDefinitions.value.map((item) => ({
+    label: item.definition.name,
+    value: item.definition.id,
+  })),
 );
 const processTemplateKeyOptions = computed<SelectOption[]>(() =>
-  leaveProcessDefinition.value
-    ? [
-        {
-          label: leaveProcessDefinition.value.name,
-          value: LEAVE_PROCESS_KEY,
-        },
-      ]
-    : [],
+  availableTemplateDefinitions.value.map((item) => ({
+    label: item.definition.name,
+    value: item.processKey,
+  })),
 );
 const currentStatusOptions = computed<SelectOption[]>(() =>
   activeTab.value === 'processed'
@@ -366,26 +732,30 @@ const stats = computed(() => ({
   copied: tabPages.copied.total,
   initiated: tabPages.initiated.total,
   pending: tabPages.pending.total,
-  processed: tabPages.processed.total,
+  processed: new Set(
+    doneItems.value
+      .map((item) => item.processInstanceId || item.processInstance?.id)
+      .filter(Boolean),
+  ).size,
 }));
 
 const createCategoryTabs = computed<BpmCategoryApi.Category[]>(() => {
-  const list = [...categories.value];
-  const leaveCategoryCode = leaveProcessDefinition.value?.category;
-  if (
-    leaveCategoryCode &&
-    !list.some((item) => item.code === leaveCategoryCode)
-  ) {
-    list.push({
-      code: leaveCategoryCode,
+  const categoryMap = new Map<string, BpmCategoryApi.Category>();
+  availableTemplateDefinitions.value.forEach((item, index) => {
+    const definition = item.definition;
+    categoryMap.set(definition.category, {
+      code: definition.category,
       description: undefined,
-      id: -1,
-      name: leaveProcessDefinition.value?.categoryName || t('page.oaLite.misc.uncategorized'),
-      sort: list.length,
+      id: index + 1,
+      name:
+        definition.categoryName ||
+        categories.value.find((category) => category.code === definition.category)?.name ||
+        t('page.oaLite.misc.uncategorized'),
+      sort: index,
       status: 0,
     });
-  }
-  return list;
+  });
+  return [...categoryMap.values()];
 });
 
 const currentCreateCategoryCode = computed(
@@ -399,19 +769,17 @@ const currentCreateCategoryName = computed(() => {
   if (currentCategory) {
     return currentCategory.name;
   }
-  return leaveProcessDefinition.value?.categoryName || t('page.oaLite.filters.categoryPlaceholder');
+  return t('page.oaLite.filters.categoryPlaceholder');
 });
 
-const showLeaveCreateCard = computed(() => {
-  const leaveCategoryCode = leaveProcessDefinition.value?.category;
-  if (!leaveProcessDefinition.value) {
-    return false;
-  }
-  if (!currentCreateCategoryCode.value || !leaveCategoryCode) {
-    return true;
-  }
-  return currentCreateCategoryCode.value === leaveCategoryCode;
-});
+const currentCreateTemplates = computed(() =>
+  availableTemplateDefinitions.value.filter((item) => {
+    if (!currentCreateCategoryCode.value) {
+      return true;
+    }
+    return item.definition.category === currentCreateCategoryCode.value;
+  }),
+);
 
 const dashboardNavItems = computed(() => [
   {
@@ -614,14 +982,36 @@ function getTaskStatusText(status?: number) {
   return option?.label || t('page.oaLite.status.processed');
 }
 
+function dedupeDoneTasks(tasks: BpmTaskApi.Task[]) {
+  const taskMap = new Map<string, BpmTaskApi.Task>();
+  tasks.forEach((task) => {
+    const processInstanceId = String(
+      task.processInstanceId || task.processInstance?.id || '',
+    );
+    if (!processInstanceId) {
+      taskMap.set(`task-${task.id}`, task);
+      return;
+    }
+    const current = taskMap.get(processInstanceId);
+    if (!current) {
+      taskMap.set(processInstanceId, task);
+      return;
+    }
+    const currentTime = new Date(current.endTime || current.createTime || 0).getTime();
+    const nextTime = new Date(task.endTime || task.createTime || 0).getTime();
+    if (nextTime >= currentTime) {
+      taskMap.set(processInstanceId, task);
+    }
+  });
+  return [...taskMap.values()];
+}
+
 function getItemStatus(item: DetailPayload) {
   if (!item) {
     return undefined;
   }
   if (isTaskItem(item)) {
-    return activeTab.value === 'processed'
-      ? item.status
-      : item.processInstance?.status;
+    return item.processInstance?.status ?? item.status;
   }
   if (isCopiedItem(item)) {
     return undefined;
@@ -637,9 +1027,28 @@ function getItemStatusText(item: DetailPayload) {
   if (status === undefined) {
     return '';
   }
-  return isTaskItem(item) && activeTab.value === 'processed'
-    ? getTaskStatusText(status)
-    : getProcessStatusText(status);
+  return getProcessStatusText(status);
+}
+
+function getItemStatusTone(item: DetailPayload) {
+  const status = getItemStatus(item);
+  switch (status) {
+    case BpmProcessInstanceStatus.APPROVE: {
+      return 'success';
+    }
+    case BpmProcessInstanceStatus.REJECT: {
+      return 'danger';
+    }
+    case BpmProcessInstanceStatus.CANCEL: {
+      return 'muted';
+    }
+    case BpmProcessInstanceStatus.RUNNING: {
+      return 'warning';
+    }
+    default: {
+      return 'neutral';
+    }
+  }
 }
 
 function getItemTitle(item: DetailPayload) {
@@ -788,16 +1197,12 @@ function getTabErrorMessage(tab: ListTab) {
 }
 
 function applyLeaveDefinitionFilterDefaults() {
-  if (!leaveProcessDefinition.value?.id) {
-    return;
-  }
   listTabs.forEach((tab) => {
-    if (tab === 'copied' && !listFilters[tab].processDefinitionId) {
-      listFilters[tab].processDefinitionId = leaveProcessDefinition.value!.id;
+    if (tab === 'copied') {
+      listFilters[tab].processDefinitionId = undefined;
+      return;
     }
-    if (tab !== 'copied' && !listFilters[tab].processDefinitionKey) {
-      listFilters[tab].processDefinitionKey = LEAVE_PROCESS_KEY;
-    }
+    listFilters[tab].processDefinitionKey = undefined;
   });
 }
 
@@ -850,10 +1255,21 @@ function handleStartUserSelectConfirm(activityId: string, userList: SystemUserAp
 }
 
 async function loadLeaveDefinition() {
-  leaveProcessDefinition.value = await getProcessDefinition(
-    undefined,
-    LEAVE_PROCESS_KEY,
+  const definitionList = await getProcessDefinitionList({
+    suspensionState: 1,
+  }).catch(() => []);
+  const filteredDefinitions = (definitionList || []).filter((item) =>
+    String(item.key || '').startsWith('oa_'),
   );
+  oaTemplateDefinitions.value = filteredDefinitions;
+  const definitions = OA_TEMPLATE_CONFIGS.map((item) => {
+    const definition =
+      filteredDefinitions.find((definitionItem) => definitionItem.key === item.processKey) ||
+      null;
+    return [item.key, definition] as const;
+  });
+  processDefinitions.value = Object.fromEntries(definitions);
+  leaveProcessDefinition.value = processDefinitions.value.leave || null;
 }
 
 async function loadBaseOptions() {
@@ -866,7 +1282,7 @@ async function loadBaseOptions() {
 }
 
 async function loadLeaveApprovalPreview() {
-  if (!leaveProcessDefinition.value?.id) {
+  if (!currentTemplateDefinition.value?.id) {
     activityNodes.value = [];
     startUserSelectTasks.value = [];
     await nextTick();
@@ -874,7 +1290,7 @@ async function loadLeaveApprovalPreview() {
     return;
   }
   const data = await getApprovalDetail({
-    processDefinitionId: leaveProcessDefinition.value.id,
+    processDefinitionId: currentTemplateDefinition.value.id,
     activityId: BpmNodeIdEnum.START_USER_NODE_ID,
     processVariablesStr: JSON.stringify(getLeaveProcessVariables()),
   });
@@ -936,8 +1352,8 @@ async function loadTabData(tab: ListTab) {
           status: filter.status,
           createTime,
         });
-        doneItems.value = resp.list || [];
-        pageState.total = resp.total || 0;
+        doneItems.value = dedupeDoneTasks(resp.list || []);
+        pageState.total = doneItems.value.length;
         break;
       }
       case 'copied': {
@@ -981,11 +1397,15 @@ function resetLeaveForm() {
   leaveForm.startUserSelectAssignees = {};
 }
 
-async function openLeaveForm(businessKey?: string) {
-  if (!leaveProcessDefinition.value) {
+async function openLeaveForm(
+  businessKey?: string,
+  templateKey: OaTemplateKey = 'leave',
+) {
+  currentTemplateKey.value = templateKey;
+  if (!currentTemplateDefinition.value) {
     await loadLeaveDefinition();
   }
-  if (!leaveProcessDefinition.value) {
+  if (!currentTemplateDefinition.value) {
     message.error(t('page.oaLite.messages.leaveModelMissing'));
     return;
   }
@@ -993,9 +1413,11 @@ async function openLeaveForm(businessKey?: string) {
   leavePublishing.value = true;
   try {
     if (businessKey) {
-      const leaveId = Number(businessKey);
-      if (!Number.isNaN(leaveId) && leaveId > 0) {
-        const detail = await getLeave(leaveId);
+      const businessId = Number(businessKey);
+      if (!Number.isNaN(businessId) && businessId > 0) {
+        const detail = await currentTemplateConfig.value.getDetailRequest(
+          businessId,
+        );
         leaveForm.type = detail.type;
         leaveForm.startTime = String(detail.startTime);
         leaveForm.endTime = String(detail.endTime);
@@ -1010,7 +1432,7 @@ async function openLeaveForm(businessKey?: string) {
 }
 
 async function submitLeave() {
-  if (!leaveProcessDefinition.value) {
+  if (!currentTemplateDefinition.value) {
     message.error(t('page.oaLite.messages.leaveModelCannotStart'));
     return;
   }
@@ -1035,7 +1457,7 @@ async function submitLeave() {
   }
   leaveSubmitting.value = true;
   try {
-    await createLeave({
+    await currentTemplateConfig.value.createRequest({
       endTime: Number(leaveForm.endTime),
       reason: leaveForm.reason.trim(),
       startTime: Number(leaveForm.startTime),
@@ -1104,12 +1526,104 @@ function handleNotificationOpen(open: boolean) {
   handleNotificationGetUnreadCount();
 }
 
+function parseTaskAssignedWebSocketMessage(
+  rawMessage: string,
+): null | OaTaskAssignedWebSocketMessage {
+  if (rawMessage === 'pong') {
+    return null;
+  }
+  const envelope = JSON.parse(rawMessage);
+  if (envelope.type !== OA_LITE_TASK_ASSIGNED_MESSAGE_TYPE || !envelope.content) {
+    return null;
+  }
+  return JSON.parse(envelope.content) as OaTaskAssignedWebSocketMessage;
+}
+
+async function openPendingTaskDetail(taskId: string) {
+  activeTab.value = 'pending';
+  viewState.value = 'main';
+  if (!tabInitialized.pending) {
+    await loadTabData('pending');
+  }
+  const matchedTask = todoItems.value.find((item) => String(item.id) === String(taskId));
+  if (matchedTask) {
+    selectedItem.value = matchedTask;
+    return;
+  }
+  await loadTabData('pending');
+  selectedItem.value =
+    todoItems.value.find((item) => String(item.id) === String(taskId)) || todoItems.value[0] || null;
+}
+
+async function handleTaskAssignedWebSocketMessage(
+  messagePayload: OaTaskAssignedWebSocketMessage,
+) {
+  await Promise.all([
+    handleNotificationGetUnreadCount(),
+    loadTabData('pending'),
+  ]);
+  if (activeTab.value === 'pending') {
+    syncSelectedItem('pending');
+  }
+  message.open({
+    content: `${messagePayload.startUserNickname} 提交了新的审批待办：${messagePayload.taskName}`,
+    duration: 4,
+    key: OA_LITE_TASK_ASSIGNED_TOAST_KEY,
+    onClick: () => {
+      openPendingTaskDetail(messagePayload.taskId);
+    },
+    type: 'info',
+  });
+}
+
 async function handleLogout() {
   await authStore.logout(false);
 }
 
 function openProfileCenter() {
   viewState.value = 'profile';
+}
+
+function openTemplateCreate(
+  templateKey: OaTemplateKey,
+  businessKey?: string,
+) {
+  const targetConfig =
+    OA_TEMPLATE_CONFIGS.find((item) => item.key === templateKey) ||
+    OA_TEMPLATE_CONFIGS[0];
+  if (targetConfig.createMode === 'route' && targetConfig.routeName) {
+    router.push({
+      name: targetConfig.routeName,
+      query: businessKey ? { id: businessKey } : undefined,
+    });
+    return;
+  }
+  openLeaveForm(businessKey, templateKey);
+}
+
+function handleProcessRecreate(
+  businessKey: string,
+  processDefinitionKey?: string,
+  formCustomCreatePath?: string,
+) {
+  const targetConfig = OA_TEMPLATE_CONFIGS.find(
+    (item) => item.processKey === processDefinitionKey,
+  );
+  if (targetConfig?.createMode === 'route' && targetConfig.routeName) {
+    router.push({
+      name: targetConfig.routeName,
+      query: { id: businessKey },
+    });
+    return;
+  }
+  if (formCustomCreatePath) {
+    router.push({
+      path: formCustomCreatePath,
+      query: { id: businessKey },
+    });
+    return;
+  }
+  openLeaveForm(businessKey, (targetConfig?.key as OaTemplateKey) || 'leave');
 }
 
 function selectCreateCategory(code: string) {
@@ -1164,10 +1678,10 @@ function openMainNav(section: 'center' | 'create') {
 }
 
 watch(
-  [createCategoryTabs, () => leaveProcessDefinition.value?.category],
-  ([tabs, leaveCategoryCode]) => {
+  createCategoryTabs,
+  (tabs) => {
     if (tabs.length === 0) {
-      selectedCreateCategoryCode.value = leaveCategoryCode;
+      selectedCreateCategoryCode.value = undefined;
       return;
     }
     if (
@@ -1176,10 +1690,7 @@ watch(
     ) {
       return;
     }
-    selectedCreateCategoryCode.value =
-      leaveCategoryCode && tabs.some((item) => item.code === leaveCategoryCode)
-        ? leaveCategoryCode
-        : tabs[0].code;
+    selectedCreateCategoryCode.value = tabs[0].code;
   },
   {
     immediate: true,
@@ -1187,9 +1698,9 @@ watch(
 );
 
 watch(
-  () => [leaveForm.type, leaveForm.startTime, leaveForm.endTime],
+  () => [currentTemplateKey.value, leaveForm.type, leaveForm.startTime, leaveForm.endTime],
   async () => {
-    if (viewState.value !== 'leave-form' || !leaveProcessDefinition.value) {
+    if (viewState.value !== 'leave-form' || !currentTemplateDefinition.value) {
       return;
     }
     await loadLeaveApprovalPreview();
@@ -1214,6 +1725,24 @@ watch(
   },
 );
 
+watch(
+  () => webSocketData.value,
+  async (rawMessage) => {
+    if (!rawMessage) {
+      return;
+    }
+    try {
+      const messagePayload = parseTaskAssignedWebSocketMessage(rawMessage);
+      if (!messagePayload) {
+        return;
+      }
+      await handleTaskAssignedWebSocketMessage(messagePayload);
+    } catch (error) {
+      console.error('处理 OA 实时待办消息失败', error);
+    }
+  },
+);
+
 onMounted(async () => {
   if (typeof document !== 'undefined') {
     document.body.classList.add(OA_LITE_BODY_THEME_CLASS);
@@ -1230,7 +1759,7 @@ onMounted(async () => {
         handleNotificationGetUnreadCount();
       }
     }, 1000 * 60 * 2);
-    if (!leaveProcessDefinition.value) {
+    if (availableTemplateDefinitions.value.length === 0) {
       message.error(t('page.oaLite.messages.leaveModelMissing'));
       return;
     }
@@ -1249,6 +1778,7 @@ onUnmounted(() => {
     clearInterval(notificationPollingTimer);
     notificationPollingTimer = null;
   }
+  closeWebSocket();
 });
 </script>
 
@@ -1275,49 +1805,49 @@ onUnmounted(() => {
               <div class="oa-lite-leave-card">
                 <div class="oa-lite-leave-title-row">
                   <div>
-                    <h1 class="oa-lite-leave-title">{{ t('page.oaLite.leaveForm.title') }}</h1>
-                    <p class="oa-lite-leave-subtitle">{{ t('page.oaLite.leaveForm.subtitle') }}</p>
+                    <h1 class="oa-lite-leave-title">{{ currentTemplateConfig.title }}</h1>
+                    <p class="oa-lite-leave-subtitle">{{ currentTemplateConfig.subtitle }}</p>
                   </div>
-                  <IconifyIcon icon="lucide:file-heart" class="oa-lite-leave-qr" />
+                  <IconifyIcon :icon="currentTemplateConfig.icon" class="oa-lite-leave-qr" />
                 </div>
 
                 <div class="oa-lite-leave-divider"></div>
 
                 <Form layout="vertical">
-                  <Form.Item :label="t('page.oaLite.leaveForm.type')" required>
+                  <Form.Item :label="currentTemplateConfig.typeLabel" required>
                     <Select
                       v-model:value="leaveForm.type"
-                      :options="leaveTypeOptions"
-                      :placeholder="t('page.oaLite.leaveForm.typePlaceholder')"
+                      :options="currentTemplateTypeOptions"
+                      :placeholder="currentTemplateConfig.typePlaceholder"
                       popup-class-name="oa-lite-select-popup"
                       :get-popup-container="(triggerNode) => triggerNode.parentNode"
                     />
                   </Form.Item>
-                  <Form.Item :label="t('page.oaLite.leaveForm.startTime')" required>
+                  <Form.Item :label="currentTemplateConfig.startTimeLabel" required>
                     <DatePicker
                       v-model:value="leaveForm.startTime"
                       show-time
                       value-format="x"
                       format="YYYY-MM-DD HH:mm:ss"
                       class="w-full"
-                      :placeholder="t('page.oaLite.leaveForm.startTimePlaceholder')"
+                      :placeholder="currentTemplateConfig.startTimePlaceholder"
                     />
                   </Form.Item>
-                  <Form.Item :label="t('page.oaLite.leaveForm.endTime')" required>
+                  <Form.Item :label="currentTemplateConfig.endTimeLabel" required>
                     <DatePicker
                       v-model:value="leaveForm.endTime"
                       show-time
                       value-format="x"
                       format="YYYY-MM-DD HH:mm:ss"
                       class="w-full"
-                      :placeholder="t('page.oaLite.leaveForm.endTimePlaceholder')"
+                      :placeholder="currentTemplateConfig.endTimePlaceholder"
                     />
                   </Form.Item>
-                  <Form.Item :label="t('page.oaLite.leaveForm.reason')" required>
+                  <Form.Item :label="currentTemplateConfig.reasonLabel" required>
                     <Input.TextArea
                       v-model:value="leaveForm.reason"
                       :rows="4"
-                      :placeholder="t('page.oaLite.leaveForm.reasonPlaceholder')"
+                      :placeholder="currentTemplateConfig.reasonPlaceholder"
                     />
                   </Form.Item>
                 </Form>
@@ -1340,7 +1870,7 @@ onUnmounted(() => {
 
                 <div class="oa-lite-leave-submit-row">
                   <Button type="primary" :loading="leaveSubmitting" @click="submitLeave">
-                    {{ t('page.oaLite.leaveForm.submit') }}
+                    {{ currentTemplateConfig.submitLabel }}
                   </Button>
                 </div>
               </div>
@@ -1469,19 +1999,20 @@ onUnmounted(() => {
                     <IconifyIcon icon="lucide:chevron-right" class="oa-lite-template-section-arrow" />
                   </div>
 
-                  <div v-if="showLeaveCreateCard" class="oa-lite-template-grid">
+                  <div v-if="currentCreateTemplates.length > 0" class="oa-lite-template-grid">
                     <button
+                      v-for="item in currentCreateTemplates"
+                      :key="item.key"
                       class="oa-lite-template-card"
-                      :disabled="leavePublishing"
-                      @click="openLeaveForm()"
+                      @click="openTemplateCreate(item.key)"
                     >
                       <div class="oa-lite-template-icon">
-                        <IconifyIcon icon="lucide:file-heart" />
+                        <IconifyIcon :icon="item.icon" />
                       </div>
                       <div class="oa-lite-template-body">
-                        <div class="oa-lite-template-name">{{ t('page.oaLite.leaveForm.title') }}</div>
+                        <div class="oa-lite-template-name">{{ item.title }}</div>
                         <div class="oa-lite-template-desc">
-                          {{ t('page.oaLite.createCard.leaveDesc') }}
+                          {{ item.description }}
                         </div>
                       </div>
                     </button>
@@ -1606,6 +2137,7 @@ onUnmounted(() => {
                             <Tag
                               v-if="getItemStatus(item) !== undefined"
                               class="oa-lite-list-status-tag"
+                              :class="`tone-${getItemStatusTone(item)}`"
                             >
                               {{ getItemStatusText(item) }}
                             </Tag>
@@ -1644,7 +2176,7 @@ onUnmounted(() => {
                       :request="currentDetailRequest"
                       :section="currentDetailSection"
                       @refresh="handleDetailRefresh"
-                      @recreate="openLeaveForm"
+                      @recreate="handleProcessRecreate"
                     />
                     <div v-else class="oa-lite-detail-empty">
                       <Empty :description="t('page.oaLite.empty.selectDetail', [currentListTitle])" />
@@ -2363,6 +2895,36 @@ onUnmounted(() => {
   border: 1px solid #dbe5f0;
   background: #fff !important;
   color: #111827 !important;
+}
+
+.oa-lite-list-status-tag.ant-tag.tone-success {
+  background: #ecfdf3 !important;
+  border-color: #b7ebc6 !important;
+  color: #027a48 !important;
+}
+
+.oa-lite-list-status-tag.ant-tag.tone-warning {
+  background: #fffbeb !important;
+  border-color: #fcd34d !important;
+  color: #b45309 !important;
+}
+
+.oa-lite-list-status-tag.ant-tag.tone-danger {
+  background: #fef2f2 !important;
+  border-color: #fecaca !important;
+  color: #b42318 !important;
+}
+
+.oa-lite-list-status-tag.ant-tag.tone-muted {
+  background: #f8fafc !important;
+  border-color: #cbd5e1 !important;
+  color: #475569 !important;
+}
+
+.oa-lite-list-status-tag.ant-tag.tone-neutral {
+  background: #eff6ff !important;
+  border-color: #bfdbfe !important;
+  color: #1d4ed8 !important;
 }
 
 .oa-lite-list-extra {

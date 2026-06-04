@@ -13,6 +13,10 @@ public interface ErrorCodeConstants {
 
     // ========== OA 流程模块 1-009-001-000 ==========
     ErrorCode OA_LEAVE_NOT_EXISTS = new ErrorCode(1_009_001_001, "请假申请不存在");
+    ErrorCode OA_SEAL_NOT_EXISTS = new ErrorCode(1_009_001_002, "用章申请不存在");
+    ErrorCode OA_DOCUMENT_NOT_EXISTS = new ErrorCode(1_009_001_003, "合同/文件审批不存在");
+    ErrorCode OA_PROJECT_NOT_EXISTS = new ErrorCode(1_009_001_004, "项目立项申请不存在");
+    ErrorCode OA_STAFFING_NOT_EXISTS = new ErrorCode(1_009_001_005, "项目人员调配申请不存在");
 
     // ========== 流程模型 1-009-002-000 ==========
     ErrorCode MODEL_KEY_EXISTS = new ErrorCode(1_009_002_000, "已经存在流程标识为【{}】的流程");

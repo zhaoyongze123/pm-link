@@ -1,24 +1,35 @@
 <script lang="ts" setup>
-import { computed } from 'vue';
+import { onBeforeUnmount, onMounted } from 'vue';
 
 import { AuthPageLayout } from '@vben/layouts';
-import { preferences } from '@vben/preferences';
+import { preferences, updatePreferences } from '@vben/preferences';
 
-import { $t } from '#/locales';
+const previousAuthPageLayout = preferences.app.authPageLayout;
 
-const appName = computed(() => preferences.app.name);
-const logo = computed(() => preferences.logo.source);
-const logoDark = computed(() => preferences.logo.sourceDark);
+onMounted(() => {
+  if (preferences.app.authPageLayout !== 'panel-center') {
+    updatePreferences({
+      app: {
+        authPageLayout: 'panel-center',
+      },
+    });
+  }
+});
+
+onBeforeUnmount(() => {
+  if (preferences.app.authPageLayout !== previousAuthPageLayout) {
+    updatePreferences({
+      app: {
+        authPageLayout: previousAuthPageLayout,
+      },
+    });
+  }
+});
 </script>
 
 <template>
-  <AuthPageLayout
-    :app-name="appName"
-    :logo="logo"
-    :logo-dark="logoDark"
-    :page-description="$t('authentication.pageDesc')"
-    :page-title="$t('authentication.pageTitle')"
-  >
+  <AuthPageLayout :copyright="false">
+    <template #logo></template>
     <!-- 自定义工具栏 -->
     <!-- <template #toolbar></template> -->
   </AuthPageLayout>

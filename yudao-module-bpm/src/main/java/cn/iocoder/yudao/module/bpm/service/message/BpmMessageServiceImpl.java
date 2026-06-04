@@ -1,5 +1,7 @@
 package cn.iocoder.yudao.module.bpm.service.message;
 
+import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
+import cn.iocoder.yudao.framework.websocket.core.sender.WebSocketMessageSender;
 import cn.iocoder.yudao.framework.web.config.WebProperties;
 import cn.iocoder.yudao.module.bpm.convert.message.BpmMessageConvert;
 import cn.iocoder.yudao.module.bpm.enums.message.BpmMessageEnum;
@@ -7,8 +9,10 @@ import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenProcess
 import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenProcessInstanceRejectReqDTO;
 import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenTaskCreatedReqDTO;
 import cn.iocoder.yudao.module.bpm.service.message.dto.BpmMessageSendWhenTaskTimeoutReqDTO;
+import cn.iocoder.yudao.module.bpm.service.message.dto.BpmTaskAssignedWebSocketMessage;
 import cn.iocoder.yudao.module.system.api.sms.SmsSendApi;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
@@ -31,6 +35,10 @@ public class BpmMessageServiceImpl implements BpmMessageService {
 
     @Resource
     private WebProperties webProperties;
+
+    @SuppressWarnings("SpringJavaAutowiredFieldsWarningInspection")
+    @Autowired(required = false) // 允许通过 yudao.websocket.enable=false 关闭实时推送
+    private WebSocketMessageSender webSocketMessageSender;
 
     @Override
     public void sendMessageWhenProcessInstanceApprove(BpmMessageSendWhenProcessInstanceApproveReqDTO reqDTO) {
@@ -60,6 +68,10 @@ public class BpmMessageServiceImpl implements BpmMessageService {
         templateParams.put("detailUrl", getProcessInstanceDetailUrl(reqDTO.getProcessInstanceId()));
         smsSendApi.sendSingleSmsToAdmin(BpmMessageConvert.INSTANCE.convert(reqDTO.getAssigneeUserId(),
                 BpmMessageEnum.TASK_ASSIGNED.getSmsTemplateCode(), templateParams));
+        if (webSocketMessageSender != null) {
+            webSocketMessageSender.sendObject(UserTypeEnum.ADMIN.getValue(), reqDTO.getAssigneeUserId(),
+                    "task-assigned", buildTaskAssignedWebSocketMessage(reqDTO));
+        }
     }
 
     @Override
@@ -74,6 +86,18 @@ public class BpmMessageServiceImpl implements BpmMessageService {
 
     private String getProcessInstanceDetailUrl(String taskId) {
         return webProperties.getAdminUi().getUrl() + "/bpm/process-instance/detail?id=" + taskId;
+    }
+
+    private BpmTaskAssignedWebSocketMessage buildTaskAssignedWebSocketMessage(BpmMessageSendWhenTaskCreatedReqDTO reqDTO) {
+        BpmTaskAssignedWebSocketMessage message = new BpmTaskAssignedWebSocketMessage();
+        message.setProcessInstanceId(reqDTO.getProcessInstanceId());
+        message.setProcessInstanceName(reqDTO.getProcessInstanceName());
+        message.setTaskId(reqDTO.getTaskId());
+        message.setTaskName(reqDTO.getTaskName());
+        message.setStartUserId(reqDTO.getStartUserId());
+        message.setStartUserNickname(reqDTO.getStartUserNickname());
+        message.setAssigneeUserId(reqDTO.getAssigneeUserId());
+        return message;
     }
 
 }

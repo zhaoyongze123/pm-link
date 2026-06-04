@@ -2,14 +2,22 @@ import type { VbenFormSchema } from '#/adapter/form';
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { DescriptionItemSchema } from '#/components/description';
 
-import { h } from 'vue';
-
 import { DICT_TYPE } from '@vben/constants';
-import { getDictOptions } from '@vben/hooks';
+import { getDictLabel, getDictOptions } from '@vben/hooks';
 import { formatDate } from '@vben/utils';
-
-import { DictTag } from '#/components/dict-tag';
 import { getRangePickerDefaultProps } from '#/utils';
+
+function getLeaveTypeFallbackLabel(value: null | number | string | undefined) {
+  if (value === undefined || value === null) {
+    return '-';
+  }
+  const matched = [
+    { label: '病假', value: 1 },
+    { label: '事假', value: 2 },
+    { label: '婚假', value: 3 },
+  ].find((item) => String(item.value) === String(value));
+  return matched?.label || String(value);
+}
 
 /** 新增/修改的表单 */
 export function useFormSchema(): VbenFormSchema[] {
@@ -182,10 +190,10 @@ export function useDetailFormSchema(): DescriptionItemSchema[] {
       label: '请假类型',
       field: 'type',
       render: (val) =>
-        h(DictTag, {
-          type: DICT_TYPE.BPM_OA_LEAVE_TYPE,
-          value: val,
-        }),
+        val === undefined || val === null
+          ? '-'
+          : getDictLabel(DICT_TYPE.BPM_OA_LEAVE_TYPE, val) ||
+            getLeaveTypeFallbackLabel(val),
     },
     {
       label: '开始时间',
