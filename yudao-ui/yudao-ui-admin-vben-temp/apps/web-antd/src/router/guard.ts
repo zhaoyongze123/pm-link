@@ -11,6 +11,11 @@ import { message } from 'ant-design-vue';
 import { getSimpleDictDataList } from '#/api/system/dict/data';
 import { accessRoutes, coreRouteNames } from '#/router/routes';
 import { useAuthStore } from '#/store';
+import {
+  filterAccessRoutes,
+  filterMenuRecords,
+  isBlockedMenuPath,
+} from '#/utils/menu-filter';
 import { isAdminUser, OA_LITE_HOME_PATH, resolveUserHomePath } from '#/utils/oa-user';
 
 import { generateAccess } from './access';
@@ -24,6 +29,17 @@ function shouldRedirectNonAdminToOaLite(path: string, roles: string[] = []) {
   return !NON_ADMIN_ALLOWED_PATH_PREFIXES.some(
     (prefix) => path === prefix || path.startsWith(`${prefix}/`),
   );
+}
+
+function buildLoginRedirect(fullPath: string) {
+  return {
+    path: LOGIN_PATH,
+    query:
+      fullPath === preferences.app.defaultHomePath
+        ? {}
+        : { redirect: encodeURIComponent(fullPath) },
+    replace: true,
+  };
 }
 
 /**
@@ -67,6 +83,13 @@ function setupAccessGuard(router: Router) {
     const authStore = useAuthStore();
     const dictStore = useDictStore();
 
+    if (isBlockedMenuPath(to.path)) {
+      return {
+        path: preferences.app.defaultHomePath,
+        replace: true,
+      };
+    }
+
     // 基本路由，这些路由不需要进入权限拦截
     if (coreRouteNames.includes(to.name as string)) {
       if (to.path === LOGIN_PATH && accessStore.accessToken) {
@@ -91,16 +114,7 @@ function setupAccessGuard(router: Router) {
 
       // 没有访问权限，跳转登录页面
       if (to.fullPath !== LOGIN_PATH) {
-        return {
-          path: LOGIN_PATH,
-          // 如不需要，直接删除 query
-          query:
-            to.fullPath === preferences.app.defaultHomePath
-              ? {}
-              : { redirect: encodeURIComponent(to.fullPath) },
-          // 携带当前跳转的页面，登录后重新跳转该页面
-          replace: true,
-        };
+        return buildLoginRedirect(to.fullPath);
       }
       return to;
     }
@@ -110,6 +124,8 @@ function setupAccessGuard(router: Router) {
 
     // 是否已经生成过动态路由
     if (accessStore.isAccessChecked) {
+      accessStore.setAccessMenus(filterMenuRecords(accessStore.accessMenus));
+      accessStore.setAccessRoutes(filterAccessRoutes(accessStore.accessRoutes));
       return shouldRedirectNonAdminToOaLite(to.path, userRoles)
         ? {
             path: OA_LITE_HOME_PATH,
@@ -133,6 +149,9 @@ function setupAccessGuard(router: Router) {
         if (authPermissionInfo) {
           userInfo = authPermissionInfo.user;
         }
+      } catch (error) {
+        console.error('加载用户信息失败，已回退到登录页', error);
+        return buildLoginRedirect(to.fullPath);
       } finally {
         loading();
       }
@@ -148,8 +167,8 @@ function setupAccessGuard(router: Router) {
     });
 
     // 保存菜单信息和路由信息
-    accessStore.setAccessMenus(accessibleMenus);
-    accessStore.setAccessRoutes(accessibleRoutes);
+    accessStore.setAccessMenus(filterMenuRecords(accessibleMenus));
+    accessStore.setAccessRoutes(filterAccessRoutes(accessibleRoutes));
     accessStore.setIsAccessChecked(true);
     userStore.setUserRoles(userRoles);
     const redirectPath = (from.query.redirect ??

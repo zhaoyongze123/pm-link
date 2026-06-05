@@ -48,7 +48,7 @@ async function calcContentHeight() {
 }
 
 function isDocAlertEnable(): boolean {
-  return import.meta.env.VITE_APP_DOCALERT_ENABLE !== 'false';
+  return false;
 }
 
 onMounted(() => {

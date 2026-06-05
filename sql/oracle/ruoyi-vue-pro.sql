@@ -3970,8 +3970,8 @@ COMMENT ON TABLE system_role IS '角色信息表';
 -- ----------------------------
 -- @formatter:off
 INSERT INTO system_role (id, name, code, sort, data_scope, data_scope_dept_ids, status, type, remark, creator, create_time, updater, update_time, deleted, tenant_id) VALUES (1, '超级管理员', 'super_admin', 1, 1, '', 0, 1, '超级管理员', 'admin', to_date('2021-01-05 17:03:48', 'SYYYY-MM-DD HH24:MI:SS'), '', to_date('2022-02-22 05:08:21', 'SYYYY-MM-DD HH24:MI:SS'), '0', 1);
-INSERT INTO system_role (id, name, code, sort, data_scope, data_scope_dept_ids, status, type, remark, creator, create_time, updater, update_time, deleted, tenant_id) VALUES (2, '普通角色', 'common', 2, 2, '', 0, 1, '普通角色', 'admin', to_date('2021-01-05 17:03:48', 'SYYYY-MM-DD HH24:MI:SS'), '', to_date('2022-02-22 05:08:20', 'SYYYY-MM-DD HH24:MI:SS'), '0', 1);
-INSERT INTO system_role (id, name, code, sort, data_scope, data_scope_dept_ids, status, type, remark, creator, create_time, updater, update_time, deleted, tenant_id) VALUES (3, 'CRM 管理员', 'crm_admin', 2, 1, '', 0, 1, 'CRM 专属角色', '1', to_date('2024-02-24 10:51:13', 'SYYYY-MM-DD HH24:MI:SS'), '1', to_date('2024-02-24 02:51:32', 'SYYYY-MM-DD HH24:MI:SS'), '0', 1);
+INSERT INTO system_role (id, name, code, sort, data_scope, data_scope_dept_ids, status, type, remark, creator, create_time, updater, update_time, deleted, tenant_id) VALUES (2, '普通用户', 'common_user', 2, 2, '', 0, 1, '普通用户', 'admin', to_date('2021-01-05 17:03:48', 'SYYYY-MM-DD HH24:MI:SS'), '', to_date('2022-02-22 05:08:20', 'SYYYY-MM-DD HH24:MI:SS'), '0', 1);
+INSERT INTO system_role (id, name, code, sort, data_scope, data_scope_dept_ids, status, type, remark, creator, create_time, updater, update_time, deleted, tenant_id) VALUES (3, '部门管理员', 'dept_admin', 2, 1, '', 0, 1, '部门管理员', '1', to_date('2024-02-24 10:51:13', 'SYYYY-MM-DD HH24:MI:SS'), '1', to_date('2024-02-24 02:51:32', 'SYYYY-MM-DD HH24:MI:SS'), '0', 1);
 INSERT INTO system_role (id, name, code, sort, data_scope, data_scope_dept_ids, status, type, remark, creator, create_time, updater, update_time, deleted, tenant_id) VALUES (109, '租户管理员', 'tenant_admin', 0, 1, '', 0, 1, '系统自动生成', '1', to_date('2022-02-22 00:56:14', 'SYYYY-MM-DD HH24:MI:SS'), '1', to_date('2022-02-22 00:56:14', 'SYYYY-MM-DD HH24:MI:SS'), '0', 121);
 INSERT INTO system_role (id, name, code, sort, data_scope, data_scope_dept_ids, status, type, remark, creator, create_time, updater, update_time, deleted, tenant_id) VALUES (111, '租户管理员', 'tenant_admin', 0, 1, '', 0, 1, '系统自动生成', '1', to_date('2022-03-07 21:37:58', 'SYYYY-MM-DD HH24:MI:SS'), '1', to_date('2022-03-07 21:37:58', 'SYYYY-MM-DD HH24:MI:SS'), '0', 122);
 INSERT INTO system_role (id, name, code, sort, data_scope, data_scope_dept_ids, status, type, remark, creator, create_time, updater, update_time, deleted, tenant_id) VALUES (155, '测试数据权限1', 'test-dp', 4, 2, '[112,100,102,103,104,105,107,108]', 0, 2, '1111', '1', to_date('2025-03-31 14:58:06', 'SYYYY-MM-DD HH24:MI:SS'), '1', to_date('2025-12-04 23:29:40', 'SYYYY-MM-DD HH24:MI:SS'), '0', 1);
@@ -5801,4 +5801,3 @@ COMMIT;
 
 CREATE SEQUENCE yudao_demo03_student_seq
     START WITH 10;
-

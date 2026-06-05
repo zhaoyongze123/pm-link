@@ -16,6 +16,12 @@ public interface ErrorCodeConstants {
     ErrorCode AUTH_THIRD_LOGIN_NOT_BIND = new ErrorCode(1_002_000_005, "未绑定账号，需要进行绑定");
     ErrorCode AUTH_MOBILE_NOT_EXISTS = new ErrorCode(1_002_000_007, "手机号不存在");
     ErrorCode AUTH_REGISTER_CAPTCHA_CODE_ERROR = new ErrorCode(1_002_000_008, "验证码不正确，原因：{}");
+    ErrorCode AUTH_KOD_SSO_DISABLED = new ErrorCode(1_002_000_009, "可道云单点登录未启用");
+    ErrorCode AUTH_KOD_SSO_BAD_REQUEST = new ErrorCode(1_002_000_010, "可道云单点登录配置不完整或参数不合法，原因：{}");
+    ErrorCode AUTH_KOD_SSO_TOKEN_INVALID = new ErrorCode(1_002_000_011, "可道云单点登录失败，原因：{}");
+    ErrorCode AUTH_KOD_SSO_EXCHANGE_CODE_NOT_FOUND = new ErrorCode(1_002_000_012, "可道云登录换票码不存在或已过期");
+    ErrorCode AUTH_KOD_SSO_AUTO_CREATE_DISABLED = new ErrorCode(1_002_000_013, "当前可道云账号未绑定本地用户，且未开启自动创建");
+    ErrorCode AUTH_KOD_SSO_REDIRECT_URI_INVALID = new ErrorCode(1_002_000_014, "可道云回跳地址不合法");
 
     // ========== 菜单模块 1-002-001-000 ==========
     ErrorCode MENU_NAME_DUPLICATE = new ErrorCode(1_002_001_000, "已经存在该名字的菜单");

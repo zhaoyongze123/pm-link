@@ -53,6 +53,10 @@ public class UserProfileController {
     public CommonResult<UserProfileRespVO> getUserProfile() {
         // 获得用户基本信息
         AdminUserDO user = userService.getUser(getLoginUserId());
+        if (user == null) {
+            log.warn("获取个人中心信息失败，当前登录用户不存在，userId={}", getLoginUserId());
+            return success(null);
+        }
         // 获得用户角色
         List<RoleDO> userRoles = roleService.getRoleListFromCache(permissionService.getUserRoleIdListByUserId(user.getId()));
         // 获得部门信息

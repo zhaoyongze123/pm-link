@@ -241,6 +241,15 @@ public class AdminUserServiceImpl implements AdminUserService {
     }
 
     @Override
+    public void updateUserDept(Long id, Long deptId) {
+        validateUserExists(id);
+        if (deptId != null) {
+            deptService.validateDeptList(CollectionUtils.singleton(deptId));
+        }
+        userMapper.updateById(new AdminUserDO().setId(id).setDeptId(deptId));
+    }
+
+    @Override
     @Transactional(rollbackFor = Exception.class)
     @LogRecord(type = SYSTEM_USER_TYPE, subType = SYSTEM_USER_DELETE_SUB_TYPE, bizNo = "{{#id}}",
             success = SYSTEM_USER_DELETE_SUCCESS)

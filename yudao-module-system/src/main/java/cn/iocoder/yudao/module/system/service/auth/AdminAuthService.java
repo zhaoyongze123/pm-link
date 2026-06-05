@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.system.service.auth;
 
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.system.enums.logger.LoginLogTypeEnum;
 
 import javax.validation.Valid;
 
@@ -61,6 +62,16 @@ public interface AdminAuthService {
      * @return 登录结果
      */
     AuthLoginRespVO socialLogin(@Valid AuthSocialLoginReqVO reqVO);
+
+    /**
+     * 基于已识别的用户直接创建登录态
+     *
+     * @param userId 用户编号
+     * @param username 登录账号
+     * @param logType 登录类型
+     * @return 登录结果
+     */
+    AuthLoginRespVO createLoginToken(Long userId, String username, LoginLogTypeEnum logType);
 
     /**
      * 刷新访问令牌
