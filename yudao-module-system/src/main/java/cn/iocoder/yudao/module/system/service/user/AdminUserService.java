@@ -89,6 +89,14 @@ public interface AdminUserService {
     void updateUserStatus(Long id, Integer status);
 
     /**
+     * 同步用户部门
+     *
+     * @param id 用户编号
+     * @param deptId 部门编号，允许为空
+     */
+    void updateUserDept(Long id, Long deptId);
+
+    /**
      * 删除用户
      *
      * @param id 用户编号

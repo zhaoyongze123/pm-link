@@ -8,13 +8,17 @@ import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.framework.security.config.SecurityProperties;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
+import cn.iocoder.yudao.framework.tenant.core.aop.TenantIgnore;
+import cn.iocoder.yudao.framework.tenant.core.util.TenantUtils;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.*;
 import cn.iocoder.yudao.module.system.convert.auth.AuthConvert;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.MenuDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.permission.RoleDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.enums.logger.LoginLogTypeEnum;
+import cn.iocoder.yudao.module.system.framework.kodsso.config.KodSsoProperties;
 import cn.iocoder.yudao.module.system.service.auth.AdminAuthService;
+import cn.iocoder.yudao.module.system.service.auth.KodSsoService;
 import cn.iocoder.yudao.module.system.service.permission.MenuService;
 import cn.iocoder.yudao.module.system.service.permission.PermissionService;
 import cn.iocoder.yudao.module.system.service.permission.RoleService;
@@ -31,14 +35,18 @@ import org.springframework.web.bind.annotation.*;
 import javax.annotation.Resource;
 import javax.annotation.security.PermitAll;
 import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
+import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.util.collection.CollectionUtils.convertSet;
+import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.AUTH_KOD_SSO_BAD_REQUEST;
 
 @Tag(name = "管理后台 - 认证")
 @RestController
@@ -59,6 +67,10 @@ public class AuthController {
     private PermissionService permissionService;
     @Resource
     private SocialClientService socialClientService;
+    @Resource
+    private KodSsoService kodSsoService;
+    @Resource
+    private KodSsoProperties kodSsoProperties;
 
     @Resource
     private SecurityProperties securityProperties;
@@ -171,6 +183,54 @@ public class AuthController {
     @Operation(summary = "社交快捷登录，使用 code 授权码", description = "适合未登录的用户，但是社交账号已绑定用户")
     public CommonResult<AuthLoginRespVO> socialQuickLogin(@RequestBody @Valid AuthSocialLoginReqVO reqVO) {
         return success(authService.socialLogin(reqVO));
+    }
+
+    @GetMapping("/kod-sso/start")
+    @PermitAll
+    @TenantIgnore
+    @Operation(summary = "可道云单点登录启动")
+    @Parameter(name = "redirectUri", description = "前端回跳地址，可选")
+    public void startKodSso(HttpServletRequest request, HttpServletResponse response,
+                            @RequestParam(value = "redirectUri", required = false) String redirectUri) throws IOException {
+        response.sendRedirect(kodSsoService.buildAuthorizeRedirectUrl(request, redirectUri));
+    }
+
+    @GetMapping("/kod-sso/callback")
+    @PermitAll
+    @TenantIgnore
+    @Operation(summary = "可道云单点登录回调")
+    @Parameters({
+            @Parameter(name = "kodTokenApi", description = "可道云返回的访问令牌", required = true),
+            @Parameter(name = "redirectUri", description = "前端回跳地址，可选")
+    })
+    public CommonResult<AuthLoginRespVO> callbackKodSso(HttpServletResponse response,
+                                                        @RequestParam("kodTokenApi") String kodTokenApi,
+                                                        @RequestParam(value = "redirectUri", required = false) String redirectUri) throws IOException {
+        Long tenantId = getKodSsoTenantId();
+        if (StrUtil.isBlank(redirectUri)) {
+            return success(TenantUtils.execute(tenantId, () -> kodSsoService.loginByKodToken(kodTokenApi)));
+        }
+        String clientRedirectUrl = TenantUtils.execute(tenantId,
+                () -> kodSsoService.buildClientRedirectUrl(kodTokenApi, redirectUri));
+        response.sendRedirect(clientRedirectUrl);
+        return null;
+    }
+
+    @PostMapping("/kod-sso/exchange")
+    @PermitAll
+    @TenantIgnore
+    @Operation(summary = "可道云单点登录换取本系统令牌")
+    @Parameter(name = "code", description = "一次性换票码", required = true)
+    public CommonResult<AuthLoginRespVO> exchangeKodSso(@RequestParam("code") String code) {
+        return success(TenantUtils.execute(getKodSsoTenantId(), () -> kodSsoService.exchangeCode(code)));
+    }
+
+    private Long getKodSsoTenantId() {
+        Long tenantId = kodSsoProperties.getTenantId();
+        if (tenantId == null || tenantId <= 0) {
+            throw exception(AUTH_KOD_SSO_BAD_REQUEST, "缺少可道云 SSO tenantId 配置");
+        }
+        return tenantId;
     }
 
 }

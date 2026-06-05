@@ -159,3 +159,10 @@ export async function socialLogin(data: AuthApi.SocialLoginParams) {
     data,
   );
 }
+
+/** 可道云单点登录换票 */
+export async function kodSsoExchange(code: string) {
+  return requestClient.post<AuthApi.LoginResult>(
+    `/system/auth/kod-sso/exchange?code=${encodeURIComponent(code)}`,
+  );
+}

@@ -68,6 +68,20 @@ interface TabbarState {
  * @zh_CN 访问历史记录最大数量
  */
 const MAX_VISIT_HISTORY = 50;
+const REMOVED_TAB_PATH_PREFIXES = ['/system/dict'];
+
+function isRemovedTabPath(path?: string) {
+  if (!path) {
+    return false;
+  }
+  return REMOVED_TAB_PATH_PREFIXES.some(
+    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  );
+}
+
+function filterRemovedTabs<T extends { path?: string }>(tabs: T[] = []) {
+  return tabs.filter((tab) => !isRemovedTabPath(tab.path));
+}
 
 /**
  * @zh_CN 访问权限相关
@@ -584,7 +598,9 @@ export const useTabbarStore = defineStore('core-tabbar', {
   },
   getters: {
     affixTabs(): TabDefinition[] {
-      const affixTabs = this.tabs.filter((tab) => isAffixTab(tab));
+      const affixTabs = filterRemovedTabs(
+        this.tabs.filter((tab) => isAffixTab(tab)),
+      );
 
       return affixTabs.toSorted((a, b) => {
         const orderA = (a.meta?.affixTabOrder ?? 0) as number;
@@ -602,7 +618,9 @@ export const useTabbarStore = defineStore('core-tabbar', {
       return this.menuList;
     },
     getTabs(): TabDefinition[] {
-      const normalTabs = this.tabs.filter((tab) => !isAffixTab(tab));
+      const normalTabs = filterRemovedTabs(
+        this.tabs.filter((tab) => !isAffixTab(tab)),
+      );
       return [...this.affixTabs, ...normalTabs].filter(Boolean);
     },
     getCachedRoutes(): Map<string, RouteCached> {
@@ -618,13 +636,18 @@ export const useTabbarStore = defineStore('core-tabbar', {
         serialize: JSON.stringify,
         deserialize(value: string) {
           const parsed = JSON.parse(value);
+          parsed.tabs = filterRemovedTabs(parsed.tabs || []);
           // Stack 类实例经 JSON 序列化后会变成普通对象 {dedup, items, maxSize}，
           // 丢失所有方法和 getter，需要重新构建 Stack 实例
           if (parsed.visitHistory && !(parsed.visitHistory instanceof Stack)) {
             const raw = parsed.visitHistory;
             const stack = createStack<string>(true, MAX_VISIT_HISTORY);
             if (Array.isArray(raw.items)) {
-              stack.push(...raw.items);
+              stack.push(
+                ...raw.items.filter(
+                  (item: string) => !isRemovedTabPath(item?.split('?')[0]),
+                ),
+              );
             }
             parsed.visitHistory = stack;
           }

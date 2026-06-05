@@ -187,6 +187,18 @@ public class AdminAuthServiceImpl implements AdminAuthService {
         return createTokenAfterLoginSuccess(user.getId(), user.getUsername(), LoginLogTypeEnum.LOGIN_SOCIAL);
     }
 
+    @Override
+    public AuthLoginRespVO createLoginToken(Long userId, String username, LoginLogTypeEnum logType) {
+        AdminUserDO user = userService.getUser(userId);
+        if (user == null) {
+            throw exception(USER_NOT_EXISTS);
+        }
+        if (CommonStatusEnum.isDisable(user.getStatus())) {
+            throw exception(AUTH_LOGIN_USER_DISABLED);
+        }
+        return createTokenAfterLoginSuccess(userId, username, logType);
+    }
+
     @VisibleForTesting
     void validateCaptcha(AuthLoginReqVO reqVO) {
         ResponseModel response = doValidateCaptcha(reqVO);

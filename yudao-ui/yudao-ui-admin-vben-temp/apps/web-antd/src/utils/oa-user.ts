@@ -1,4 +1,4 @@
-const ADMIN_ROLE_CODES = new Set(['super_admin']);
+const ADMIN_ROLE_CODES = new Set(['super_admin', 'dept_admin']);
 const REMOVED_HOME_PATHS = new Set(['/analytics', '/workspace', '/dashboard']);
 const OA_LITE_HOME_PATH = '/oa-lite';
 

@@ -15,6 +15,7 @@ import {
   ref,
   watch,
 } from 'vue';
+import { useRoute } from 'vue-router';
 
 import {
   BpmCandidateStrategyEnum,
@@ -74,6 +75,7 @@ import {
   updateAllNotifyMessageRead,
   updateNotifyMessageRead,
 } from '#/api/system/notify/message';
+import { kodSsoExchange } from '#/api/core/auth';
 import { getUserProfile } from '#/api/system/user/profile';
 import { router } from '#/router';
 import { getSimpleUserList } from '#/api/system/user';
@@ -413,7 +415,7 @@ const authStore = useAuthStore();
 const accessStore = useAccessStore();
 const userStore = useUserStore();
 const { t } = useI18n();
-const refreshToken = accessStore.refreshToken as string;
+const route = useRoute();
 
 const loading = ref(false);
 const leaveSubmitting = ref(false);
@@ -453,17 +455,88 @@ const headerNotifications = ref<OaHeaderNotificationItem[]>([]);
 const headerUnreadCount = ref(0);
 const showNotificationDot = computed(() => headerUnreadCount.value > 0);
 let notificationPollingTimer: null | ReturnType<typeof setInterval> = null;
-const webSocketServer = `${`${import.meta.env.VITE_BASE_URL}/infra/ws`.replace(
-  'http',
-  'ws',
-)}?token=${refreshToken}`;
-const { data: webSocketData, close: closeWebSocket } = useWebSocket(
-  webSocketServer,
-  {
-    autoReconnect: true,
-    heartbeat: true,
-  },
-);
+const webSocketServer = ref('');
+const {
+  data: webSocketData,
+  close: closeWebSocket,
+  open: openWebSocket,
+} = useWebSocket(webSocketServer, {
+  autoReconnect: true,
+  heartbeat: true,
+  immediate: false,
+});
+
+function buildWebSocketServer(refreshToken: string) {
+  return `${`${import.meta.env.VITE_BASE_URL}/infra/ws`.replace(
+    'http',
+    'ws',
+  )}?token=${encodeURIComponent(refreshToken)}`;
+}
+
+function connectTaskWebSocket() {
+  const refreshToken = accessStore.refreshToken as string;
+  if (!refreshToken) {
+    return;
+  }
+  const nextServer = buildWebSocketServer(refreshToken);
+  if (webSocketServer.value !== nextServer) {
+    closeWebSocket();
+    webSocketServer.value = nextServer;
+  }
+  openWebSocket();
+}
+
+function resolveTenantIdFromQuery() {
+  const tenantId = route.query.tenantId;
+  const tenantIdText = Array.isArray(tenantId) ? tenantId[0] : tenantId;
+  if (!tenantIdText) {
+    return null;
+  }
+  const parsedTenantId = Number(tenantIdText);
+  return Number.isFinite(parsedTenantId) && parsedTenantId > 0
+    ? parsedTenantId
+    : null;
+}
+
+async function handleKodSsoAutoLogin() {
+  const tenantId = resolveTenantIdFromQuery();
+  if (tenantId) {
+    accessStore.setTenantId(tenantId);
+  }
+
+  const kodSsoCode = route.query.kodSsoCode;
+  const code = Array.isArray(kodSsoCode) ? kodSsoCode[0] : kodSsoCode;
+  if (!code) {
+    return;
+  }
+  if (!tenantId && !accessStore.tenantId) {
+    throw new Error('缺少租户编号，无法完成可道云登录');
+  }
+
+  const loginResult = await kodSsoExchange(code);
+  accessStore.setAccessToken(loginResult.accessToken);
+  accessStore.setRefreshToken(loginResult.refreshToken);
+  await authStore.fetchUserInfo();
+
+  const nextQuery = { ...route.query };
+  delete nextQuery.kodSsoCode;
+  await router.replace({
+    path: route.path,
+    query: nextQuery,
+  });
+}
+
+async function clearKodSsoCodeFromQuery() {
+  if (!('kodSsoCode' in route.query)) {
+    return;
+  }
+  const nextQuery = { ...route.query };
+  delete nextQuery.kodSsoCode;
+  await router.replace({
+    path: route.path,
+    query: nextQuery,
+  });
+}
 
 const oaLiteTheme = {
   algorithm: [antdTheme.defaultAlgorithm],
@@ -1835,12 +1908,27 @@ onMounted(async () => {
     document.body.classList.add(OA_LITE_BODY_THEME_CLASS);
   }
   try {
+    try {
+      await handleKodSsoAutoLogin();
+    } catch (error: any) {
+      const hasLoginState = Boolean(accessStore.accessToken);
+      await clearKodSsoCodeFromQuery();
+      if (!hasLoginState) {
+        throw error;
+      }
+      message.warning(error?.message || t('page.oaLite.messages.loadPageFailed'));
+    }
+    connectTaskWebSocket();
     await Promise.all([
       loadBaseOptions(),
-      loadLeaveDefinition(),
+      loadLeaveDefinition().catch((error: any) => {
+        message.warning(
+          error?.message || t('page.oaLite.messages.leaveModelMissing'),
+        );
+      }),
       syncCurrentUserProfile(),
     ]);
-    await handleNotificationGetUnreadCount();
+    await Promise.all([handleNotificationGetUnreadCount(), refreshAllTabs()]);
     notificationPollingTimer = setInterval(() => {
       if (userStore.userInfo) {
         handleNotificationGetUnreadCount();
@@ -1848,10 +1936,9 @@ onMounted(async () => {
     }, 1000 * 60 * 2);
     if (availableTemplateDefinitions.value.length === 0) {
       message.error(t('page.oaLite.messages.leaveModelMissing'));
-      return;
+    } else {
+      applyLeaveDefinitionFilterDefaults();
     }
-    applyLeaveDefinitionFilterDefaults();
-    await refreshAllTabs();
   } catch (error: any) {
     message.error(error?.message || t('page.oaLite.messages.loadPageFailed'));
   }

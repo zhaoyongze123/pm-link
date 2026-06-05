@@ -109,6 +109,15 @@ const coreRoutes: RouteRecordRaw[] = [
           title: $t('page.auth.login'),
         },
       },
+      {
+        name: 'KodSSOLogin',
+        path: 'kod-sso-login',
+        component: () =>
+          import('#/views/_core/authentication/kod-sso-login.vue'),
+        meta: {
+          title: $t('page.auth.login'),
+        },
+      },
     ],
   },
   /**

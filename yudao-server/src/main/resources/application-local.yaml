@@ -1,6 +1,24 @@
 server:
   port: 48080
 
+yudao:
+  security:
+    permit-all-urls:
+      - /admin-api/system/auth/kod-sso/start
+      - /admin-api/system/auth/kod-sso/callback
+      - /admin-api/system/auth/kod-sso/exchange
+  tenant:
+    ignore-urls:
+      - /admin-api/system/auth/kod-sso/start
+      - /admin-api/system/auth/kod-sso/callback
+      - /admin-api/system/auth/kod-sso/exchange
+  kod-sso:
+    enabled: true
+    base-url: http://192.168.1.108/
+    app-name: user:all
+    redirect-uri: http://192.168.1.103:5666/auth/kod-sso-login?tenantId=1
+    tenant-id: 1
+
 --- #################### 数据库相关配置 ####################
 spring:
   autoconfigure:

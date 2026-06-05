@@ -22,6 +22,7 @@ import {
 } from '#/api';
 import { getUserProfile } from '#/api/system/user/profile';
 import { $t } from '#/locales';
+import { filterAccessMenus } from '#/utils/menu-filter';
 import { resolveUserHomePath } from '#/utils/oa-user';
 
 const MENU_WHITELIST = new Set(['系统管理', '基础设施', '工作流程']);
@@ -154,7 +155,9 @@ export const useAuthStore = defineStore('auth', () => {
       getUserProfile().catch(() => null),
     ]);
     authPermissionInfo = permissionInfo;
-    const filteredMenus = filterTopLevelMenus(authPermissionInfo.menus || []);
+    const filteredMenus = filterAccessMenus(
+      filterTopLevelMenus(authPermissionInfo.menus || []),
+    );
     const userRoles = authPermissionInfo.roles || [];
     const normalizedUser = {
       ...authPermissionInfo.user,
