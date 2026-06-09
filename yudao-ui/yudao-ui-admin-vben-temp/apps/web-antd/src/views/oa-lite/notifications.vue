@@ -1,24 +1,30 @@
 <script lang="ts" setup>
 import type { SystemNotifyMessageApi } from '#/api/system/notify/message';
+import type { SystemNoticeApi } from '#/api/system/notice';
 
 import { computed, onMounted, onUnmounted, reactive, ref } from 'vue';
+import { useRoute } from 'vue-router';
 
 import { formatDateTime } from '@vben/utils';
 
 import { Button, Empty, message, Modal, Pagination, Spin, Tag } from 'ant-design-vue';
 
 import {
+  extractNoticeId,
   getMyNotifyMessagePage,
   updateAllNotifyMessageRead,
   updateNotifyMessageRead,
 } from '#/api/system/notify/message';
+import { getNotice } from '#/api/system/notice';
 import { router } from '#/router';
 
 type ReadFilter = 'all' | 'read' | 'unread';
-const OA_LITE_BODY_THEME_CLASS = 'oa-lite-light-theme';
+const OA_LITE_NOTICE_PUSH_EVENT = 'oa-lite-notice-push';
+const route = useRoute();
 
 const loading = ref(false);
 const selectedMessage = ref<null | SystemNotifyMessageApi.NotifyMessage>(null);
+const selectedNotice = ref<SystemNoticeApi.Notice>();
 const readFilter = ref<ReadFilter>('all');
 const messages = ref<SystemNotifyMessageApi.NotifyMessage[]>([]);
 
@@ -55,9 +61,31 @@ async function loadMessages() {
     });
     messages.value = pageResult.list;
     pageState.total = pageResult.total;
+    await tryOpenMessageFromRoute();
   } finally {
     loading.value = false;
   }
+}
+
+function resolveRouteMessageId() {
+  const raw = route.query.messageId;
+  if (Array.isArray(raw)) {
+    return Number(raw[0]);
+  }
+  return raw ? Number(raw) : undefined;
+}
+
+async function tryOpenMessageFromRoute() {
+  const routeMessageId = resolveRouteMessageId();
+  if (!routeMessageId) {
+    return;
+  }
+  const target = messages.value.find((item) => item.id === routeMessageId);
+  if (!target) {
+    return;
+  }
+  await handleViewDetail(target);
+  router.replace({ path: route.path, query: {} });
 }
 
 async function handleFilterChange(filter: ReadFilter) {
@@ -79,13 +107,51 @@ function handleBack() {
   router.push({ name: 'OALite' });
 }
 
-function handleViewDetail(item: SystemNotifyMessageApi.NotifyMessage) {
+function stripHtmlContent(value?: string) {
+  if (!value) {
+    return '';
+  }
+  return value
+    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function resolveMessagePreview(item: SystemNotifyMessageApi.NotifyMessage) {
+  const noticeId = extractNoticeId(item);
+  if (!noticeId) {
+    return stripHtmlContent(item.templateContent) || '点击查看详情';
+  }
+  const content =
+    typeof item.templateParams?.content === 'string' ? item.templateParams.content : '';
+  const preview = stripHtmlContent(content || item.templateContent);
+  return preview || '点击查看公告详情';
+}
+
+async function handleViewDetail(item: SystemNotifyMessageApi.NotifyMessage) {
+  if (!item.readStatus) {
+    await updateNotifyMessageRead([item.id]);
+    item.readStatus = true;
+    item.readTime = new Date() as any;
+  }
   selectedMessage.value = item;
+  selectedNotice.value = undefined;
+  const noticeId = extractNoticeId(item);
+  if (!noticeId) {
+    return;
+  }
+  selectedNotice.value = await getNotice(noticeId);
 }
 
 async function handleMarkRead(item: SystemNotifyMessageApi.NotifyMessage) {
   if (item.readStatus) {
-    handleViewDetail(item);
+    await handleViewDetail(item);
     return;
   }
   const hideLoading = message.loading({
@@ -101,6 +167,8 @@ async function handleMarkRead(item: SystemNotifyMessageApi.NotifyMessage) {
       readStatus: true,
       readTime: new Date(),
     };
+    const noticeId = extractNoticeId(item);
+    selectedNotice.value = noticeId ? await getNotice(noticeId) : undefined;
   } finally {
     hideLoading();
   }
@@ -121,127 +189,159 @@ async function handleMarkAllRead() {
 }
 
 onMounted(() => {
-  document.body.classList.add(OA_LITE_BODY_THEME_CLASS);
   loadMessages();
+  if (typeof window !== 'undefined') {
+    window.addEventListener(OA_LITE_NOTICE_PUSH_EVENT, loadMessages);
+  }
 });
 
 onUnmounted(() => {
-  document.body.classList.remove(OA_LITE_BODY_THEME_CLASS);
+  if (typeof window !== 'undefined') {
+    window.removeEventListener(OA_LITE_NOTICE_PUSH_EVENT, loadMessages);
+  }
 });
 </script>
 
 <template>
   <div class="oa-notify-page">
     <div class="oa-notify-shell">
-      <header class="oa-notify-header">
-        <div class="oa-notify-header-main">
-          <div class="oa-notify-kicker">通知中心</div>
-          <div class="oa-notify-title-row">
-            <h1>全部历史消息</h1>
-            <span class="oa-notify-title-meta">历史存档</span>
-          </div>
-          <p>统一查看待办、抄送和后续站内提醒，已读记录会持续保留。</p>
+      <section class="oa-notify-hero">
+        <div class="oa-notify-hero-main">
+          <div class="oa-notify-eyebrow">Notifications</div>
+          <h1 class="oa-notify-heading">消息中心</h1>
         </div>
-        <div class="oa-notify-header-actions">
-          <Button @click="handleBack">返回 OA</Button>
-          <Button type="primary" @click="handleMarkAllRead">全部标记已读</Button>
-        </div>
-      </header>
-
-      <section class="oa-notify-toolbar">
-        <div class="oa-notify-filters">
-          <button
-            v-for="option in readFilterOptions"
-            :key="option.key"
-            class="oa-notify-filter"
-            :class="{ active: readFilter === option.key }"
-            type="button"
-            @click="handleFilterChange(option.key)"
-          >
-            {{ option.label }}
-          </button>
-        </div>
-        <div class="oa-notify-summary">
-          <span>当前页未读 {{ unreadCount }} 条</span>
+        <div class="oa-notify-hero-summary">
+          <span>未读 {{ unreadCount }}</span>
           <span class="oa-notify-summary-divider"></span>
-          <span>共 {{ pageState.total }} 条历史消息</span>
+          <span>历史 {{ pageState.total }}</span>
         </div>
       </section>
 
-      <section class="oa-notify-list-card">
-        <div class="oa-notify-list-head">
-          <span class="sender">发送人</span>
-          <span class="content">消息内容</span>
-          <span class="time">时间</span>
-          <span class="status">状态</span>
-          <span class="action">操作</span>
+      <section class="oa-notify-section">
+        <div class="oa-notify-section-head">
+          <div>
+            <h3 class="oa-notify-section-title">消息筛选与处理</h3>
+          </div>
+          <div class="oa-notify-header-actions">
+            <Button @click="handleBack">返回 OA</Button>
+            <Button type="primary" @click="handleMarkAllRead">全部标记已读</Button>
+          </div>
         </div>
-        <Spin :spinning="loading">
-          <template v-if="messages.length > 0">
-            <article
-              v-for="item in messages"
-              :key="item.id"
-              class="oa-notify-item"
-              :class="{ unread: !item.readStatus }"
-            >
-              <div class="oa-notify-item-main" @click="handleViewDetail(item)">
-                <div class="oa-notify-item-sender">
-                  <span v-if="!item.readStatus" class="oa-notify-dot"></span>
-                  <span>{{ item.templateNickname }}</span>
-                </div>
-                <div class="oa-notify-item-content">
-                  <div class="oa-notify-item-subject">{{ item.templateContent }}</div>
-                </div>
-                <div class="oa-notify-item-time">
-                  <span>{{ formatDateTime(item.createTime) }}</span>
-                  <span v-if="item.readTime" class="oa-notify-read-time">
-                    读于 {{ formatDateTime(item.readTime) }}
-                  </span>
-                </div>
-                <div class="oa-notify-item-status">
-                  <Tag
-                    :color="item.readStatus ? 'default' : 'processing'"
-                    class="oa-notify-status-tag"
-                    :class="{ read: item.readStatus, unread: !item.readStatus }"
-                  >
-                    {{ item.readStatus ? '已读' : '未读' }}
-                  </Tag>
-                </div>
-              </div>
-              <div class="oa-notify-item-actions">
-                <Button type="link" @click="handleViewDetail(item)">查看详情</Button>
-                <Button
-                  v-if="!item.readStatus"
-                  type="link"
-                  @click="handleMarkRead(item)"
+        <div class="oa-notify-section-body">
+          <section class="oa-notify-toolbar">
+            <div class="oa-notify-filters">
+              <button
+                v-for="option in readFilterOptions"
+                :key="option.key"
+                class="oa-notify-filter"
+                :class="{ active: readFilter === option.key }"
+                type="button"
+                @click="handleFilterChange(option.key)"
+              >
+                {{ option.label }}
+              </button>
+            </div>
+            <div class="oa-notify-summary">
+              <span>当前页未读 {{ unreadCount }} 条</span>
+              <span class="oa-notify-summary-divider"></span>
+              <span>共 {{ pageState.total }} 条历史消息</span>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <section class="oa-notify-section oa-notify-list-panel">
+        <div class="oa-notify-section-head">
+          <div>
+            <h3 class="oa-notify-section-title">消息列表</h3>
+          </div>
+        </div>
+        <div class="oa-notify-section-body">
+          <section class="oa-notify-list-shell">
+            <div class="oa-notify-list-head">
+              <span class="sender">发送人</span>
+              <span class="content">消息内容</span>
+              <span class="time">时间</span>
+              <span class="status">状态</span>
+              <span class="action">操作</span>
+            </div>
+            <Spin :spinning="loading">
+              <template v-if="messages.length > 0">
+                <article
+                  v-for="item in messages"
+                  :key="item.id"
+                  class="oa-notify-item"
+                  :class="{ unread: !item.readStatus }"
                 >
-                  标记已读
-                </Button>
-              </div>
-            </article>
-          </template>
-          <Empty v-else description="暂无历史消息" />
-        </Spin>
-      </section>
+                  <button
+                    class="oa-notify-item-main"
+                    type="button"
+                      @click="handleViewDetail(item)"
+                    >
+                      <div class="oa-notify-item-sender">
+                      <span>{{ item.templateNickname }}</span>
+                      <span v-if="!item.readStatus" class="oa-notify-inline-mark">未读</span>
+                      </div>
+                    <div class="oa-notify-item-content">
+                      <div class="oa-notify-item-subject">{{ resolveMessagePreview(item) }}</div>
+                    </div>
+                    <div class="oa-notify-item-time">
+                      <span>{{ formatDateTime(item.createTime) }}</span>
+                      <span v-if="item.readTime" class="oa-notify-read-time">
+                        读于 {{ formatDateTime(item.readTime) }}
+                      </span>
+                    </div>
+                    <div class="oa-notify-item-status">
+                      <Tag
+                        :color="item.readStatus ? 'default' : 'processing'"
+                        class="oa-notify-status-tag"
+                        :class="{ read: item.readStatus, unread: !item.readStatus }"
+                      >
+                        {{ item.readStatus ? '已读' : '未读' }}
+                      </Tag>
+                    </div>
+                  </button>
+                  <div class="oa-notify-item-actions">
+                    <Button type="link" @click="handleViewDetail(item)">查看详情</Button>
+                    <Button
+                      v-if="!item.readStatus"
+                      type="link"
+                      @click="handleMarkRead(item)"
+                    >
+                      标记已读
+                    </Button>
+                  </div>
+                </article>
+              </template>
+              <Empty v-else description="暂无历史消息" />
+            </Spin>
+          </section>
 
-      <div class="oa-notify-pagination">
-        <Pagination
-          :current="pageState.pageNo"
-          :page-size="pageState.pageSize"
-          :total="pageState.total"
-          :show-size-changer="true"
-          :show-total="(total) => `共 ${total} 条`"
-          @change="handlePageChange"
-        />
-      </div>
+          <div class="oa-notify-pagination">
+            <Pagination
+              :current="pageState.pageNo"
+              :page-size="pageState.pageSize"
+              :total="pageState.total"
+              :show-size-changer="true"
+              :show-total="(total) => `共 ${total} 条`"
+              @change="handlePageChange"
+            />
+          </div>
+        </div>
+      </section>
     </div>
 
     <Modal
       :open="selectedMessage !== null"
       title="通知详情"
       :footer="null"
-      wrap-class-name="oa-notify-light-modal"
-      @cancel="selectedMessage = null"
+      wrap-class-name="oa-notify-modal"
+      @cancel="
+        () => {
+          selectedMessage = null;
+          selectedNotice = undefined;
+        }
+      "
     >
       <template v-if="selectedMessage">
         <div class="oa-notify-detail">
@@ -270,7 +370,58 @@ onUnmounted(() => {
             <span class="label">阅读时间</span>
             <span>{{ formatDateTime(selectedMessage.readTime) }}</span>
           </div>
-          <div class="oa-notify-detail-content">
+          <template v-if="selectedNotice">
+            <div class="oa-notify-detail-notice-head">
+              <div>
+                <h3>{{ selectedNotice.title }}</h3>
+                <p>
+                  发布对象：{{ selectedNotice.publishTarget || '全体后台用户' }}
+                  <span class="oa-notify-detail-divider"></span>
+                  发布时间：{{ formatDateTime(selectedNotice.createTime) }}
+                </p>
+              </div>
+              <Tag :color="selectedNotice.pinned ? 'blue' : 'default'">
+                {{ selectedNotice.pinned ? '置顶' : '未置顶' }}
+              </Tag>
+            </div>
+            <div class="oa-notify-detail-content" v-html="selectedNotice.content"></div>
+            <section class="oa-notify-detail-attachments">
+              <div class="oa-notify-detail-attachments-head">附件</div>
+              <div
+                v-if="selectedNotice.attachments && selectedNotice.attachments.length"
+                class="oa-notify-detail-attachment-list"
+              >
+                <div
+                  v-for="attachment in selectedNotice.attachments"
+                  :key="attachment.id"
+                  class="oa-notify-detail-attachment-item"
+                >
+                  <div class="oa-notify-detail-attachment-meta">
+                    <strong>{{ attachment.name }}</strong>
+                    <span>{{ attachment.type || '未知类型' }}</span>
+                  </div>
+                  <div class="oa-notify-detail-attachment-actions">
+                    <Button
+                      type="link"
+                      size="small"
+                      @click="window.open(attachment.url, '_blank', 'noopener,noreferrer')"
+                    >
+                      预览
+                    </Button>
+                    <Button
+                      type="link"
+                      size="small"
+                      @click="window.open(attachment.url, '_blank', 'noopener,noreferrer')"
+                    >
+                      下载
+                    </Button>
+                  </div>
+                </div>
+              </div>
+              <Empty v-else description="暂无附件" :image="Empty.PRESENTED_IMAGE_SIMPLE" />
+            </section>
+          </template>
+          <div v-else class="oa-notify-detail-content oa-notify-detail-content--plain">
             {{ selectedMessage.templateContent }}
           </div>
         </div>
@@ -281,62 +432,79 @@ onUnmounted(() => {
 
 <style scoped>
 .oa-notify-page {
-  min-height: 100vh;
-  padding: 24px 24px 40px;
-  background:
-    linear-gradient(180deg, #f7f9fc 0%, #eef3f9 100%);
+  min-height: 100%;
+  padding: 0 0 24px;
+  background: transparent;
 }
 
 .oa-notify-shell {
-  margin: 0 auto;
-  max-width: 1180px;
-}
-
-.oa-notify-header {
   display: flex;
-  gap: 20px;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 0 18px;
-  border-bottom: 1px solid rgba(203, 213, 225, 0.9);
+  flex-direction: column;
+  gap: 22px;
 }
 
-.oa-notify-header-main {
+.oa-notify-hero {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 4px 0 18px;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.oa-notify-hero-main {
   min-width: 0;
 }
 
-.oa-notify-kicker {
-  margin-bottom: 10px;
-  color: #f97316;
+.oa-notify-eyebrow {
+  color: var(--oa-ink-faint);
   font-size: 12px;
-  font-weight: 600;
-  letter-spacing: 0.12em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
-.oa-notify-title-row {
-  display: flex;
-  gap: 12px;
-  align-items: baseline;
-}
-
-.oa-notify-header h1 {
-  margin: 0;
-  color: #0f172a;
+.oa-notify-heading {
+  margin: 8px 0 0;
+  color: var(--oa-ink);
   font-size: 24px;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
-.oa-notify-title-meta {
-  color: #94a3b8;
+.oa-notify-hero-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--oa-ink-soft);
   font-size: 13px;
 }
 
-.oa-notify-header p {
-  margin: 10px 0 0;
-  color: #64748b;
-  font-size: 14px;
+.oa-notify-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.oa-notify-section-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--oa-shell-border) 72%, transparent);
+}
+
+.oa-notify-section-title {
+  margin: 0;
+  color: var(--oa-ink);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.oa-notify-section-body {
+  min-width: 0;
+  padding-top: 12px;
 }
 
 .oa-notify-header-actions {
@@ -345,21 +513,15 @@ onUnmounted(() => {
   align-items: center;
 }
 
-.oa-notify-toolbar,
-.oa-notify-list-card {
-  margin-top: 18px;
-  border: 1px solid rgba(203, 213, 225, 0.8);
-  background: rgba(255, 255, 255, 0.94);
-}
-
 .oa-notify-toolbar {
-  display: flex;
-  gap: 16px;
-  align-items: center;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: end;
   justify-content: space-between;
-  padding: 14px 18px;
-  border-radius: 14px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+  padding: 0 0 2px;
+  border: 0;
+  background: transparent;
 }
 
 .oa-notify-filters {
@@ -369,39 +531,47 @@ onUnmounted(() => {
 }
 
 .oa-notify-filter {
-  padding: 8px 14px;
-  border: 1px solid #d8e1ed;
-  border-radius: 10px;
-  color: #475569;
-  background: #fff;
+  padding: 8px 0;
+  border: 1px solid var(--oa-shell-border);
+  border-width: 0 0 1px;
+  border-radius: 0;
+  color: var(--oa-ink-soft);
+  background: transparent;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition:
+    border-color 0.2s ease,
+    color 0.2s ease;
+  font-size: 13px;
+  min-width: 58px;
 }
 
 .oa-notify-filter.active {
-  border-color: #2563eb;
-  color: #1d4ed8;
-  background: #eff6ff;
+  border-color: var(--oa-accent);
+  color: var(--oa-accent);
+  background: transparent;
 }
 
 .oa-notify-summary {
   display: flex;
   gap: 10px;
   align-items: center;
-  color: #64748b;
-  font-size: 14px;
+  color: var(--oa-ink-soft);
+  font-size: 13px;
 }
 
 .oa-notify-summary-divider {
   width: 1px;
   height: 12px;
-  background: #cbd5e1;
+  background: var(--oa-shell-border);
 }
 
-.oa-notify-list-card {
-  overflow: hidden;
-  border-radius: 16px;
-  box-shadow: 0 14px 32px rgba(15, 23, 42, 0.05);
+.oa-notify-list-shell {
+  overflow-x: auto;
+  overflow-y: visible;
+  border-radius: 0;
+  border-top: 1px solid var(--oa-shell-border);
+  border-bottom: 0;
+  background: transparent;
 }
 
 .oa-notify-list-head {
@@ -409,25 +579,29 @@ onUnmounted(() => {
   grid-template-columns: 180px minmax(0, 1.8fr) 220px 90px 120px;
   gap: 16px;
   align-items: center;
-  padding: 12px 18px;
-  border-bottom: 1px solid #e2e8f0;
-  color: #64748b;
-  font-size: 12px;
+  padding: 8px 0 12px;
+  border-bottom: 1px solid var(--oa-shell-border);
+  color: var(--oa-ink-soft);
+  font-size: 11px;
   font-weight: 600;
-  letter-spacing: 0.04em;
-  background: #f8fafc;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
+  background: transparent;
 }
 
 .oa-notify-item {
-  display: block;
-  padding: 0 18px;
-  border-bottom: 1px solid rgba(226, 232, 240, 0.9);
-  transition: background-color 0.2s ease;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 16px;
+  align-items: center;
+  padding: 0;
+  border-bottom: 1px solid var(--oa-shell-border);
+  transition: border-color 0.2s ease;
+  position: relative;
 }
 
 .oa-notify-item:hover {
-  background: rgba(248, 250, 252, 0.9);
+  border-bottom-color: color-mix(in srgb, var(--oa-accent) 22%, var(--oa-shell-border));
 }
 
 .oa-notify-item:last-child {
@@ -439,38 +613,55 @@ onUnmounted(() => {
   grid-template-columns: 180px minmax(0, 1.8fr) 220px 90px;
   gap: 16px;
   align-items: center;
+  width: 100%;
   min-width: 0;
+  border: 0;
+  background: transparent;
   padding: 16px 0;
   cursor: pointer;
+  text-align: left;
+}
+
+.oa-notify-item.unread::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 14px;
+  bottom: 14px;
+  width: 2px;
+  background: var(--oa-accent);
 }
 
 .oa-notify-item.unread .oa-notify-item-content {
-  color: #0f172a;
+  color: var(--oa-ink);
 }
 
 .oa-notify-item-sender {
   display: flex;
   gap: 10px;
   align-items: center;
-  color: #0f172a;
-  font-size: 15px;
+  color: var(--oa-ink);
+  font-size: 14px;
   font-weight: 600;
 }
 
-.oa-notify-dot {
-  width: 8px;
-  height: 8px;
-  flex: none;
-  border-radius: 50%;
-  background: #2563eb;
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+.oa-notify-inline-mark {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--oa-accent) 34%, var(--oa-shell-border));
+  color: var(--oa-accent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
 }
 
 .oa-notify-item-content {
   min-width: 0;
-  color: #475569;
+  color: var(--oa-ink-soft);
   font-size: 14px;
-  line-height: 1.6;
+  line-height: 1.55;
 }
 
 .oa-notify-item-subject {
@@ -485,12 +676,12 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 4px;
   justify-content: center;
-  color: #475569;
+  color: var(--oa-ink-soft);
   font-size: 13px;
 }
 
 .oa-notify-read-time {
-  color: #94a3b8;
+  color: var(--oa-ink-faint);
   font-size: 12px;
 }
 
@@ -500,24 +691,73 @@ onUnmounted(() => {
 }
 
 .oa-notify-item-actions {
-  position: absolute;
-  top: 50%;
-  right: 18px;
   display: flex;
-  gap: 4px;
-  align-items: center;
-  transform: translateY(-50%);
+  flex-direction: column;
+  gap: 6px;
+  align-items: flex-start;
+  justify-content: center;
+  min-width: 0;
+  padding-right: 4px;
 }
 
-.oa-notify-item {
-  position: relative;
-  padding-right: 150px;
+.oa-notify-item-actions :deep(.ant-btn) {
+  padding-inline: 0;
+}
+
+@media (max-width: 1100px) {
+  .oa-notify-list-head {
+    grid-template-columns: 160px minmax(0, 1.4fr) 180px 80px 96px;
+    gap: 12px;
+  }
+
+  .oa-notify-item {
+    grid-template-columns: minmax(0, 1fr) 96px;
+    gap: 12px;
+  }
+
+  .oa-notify-item-main {
+    grid-template-columns: 160px minmax(0, 1.4fr) 180px 80px;
+    gap: 12px;
+  }
+}
+
+@media (max-width: 860px) {
+  .oa-notify-list-head {
+    display: none;
+  }
+
+  .oa-notify-item {
+    grid-template-columns: 1fr;
+    gap: 0;
+    padding: 14px 0;
+  }
+
+  .oa-notify-item-main {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    padding: 0;
+  }
+
+  .oa-notify-item-actions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    gap: 12px;
+    padding-top: 10px;
+    padding-right: 0;
+    border-top: 1px solid color-mix(in srgb, var(--oa-shell-border) 88%, transparent);
+  }
+
+  .oa-notify-item-status,
+  .oa-notify-item-time {
+    justify-content: flex-start;
+  }
 }
 
 .oa-notify-pagination {
   display: flex;
   justify-content: flex-end;
   margin-top: 18px;
+  padding-top: 2px;
 }
 
 .oa-notify-detail {
@@ -530,39 +770,148 @@ onUnmounted(() => {
   display: flex;
   gap: 12px;
   align-items: center;
-  color: #334155;
+  color: var(--oa-ink);
 }
 
 .oa-notify-detail-row .label {
   min-width: 72px;
-  color: #64748b;
+  color: var(--oa-ink-soft);
 }
 
 .oa-notify-detail-content {
-  padding: 16px;
-  border-radius: 16px;
-  color: #0f172a;
-  line-height: 1.8;
-  background: #f8fafc;
+  padding: 14px 0 16px;
+  border-radius: 0;
+  border-top: 1px solid var(--oa-shell-border);
+  border-bottom: 1px solid var(--oa-shell-border);
+  color: var(--oa-ink);
+  line-height: 1.85;
+  background: transparent;
+}
+
+.oa-notify-detail-content--plain {
+  white-space: pre-wrap;
+}
+
+.oa-notify-detail-notice-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.oa-notify-detail-notice-head h3 {
+  margin: 0;
+  color: var(--oa-ink);
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.oa-notify-detail-notice-head p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 10px 0 0;
+  color: var(--oa-ink-soft);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.oa-notify-detail-divider {
+  width: 1px;
+  height: 12px;
+  background: var(--oa-shell-border);
+}
+
+.oa-notify-detail-attachments {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 16px;
+  border-top: 1px solid var(--oa-shell-border);
+}
+
+.oa-notify-detail-attachments-head {
+  color: var(--oa-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.oa-notify-detail-attachment-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.oa-notify-detail-attachment-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.oa-notify-detail-attachment-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.oa-notify-detail-attachment-meta strong {
+  color: var(--oa-ink);
+  font-size: 14px;
+}
+
+.oa-notify-detail-attachment-meta span {
+  color: var(--oa-ink-soft);
+  font-size: 12px;
+}
+
+.oa-notify-detail-attachment-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+:deep(.oa-notify-modal .ant-modal-content) {
+  overflow: hidden;
+  border-radius: 0;
+  border: 1px solid var(--oa-shell-border);
+  box-shadow: none;
+}
+
+:deep(.oa-notify-modal .ant-modal-body) {
+  padding-top: 12px;
+}
+
+:deep(.oa-notify-modal .ant-modal-header) {
+  border-bottom: 1px solid var(--oa-shell-border);
+  background: transparent;
 }
 
 :deep(.oa-notify-status-tag.read) {
-  border-color: #dbe3f1 !important;
-  color: #000 !important;
-  background: rgba(248, 250, 252, 0.92) !important;
+  border-color: color-mix(in srgb, var(--oa-ink-faint) 24%, var(--oa-shell-border)) !important;
+  color: var(--oa-ink-soft) !important;
+  background: transparent !important;
 }
 
 :deep(.oa-notify-status-tag.unread) {
-  color: #1d4ed8 !important;
+  border-color: color-mix(in srgb, var(--oa-accent) 34%, var(--oa-shell-border)) !important;
+  color: var(--oa-accent) !important;
+  background: transparent !important;
 }
 
 @media (max-width: 768px) {
   .oa-notify-page {
-    padding: 20px 16px 32px;
+    padding-bottom: 20px;
   }
 
-  .oa-notify-header,
+  .oa-notify-hero,
+  .oa-notify-section-head,
   .oa-notify-toolbar {
+    display: flex;
     flex-direction: column;
     align-items: flex-start;
   }
@@ -603,164 +952,5 @@ onUnmounted(() => {
   .oa-notify-pagination {
     justify-content: center;
   }
-}
-</style>
-
-<style lang="scss">
-body.oa-lite-light-theme {
-  --background: 0 0% 100%;
-  --background-deep: 216 20.11% 95.47%;
-  --foreground: 210 6% 21%;
-  --muted: 240 4.8% 95.9%;
-  --muted-foreground: 240 3.8% 46.1%;
-  --accent: 240 5% 96%;
-  --accent-hover: 200deg 10% 90%;
-  --accent-foreground: 240 6% 10%;
-  --border: 240 5.9% 90%;
-}
-
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-content,
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-header {
-  background: #fff !important;
-  color: #0f172a !important;
-}
-
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-content {
-  border: 1px solid rgba(148, 163, 184, 0.18);
-  border-radius: 28px;
-  box-shadow: 0 24px 60px rgba(15, 23, 42, 0.18) !important;
-}
-
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-header {
-  border-bottom: 1px solid #e2e8f0;
-  border-radius: 28px 28px 0 0;
-}
-
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-title,
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-close,
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-close-x,
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-body,
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-body span,
-body.oa-lite-light-theme .oa-notify-light-modal .ant-tag {
-  color: #0f172a !important;
-}
-
-body.oa-lite-light-theme .oa-notify-light-modal .ant-modal-close:hover {
-  background: #f8fafc !important;
-}
-
-body.oa-lite-light-theme .oa-notify-light-modal .oa-notify-detail-row .label {
-  color: #64748b !important;
-}
-
-body.oa-lite-light-theme .oa-notify-light-modal .oa-notify-detail-content {
-  background: #f8fafc !important;
-  color: #0f172a !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-btn {
-  border-radius: 16px;
-  box-shadow: none !important;
-  transition:
-    border-color 0.2s ease,
-    background-color 0.2s ease,
-    color 0.2s ease;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-btn-default {
-  border-color: #d7e2f0 !important;
-  color: #0f172a !important;
-  background: #fff !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-btn-default:hover,
-body.oa-lite-light-theme .oa-notify-page .ant-btn-default:focus {
-  border-color: #93c5fd !important;
-  color: #1d4ed8 !important;
-  background: #f8fbff !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-btn-primary {
-  border-color: #2563eb !important;
-  color: #fff !important;
-  background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%) !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-btn-primary:hover,
-body.oa-lite-light-theme .oa-notify-page .ant-btn-primary:focus {
-  border-color: #1d4ed8 !important;
-  background: linear-gradient(135deg, #1d4ed8 0%, #2563eb 100%) !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-btn-link {
-  color: #2563eb !important;
-  background: transparent !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-btn-link:hover,
-body.oa-lite-light-theme .oa-notify-page .ant-btn-link:focus {
-  color: #1d4ed8 !important;
-  background: rgba(37, 99, 235, 0.06) !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-pagination {
-  color: #475569 !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-total-text,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-select-selection-item,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-select-arrow,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-options {
-  color: #475569 !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-item,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-prev .ant-pagination-item-link,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-next .ant-pagination-item-link,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-select-selector {
-  border-color: #d7e2f0 !important;
-  color: #0f172a !important;
-  background: #fff !important;
-  box-shadow: none !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-item a,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-prev button,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-next button {
-  color: #0f172a !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-item:hover,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-prev:hover .ant-pagination-item-link,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-next:hover .ant-pagination-item-link,
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-select-selector:hover {
-  border-color: #93c5fd !important;
-  color: #1d4ed8 !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-item-active {
-  border-color: #2563eb !important;
-  background: #eff6ff !important;
-}
-
-body.oa-lite-light-theme .oa-notify-page .ant-pagination .ant-pagination-item-active a {
-  color: #2563eb !important;
-}
-
-body.oa-lite-light-theme .ant-select-dropdown {
-  border: 1px solid rgba(148, 163, 184, 0.18) !important;
-  border-radius: 16px !important;
-  background: #fff !important;
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.12) !important;
-}
-
-body.oa-lite-light-theme .ant-select-dropdown .ant-select-item {
-  color: #0f172a !important;
-}
-
-body.oa-lite-light-theme .ant-select-dropdown .ant-select-item-option-active:not(.ant-select-item-option-disabled),
-body.oa-lite-light-theme .ant-select-dropdown .ant-select-item-option-selected:not(.ant-select-item-option-disabled) {
-  background: #eff6ff !important;
-  color: #1d4ed8 !important;
 }
 </style>

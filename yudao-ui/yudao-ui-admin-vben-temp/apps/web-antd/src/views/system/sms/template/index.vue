@@ -135,74 +135,86 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="短信模板">
     <template #doc>
       <DocAlert title="短信配置" url="https://doc.iocoder.cn/sms/" />
     </template>
 
     <FormModal @success="handleRefresh" />
     <SendModal />
-    <Grid table-title="短信模板列表">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: $t('ui.actionTitle.create', ['短信模板']),
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              auth: ['system:sms-template:create'],
-              onClick: handleCreate,
-            },
-            {
-              label: $t('ui.actionTitle.export'),
-              type: 'primary',
-              icon: ACTION_ICON.DOWNLOAD,
-              auth: ['system:sms-template:export'],
-              onClick: handleExport,
-            },
-            {
-              label: $t('ui.actionTitle.deleteBatch'),
-              type: 'primary',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              disabled: isEmpty(checkedIds),
-              auth: ['system:sms-template:delete'],
-              onClick: handleDeleteBatch,
-            },
-          ]"
-        />
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.edit'),
-              type: 'link',
-              icon: ACTION_ICON.EDIT,
-              auth: ['system:sms-template:update'],
-              onClick: handleEdit.bind(null, row),
-            },
-            {
-              label: '测试',
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              auth: ['system:sms-template:send-sms'],
-              onClick: handleSend.bind(null, row),
-            },
-            {
-              label: $t('common.delete'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:sms-template:delete'],
-              popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.name]),
-                confirm: handleDelete.bind(null, row),
-              },
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">短信模板列表</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="短信模板列表">
+            <template #toolbar-tools>
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('ui.actionTitle.create', ['短信模板']),
+                    type: 'primary',
+                    icon: ACTION_ICON.ADD,
+                    auth: ['system:sms-template:create'],
+                    onClick: handleCreate,
+                  },
+                  {
+                    label: $t('ui.actionTitle.export'),
+                    type: 'primary',
+                    icon: ACTION_ICON.DOWNLOAD,
+                    auth: ['system:sms-template:export'],
+                    onClick: handleExport,
+                  },
+                  {
+                    label: $t('ui.actionTitle.deleteBatch'),
+                    type: 'primary',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    disabled: isEmpty(checkedIds),
+                    auth: ['system:sms-template:delete'],
+                    onClick: handleDeleteBatch,
+                  },
+                ]"
+              />
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('common.edit'),
+                    type: 'link',
+                    icon: ACTION_ICON.EDIT,
+                    auth: ['system:sms-template:update'],
+                    onClick: handleEdit.bind(null, row),
+                  },
+                  {
+                    label: '测试',
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    auth: ['system:sms-template:send-sms'],
+                    onClick: handleSend.bind(null, row),
+                  },
+                  {
+                    label: $t('common.delete'),
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['system:sms-template:delete'],
+                    popConfirm: {
+                      title: $t('ui.actionMessage.deleteConfirm', [row.name]),
+                      confirm: handleDelete.bind(null, row),
+                    },
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

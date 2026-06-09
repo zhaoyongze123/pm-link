@@ -147,7 +147,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="角色与授权">
     <template #doc>
       <DocAlert
         title="功能权限"
@@ -159,74 +159,86 @@ const [Grid, gridApi] = useVbenVxeGrid({
     <FormModal @success="handleRefresh" />
     <AssignDataPermissionFormModel @success="handleRefresh" />
     <AssignMenuFormModel @success="handleRefresh" />
-    <Grid table-title="角色列表">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: $t('ui.actionTitle.create', ['角色']),
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              auth: ['system:role:create'],
-              onClick: handleCreate,
-            },
-            {
-              label: $t('ui.actionTitle.export'),
-              type: 'primary',
-              icon: ACTION_ICON.DOWNLOAD,
-              auth: ['system:role:export'],
-              onClick: handleExport,
-            },
-            {
-              label: $t('ui.actionTitle.deleteBatch'),
-              type: 'primary',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              disabled: isEmpty(checkedIds),
-              auth: ['system:role:delete'],
-              onClick: handleDeleteBatch,
-            },
-          ]"
-        />
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.edit'),
-              type: 'link',
-              icon: ACTION_ICON.EDIT,
-              auth: ['system:role:update'],
-              onClick: handleEdit.bind(null, row),
-            },
-            {
-              label: $t('common.delete'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:role:delete'],
-              popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.name]),
-                confirm: handleDelete.bind(null, row),
-              },
-            },
-          ]"
-          :drop-down-actions="[
-            {
-              label: '数据权限',
-              type: 'link',
-              auth: ['system:permission:assign-role-data-scope'],
-              onClick: handleAssignDataPermission.bind(null, row),
-            },
-            {
-              label: '菜单权限',
-              type: 'link',
-              auth: ['system:permission:assign-role-menu'],
-              onClick: handleAssignMenu.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">角色列表</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="角色列表">
+            <template #toolbar-tools>
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('ui.actionTitle.create', ['角色']),
+                    type: 'primary',
+                    icon: ACTION_ICON.ADD,
+                    auth: ['system:role:create'],
+                    onClick: handleCreate,
+                  },
+                  {
+                    label: $t('ui.actionTitle.export'),
+                    type: 'primary',
+                    icon: ACTION_ICON.DOWNLOAD,
+                    auth: ['system:role:export'],
+                    onClick: handleExport,
+                  },
+                  {
+                    label: $t('ui.actionTitle.deleteBatch'),
+                    type: 'primary',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    disabled: isEmpty(checkedIds),
+                    auth: ['system:role:delete'],
+                    onClick: handleDeleteBatch,
+                  },
+                ]"
+              />
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('common.edit'),
+                    type: 'link',
+                    icon: ACTION_ICON.EDIT,
+                    auth: ['system:role:update'],
+                    onClick: handleEdit.bind(null, row),
+                  },
+                  {
+                    label: $t('common.delete'),
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['system:role:delete'],
+                    popConfirm: {
+                      title: $t('ui.actionMessage.deleteConfirm', [row.name]),
+                      confirm: handleDelete.bind(null, row),
+                    },
+                  },
+                ]"
+                :drop-down-actions="[
+                  {
+                    label: '数据权限',
+                    type: 'link',
+                    auth: ['system:permission:assign-role-data-scope'],
+                    onClick: handleAssignDataPermission.bind(null, row),
+                  },
+                  {
+                    label: '菜单权限',
+                    type: 'link',
+                    auth: ['system:permission:assign-role-menu'],
+                    onClick: handleAssignMenu.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

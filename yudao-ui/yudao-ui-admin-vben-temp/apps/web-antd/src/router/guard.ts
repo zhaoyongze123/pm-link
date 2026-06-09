@@ -16,18 +16,31 @@ import {
   filterMenuRecords,
   isBlockedMenuPath,
 } from '#/utils/menu-filter';
-import { isAdminUser, OA_LITE_HOME_PATH, resolveUserHomePath } from '#/utils/oa-user';
+import { isAdminUser, resolveUserHomePath } from '#/utils/oa-user';
 
 import { generateAccess } from './access';
 
-const NON_ADMIN_ALLOWED_PATH_PREFIXES = [OA_LITE_HOME_PATH, '/bpm/mobile/form-preview'];
+const NON_ADMIN_WORKBENCH_ALLOWED_PREFIXES = [
+  '/bpm/oa/',
+  '/bpm/process-instance/create',
+];
 
-function shouldRedirectNonAdminToOaLite(path: string, roles: string[] = []) {
+function isNonAdminBlockedWorkbenchPath(path: string, roles: string[] = []) {
   if (isAdminUser(roles)) {
     return false;
   }
-  return !NON_ADMIN_ALLOWED_PATH_PREFIXES.some(
-    (prefix) => path === prefix || path.startsWith(`${prefix}/`),
+  if (
+    NON_ADMIN_WORKBENCH_ALLOWED_PREFIXES.some(
+      (prefix) => path === prefix || path.startsWith(prefix),
+    )
+  ) {
+    return false;
+  }
+  return (
+    path === '/bpm' ||
+    path.startsWith('/bpm/') ||
+    path === '/system' ||
+    path.startsWith('/system/')
   );
 }
 
@@ -96,7 +109,6 @@ function setupAccessGuard(router: Router) {
         return decodeURIComponent(
           (to.query?.redirect as string) ||
             resolveUserHomePath(
-              preferences.app.defaultHomePath,
               userStore.userInfo?.homePath,
               userStore.userRoles,
             ),
@@ -124,14 +136,18 @@ function setupAccessGuard(router: Router) {
 
     // 是否已经生成过动态路由
     if (accessStore.isAccessChecked) {
+      if (isNonAdminBlockedWorkbenchPath(to.path, userStore.userRoles)) {
+        return {
+          path: resolveUserHomePath(
+            userStore.userInfo?.homePath,
+            userStore.userRoles,
+          ),
+          replace: true,
+        };
+      }
       accessStore.setAccessMenus(filterMenuRecords(accessStore.accessMenus));
       accessStore.setAccessRoutes(filterAccessRoutes(accessStore.accessRoutes));
-      return shouldRedirectNonAdminToOaLite(to.path, userRoles)
-        ? {
-            path: OA_LITE_HOME_PATH,
-            replace: true,
-          }
-        : true;
+      return true;
     }
 
     // 加载字典数据（不阻塞加载）
@@ -158,6 +174,16 @@ function setupAccessGuard(router: Router) {
       userRoles = userStore.userRoles ?? [];
     }
 
+    if (isNonAdminBlockedWorkbenchPath(to.path, userRoles)) {
+      return {
+        path: resolveUserHomePath(
+          userInfo?.homePath,
+          userRoles,
+        ),
+        replace: true,
+      };
+    }
+
     // 生成菜单和路由
     const { accessibleMenus, accessibleRoutes } = await generateAccess({
       roles: userRoles,
@@ -174,18 +200,14 @@ function setupAccessGuard(router: Router) {
     const redirectPath = (from.query.redirect ??
       (to.path === preferences.app.defaultHomePath
         ? resolveUserHomePath(
-            preferences.app.defaultHomePath,
             userInfo?.homePath,
             userRoles,
           )
         : to.fullPath)) as string;
     const normalizedRedirectPath = decodeURIComponent(redirectPath);
-    const targetPath = shouldRedirectNonAdminToOaLite(normalizedRedirectPath, userRoles)
-      ? OA_LITE_HOME_PATH
-      : normalizedRedirectPath;
 
     return {
-      ...router.resolve(targetPath),
+      ...router.resolve(normalizedRedirectPath),
       replace: true,
     };
   });

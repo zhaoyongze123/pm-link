@@ -1,11 +1,20 @@
 <script lang="ts" setup>
 import type { AuthApi } from '#/api/core/auth';
 
-import { computed, nextTick, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue';
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  reactive,
+  ref,
+  watch,
+} from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { Verification } from '@vben/common-ui';
 import { isCaptchaEnable, isTenantEnable } from '@vben/hooks';
+import { IconifyIcon } from '@vben/icons';
 import { useAccessStore } from '@vben/stores';
 
 import { message } from 'ant-design-vue';
@@ -156,6 +165,7 @@ async function submitAccountLogin(captchaVerification?: string) {
   await authStore.authLogin('username', {
     password: accountForm.password,
     username: accountForm.username,
+    tenantId: accountForm.tenantId || undefined,
     ...(captchaVerification ? { captchaVerification } : {}),
   });
 }
@@ -228,6 +238,7 @@ async function handleMobileLogin() {
     await authStore.authLogin('mobile', {
       code: mobileForm.code,
       mobile: mobileForm.mobile,
+      tenantId: mobileForm.tenantId || undefined,
     });
   } catch (error: any) {
     errors.mobile = error?.message || '登录失败，请检查短信验证码';
@@ -285,161 +296,194 @@ onBeforeUnmount(() => {
   <div class="auth-portal">
     <AntigravityBackground />
     <div class="auth-portal__inner">
-      <section
-        class="auth-panel"
-        :style="{
-          transform: `perspective(1000px) rotateX(${tilt.rotateX.toFixed(2)}deg) rotateY(${tilt.rotateY.toFixed(2)}deg) translateZ(10px)`,
-        }"
-      >
-        <div class="auth-panel__header">
-          <div class="auth-panel__logo">W</div>
-          <h1>Workflow Approval System</h1>
-          <p>登入管理视界</p>
-        </div>
-
-        <div class="auth-mode-switch">
-          <button
-            :class="{ active: loginMode === 'account' }"
-            type="button"
-            @click="loginMode = 'account'"
+      <section class="auth-shell">
+        <aside class="auth-shell__intro">
+          <div
+            class="auth-intro-card"
+            :style="{
+              transform: `perspective(1200px) rotateX(${(tilt.rotateX * 0.45).toFixed(2)}deg) rotateY(${(tilt.rotateY * 0.45).toFixed(2)}deg) translateZ(4px)`,
+            }"
           >
-            账号密码
-          </button>
-          <button
-            :class="{ active: loginMode === 'mobile' }"
-            type="button"
-            @click="loginMode = 'mobile'"
-          >
-            手机验证码
-          </button>
-        </div>
-
-        <form
-          v-if="loginMode === 'account'"
-          class="auth-form"
-          @submit.prevent="handleAccountLogin"
-        >
-          <div v-if="errors.account" class="auth-form__error">
-            {{ errors.account }}
+            <div class="auth-intro-card__badge">
+              <span class="auth-intro-card__badge-icon">
+                <IconifyIcon icon="carbon:task-asset-view" />
+              </span>
+              <span>OA 审批工作台</span>
+            </div>
+            <h1>工作台入口</h1>
           </div>
+        </aside>
 
-          <label v-if="tenantEnable && tenantList.length" class="auth-field">
-            <span class="auth-field__icon">T</span>
-            <select
-              :value="accountForm.tenantId"
-              @change="setTenantId(($event.target as HTMLSelectElement).value)"
-            >
-              <option disabled value="">请选择租户</option>
-              <option
-                v-for="tenant in tenantList"
-                :key="tenant.id"
-                :value="String(tenant.id)"
-              >
-                {{ tenant.name }}
-              </option>
-            </select>
-          </label>
-
-          <label class="auth-field">
-            <span class="auth-field__icon">U</span>
-            <input
-              v-model="accountForm.username"
-              autocomplete="username"
-              placeholder="账号"
-              type="text"
-            />
-          </label>
-
-          <label class="auth-field">
-            <span class="auth-field__icon">L</span>
-            <input
-              v-model="accountForm.password"
-              autocomplete="current-password"
-              placeholder="密码"
-              type="password"
-            />
-          </label>
-
-          <div class="auth-form__actions">
-            <label class="auth-checkbox">
-              <input v-model="accountForm.remember" type="checkbox" />
-              <span>记住账号</span>
-            </label>
-            <button type="button" @click="goForgetPassword">忘记密码?</button>
-          </div>
-
-          <button class="auth-submit" :disabled="loading" type="submit">
-            {{ loading ? '身份验证中...' : '登 入' }}
-          </button>
-
-          <div class="auth-social">
-            <span>其他登录方式</span>
-            <div class="auth-social__buttons">
-              <button type="button" @click="handleSocialLogin(20)">D</button>
-              <button type="button" @click="handleSocialLogin(10)">G</button>
+        <section class="auth-panel">
+          <div class="auth-panel__header">
+            <div class="auth-panel__logo">
+              <IconifyIcon icon="solar:shield-keyhole-outline" />
+            </div>
+            <div>
+              <h2>进入工作台</h2>
             </div>
           </div>
-        </form>
 
-        <form v-else class="auth-form" @submit.prevent="handleMobileLogin">
-          <div v-if="errors.mobile" class="auth-form__error">
-            {{ errors.mobile }}
-          </div>
-
-          <label v-if="tenantEnable && tenantList.length" class="auth-field">
-            <span class="auth-field__icon">T</span>
-            <select
-              :value="mobileForm.tenantId"
-              @change="setTenantId(($event.target as HTMLSelectElement).value)"
-            >
-              <option disabled value="">请选择租户</option>
-              <option
-                v-for="tenant in tenantList"
-                :key="tenant.id"
-                :value="String(tenant.id)"
-              >
-                {{ tenant.name }}
-              </option>
-            </select>
-          </label>
-
-          <label class="auth-field">
-            <span class="auth-field__icon">M</span>
-            <input
-              v-model="mobileForm.mobile"
-              maxlength="11"
-              placeholder="手机号"
-              type="text"
-            />
-          </label>
-
-          <div class="auth-code-row">
-            <label class="auth-field auth-field--code">
-              <span class="auth-field__icon">#</span>
-              <input
-                v-model="mobileForm.code"
-                maxlength="6"
-                placeholder="验证码"
-                type="text"
-              />
-            </label>
+          <div class="auth-mode-switch">
             <button
-              class="auth-code-btn"
-              :disabled="sendingCode || countdown > 0"
+              :class="{ active: loginMode === 'account' }"
               type="button"
-              @click="handleSendCode"
+              @click="loginMode = 'account'"
             >
-              {{ countdown > 0 ? `${countdown}s` : '获取验证码' }}
+              账号密码
+            </button>
+            <button
+              :class="{ active: loginMode === 'mobile' }"
+              type="button"
+              @click="loginMode = 'mobile'"
+            >
+              手机验证码
             </button>
           </div>
 
-          <button class="auth-submit" :disabled="loading" type="submit">
-            {{ loading ? '验证中...' : '登 入' }}
-          </button>
-        </form>
-      </section>
+          <form
+            v-if="loginMode === 'account'"
+            class="auth-form"
+            @submit.prevent="handleAccountLogin"
+          >
+            <div v-if="errors.account" class="auth-form__error">
+              <IconifyIcon icon="solar:danger-triangle-outline" />
+              <span>{{ errors.account }}</span>
+            </div>
 
-      <div class="auth-portal__footer">Powered by Vben Architecture & Ant Design Vue</div>
+            <label v-if="tenantEnable && tenantList.length" class="auth-field">
+              <span class="auth-field__icon">
+                <IconifyIcon icon="solar:buildings-2-outline" />
+              </span>
+              <select
+                :value="accountForm.tenantId"
+                @change="setTenantId(($event.target as HTMLSelectElement).value)"
+              >
+                <option disabled value="">请选择租户</option>
+                <option
+                  v-for="tenant in tenantList"
+                  :key="tenant.id"
+                  :value="String(tenant.id)"
+                >
+                  {{ tenant.name }}
+                </option>
+              </select>
+            </label>
+
+            <label class="auth-field">
+              <span class="auth-field__icon">
+                <IconifyIcon icon="solar:user-outline" />
+              </span>
+              <input
+                v-model="accountForm.username"
+                autocomplete="username"
+                placeholder="请输入账号"
+                type="text"
+              />
+            </label>
+
+            <label class="auth-field">
+              <span class="auth-field__icon">
+                <IconifyIcon icon="solar:lock-password-outline" />
+              </span>
+              <input
+                v-model="accountForm.password"
+                autocomplete="current-password"
+                placeholder="请输入密码"
+                type="password"
+              />
+            </label>
+
+            <div class="auth-form__actions">
+              <label class="auth-checkbox">
+                <input v-model="accountForm.remember" type="checkbox" />
+                <span>记住账号</span>
+              </label>
+              <button type="button" @click="goForgetPassword">忘记密码</button>
+            </div>
+
+            <button class="auth-submit" :disabled="loading" type="submit">
+              {{ loading ? '正在验证身份...' : '登录并进入工作台' }}
+            </button>
+
+            <div class="auth-social">
+              <span>其他登录方式</span>
+              <div class="auth-social__buttons">
+                <button type="button" @click="handleSocialLogin(20)">
+                  <IconifyIcon icon="ri:dingtalk-line" />
+                </button>
+                <button type="button" @click="handleSocialLogin(10)">
+                  <IconifyIcon icon="ri:wechat-line" />
+                </button>
+              </div>
+            </div>
+          </form>
+
+          <form v-else class="auth-form" @submit.prevent="handleMobileLogin">
+            <div v-if="errors.mobile" class="auth-form__error">
+              <IconifyIcon icon="solar:danger-triangle-outline" />
+              <span>{{ errors.mobile }}</span>
+            </div>
+
+            <label v-if="tenantEnable && tenantList.length" class="auth-field">
+              <span class="auth-field__icon">
+                <IconifyIcon icon="solar:buildings-2-outline" />
+              </span>
+              <select
+                :value="mobileForm.tenantId"
+                @change="setTenantId(($event.target as HTMLSelectElement).value)"
+              >
+                <option disabled value="">请选择租户</option>
+                <option
+                  v-for="tenant in tenantList"
+                  :key="tenant.id"
+                  :value="String(tenant.id)"
+                >
+                  {{ tenant.name }}
+                </option>
+              </select>
+            </label>
+
+            <label class="auth-field">
+              <span class="auth-field__icon">
+                <IconifyIcon icon="solar:phone-outline" />
+              </span>
+              <input
+                v-model="mobileForm.mobile"
+                maxlength="11"
+                placeholder="请输入手机号"
+                type="text"
+              />
+            </label>
+
+            <div class="auth-code-row">
+              <label class="auth-field auth-field--code">
+                <span class="auth-field__icon">
+                  <IconifyIcon icon="solar:chat-round-check-outline" />
+                </span>
+                <input
+                  v-model="mobileForm.code"
+                  maxlength="6"
+                  placeholder="请输入验证码"
+                  type="text"
+                />
+              </label>
+              <button
+                class="auth-code-btn"
+                :disabled="sendingCode || countdown > 0"
+                type="button"
+                @click="handleSendCode"
+              >
+                {{ countdown > 0 ? `${countdown}s 后重发` : '获取验证码' }}
+              </button>
+            </div>
+
+            <button class="auth-submit" :disabled="loading" type="submit">
+              {{ loading ? '正在校验...' : '登录并进入工作台' }}
+            </button>
+          </form>
+        </section>
+      </section>
     </div>
 
     <Verification
@@ -457,150 +501,209 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .auth-portal {
-  align-items: center;
-  display: flex;
-  justify-content: center;
   min-height: 100vh;
   overflow: hidden;
-  padding: 24px;
   position: relative;
+  background:
+    radial-gradient(circle at 12% 16%, rgb(21 101 192 / 9%), transparent 18%),
+    radial-gradient(circle at 88% 6%, rgb(11 87 161 / 8%), transparent 18%),
+    linear-gradient(180deg, #f2f6fb 0%, #eaf0f7 100%);
 }
 
 .auth-portal__inner {
-  max-width: 460px;
   position: relative;
-  width: 100%;
+  width: min(1180px, calc(100vw - 48px));
+  margin: 0 auto;
+  padding: 56px 0;
   z-index: 1;
 }
 
+.auth-shell {
+  display: grid;
+  grid-template-columns: minmax(0, 1.12fr) minmax(400px, 460px);
+  gap: 28px;
+  align-items: stretch;
+}
+
+.auth-shell__intro {
+  display: flex;
+  align-items: stretch;
+}
+
+.auth-intro-card,
 .auth-panel {
-  padding: 20px 18px 8px;
-  transition: transform 0.2s ease-out;
+  border: 1px solid rgb(215 222 232 / 94%);
+  border-radius: 32px;
+  background: rgb(255 255 255 / 88%);
+  box-shadow: 0 24px 60px rgb(15 23 42 / 10%);
+  backdrop-filter: blur(18px);
+}
+
+.auth-intro-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 100%;
+  min-height: 100%;
+  padding: 34px 34px 30px;
+  transition: transform 0.24s ease-out;
+}
+
+.auth-intro-card__badge {
+  display: inline-flex;
+  width: fit-content;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 12px;
+  border: 1px solid rgb(21 101 192 / 14%);
+  border-radius: 999px;
+  color: #1565c0;
+  background: rgb(231 241 251 / 88%);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.auth-intro-card__badge-icon {
+  display: inline-flex;
+  font-size: 16px;
+}
+
+.auth-intro-card h1 {
+  margin: 24px 0 0;
+  color: #17202d;
+  font-size: clamp(34px, 5vw, 48px);
+  font-weight: 600;
+  line-height: 1.06;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+}
+
+.auth-panel {
+  align-self: center;
+  padding: 28px 26px 24px;
 }
 
 .auth-panel__header {
-  margin-bottom: 36px;
-  text-align: center;
+  display: grid;
+  grid-template-columns: 56px minmax(0, 1fr);
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 28px;
 }
 
 .auth-panel__logo {
   align-items: center;
-  backdrop-filter: blur(24px);
-  background: rgb(17 24 39 / 0.92);
-  border: 1px solid rgb(17 24 39 / 0.88);
+  background:
+    linear-gradient(180deg, rgb(255 255 255 / 24%), rgb(255 255 255 / 0%)),
+    linear-gradient(180deg, #1565c0 0%, #0b57a1 100%);
   border-radius: 18px;
-  box-shadow: 0 16px 40px rgb(15 23 42 / 0.18);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 28%);
   color: #fff;
   display: inline-flex;
-  font-size: 20px;
-  font-weight: 700;
-  height: 52px;
+  font-size: 22px;
+  height: 56px;
   justify-content: center;
-  margin-bottom: 18px;
-  width: 52px;
+  width: 56px;
 }
 
-.auth-panel__header h1 {
-  color: #111827;
-  font-size: 31px;
+.auth-panel__header h2 {
+  margin: 0;
+  color: #17202d;
+  font-size: 28px;
   font-weight: 600;
   letter-spacing: -0.03em;
-  margin: 0;
-}
-
-.auth-panel__header p {
-  color: #6b7280;
-  font-size: 14px;
-  margin: 10px 0 0;
 }
 
 .auth-mode-switch {
-  backdrop-filter: blur(18px);
-  background: rgb(255 255 255 / 0.42);
-  border: 1px solid rgb(255 255 255 / 0.6);
-  border-radius: 18px;
-  box-shadow: 0 4px 18px rgb(15 23 42 / 0.06);
   display: flex;
-  gap: 6px;
-  margin-bottom: 24px;
+  gap: 8px;
+  margin-bottom: 22px;
   padding: 6px;
+  border: 1px solid #d7dee8;
+  border-radius: 18px;
+  background: #f3f6fa;
 }
 
 .auth-mode-switch button {
-  background: transparent;
+  flex: 1;
+  padding: 12px 0;
   border: 0;
   border-radius: 14px;
-  color: #6b7280;
-  cursor: pointer;
-  flex: 1;
+  color: #4c5b70;
+  background: transparent;
   font-size: 14px;
-  font-weight: 500;
-  padding: 12px 0;
-  transition: all 0.25s ease;
+  font-weight: 600;
+  transition:
+    background-color 0.2s ease,
+    color 0.2s ease,
+    box-shadow 0.2s ease;
 }
 
 .auth-mode-switch button.active {
+  color: #17202d;
   background: #fff;
-  box-shadow: 0 4px 16px rgb(15 23 42 / 0.08);
-  color: #111827;
+  box-shadow: 0 8px 20px rgb(15 23 42 / 8%);
 }
 
 .auth-form {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .auth-form__error {
-  background: rgb(254 242 242 / 0.92);
-  border: 1px solid rgb(254 202 202 / 0.95);
-  border-radius: 14px;
-  color: #dc2626;
-  font-size: 13px;
+  display: flex;
+  gap: 10px;
+  align-items: center;
   padding: 12px 14px;
+  border: 1px solid #f0c7c5;
+  border-radius: 16px;
+  color: #c3413f;
+  background: #fdeeee;
+  font-size: 13px;
 }
 
 .auth-field {
-  align-items: center;
-  backdrop-filter: blur(20px);
-  background: rgb(255 255 255 / 0.42);
-  border: 1px solid rgb(255 255 255 / 0.68);
-  border-radius: 18px;
-  box-shadow:
-    inset 0 2px 5px rgb(15 23 42 / 0.02),
-    0 2px 6px rgb(15 23 42 / 0.03);
   display: flex;
-  overflow: hidden;
+  align-items: center;
   padding: 0 16px;
+  border: 1px solid #d7dee8;
+  border-radius: 18px;
+  background: #fff;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
 }
 
 .auth-field:focus-within {
-  background: rgb(255 255 255 / 0.62);
-  border-color: rgb(17 24 39 / 0.2);
-  box-shadow:
-    inset 0 2px 5px rgb(15 23 42 / 0.02),
-    0 0 0 3px rgb(17 24 39 / 0.06);
+  border-color: #1565c0;
+  background: #fff;
+  box-shadow: 0 0 0 4px rgb(21 101 192 / 10%);
 }
 
 .auth-field__icon {
-  align-items: center;
-  color: #9ca3af;
   display: inline-flex;
-  font-size: 16px;
-  height: 100%;
+  align-items: center;
   justify-content: center;
-  width: 24px;
+  width: 22px;
+  color: #7d8a9b;
+  font-size: 18px;
 }
 
 .auth-field input,
 .auth-field select {
-  background: transparent;
-  border: 0;
-  color: #111827;
   flex: 1;
+  padding: 16px 0 16px 12px;
+  border: 0;
+  color: #17202d;
+  background: transparent;
   font-size: 14px;
   outline: none;
-  padding: 15px 0 15px 12px;
+}
+
+.auth-field input::placeholder {
+  color: #7d8a9b;
 }
 
 .auth-field select {
@@ -609,106 +712,110 @@ onBeforeUnmount(() => {
 }
 
 .auth-form__actions {
-  align-items: center;
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  padding: 0 4px;
+  padding: 2px 4px 0;
+}
+
+.auth-form__actions button,
+.auth-checkbox {
+  color: #4c5b70;
+  font-size: 13px;
 }
 
 .auth-form__actions button {
-  background: transparent;
   border: 0;
-  color: #6b7280;
-  cursor: pointer;
-  font-size: 13px;
+  background: transparent;
   transition: color 0.2s ease;
 }
 
 .auth-form__actions button:hover {
-  color: #111827;
+  color: #1565c0;
 }
 
 .auth-checkbox {
-  align-items: center;
-  color: #6b7280;
-  cursor: pointer;
   display: inline-flex;
-  font-size: 13px;
   gap: 8px;
+  align-items: center;
 }
 
 .auth-checkbox input {
-  accent-color: #111827;
+  accent-color: #1565c0;
 }
 
 .auth-submit {
-  background: rgb(17 24 39 / 0.94);
+  padding: 15px 0;
   border: 0;
   border-radius: 18px;
-  box-shadow: 0 18px 35px rgb(15 23 42 / 0.18);
   color: #fff;
-  cursor: pointer;
+  background: linear-gradient(180deg, #1565c0 0%, #0b57a1 100%);
+  box-shadow: 0 18px 36px rgb(21 101 192 / 22%);
   font-size: 14px;
   font-weight: 600;
-  padding: 16px 0;
-  transition: all 0.25s ease;
+  transition:
+    transform 0.18s ease,
+    box-shadow 0.18s ease,
+    opacity 0.18s ease;
 }
 
 .auth-submit:hover:not(:disabled) {
-  box-shadow: 0 22px 38px rgb(15 23 42 / 0.22);
   transform: translateY(-1px);
+  box-shadow: 0 22px 42px rgb(21 101 192 / 26%);
 }
 
 .auth-submit:disabled,
 .auth-code-btn:disabled {
   cursor: not-allowed;
-  opacity: 0.55;
+  opacity: 0.58;
 }
 
 .auth-social {
-  border-top: 1px solid rgb(229 231 235 / 0.7);
-  margin-top: 10px;
-  padding-top: 24px;
+  margin-top: 6px;
+  padding-top: 22px;
+  border-top: 1px solid #e5ebf3;
   text-align: center;
 }
 
 .auth-social > span {
-  color: #6b7280;
+  color: #7d8a9b;
   font-size: 12px;
 }
 
 .auth-social__buttons {
   display: flex;
-  gap: 14px;
   justify-content: center;
-  margin-top: 16px;
+  gap: 12px;
+  margin-top: 14px;
 }
 
 .auth-social__buttons button,
 .auth-code-btn {
-  backdrop-filter: blur(16px);
-  background: rgb(255 255 255 / 0.58);
-  border: 1px solid rgb(255 255 255 / 0.78);
-  box-shadow: 0 4px 12px rgb(15 23 42 / 0.06);
-  transition: all 0.25s ease;
+  border: 1px solid #d7dee8;
+  background: #fff;
+  box-shadow: none;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease,
+    background-color 0.18s ease;
 }
 
 .auth-social__buttons button {
-  align-items: center;
-  border-radius: 999px;
-  color: #4b5563;
-  cursor: pointer;
   display: inline-flex;
-  font-size: 18px;
-  height: 42px;
+  align-items: center;
   justify-content: center;
-  width: 42px;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  color: #4c5b70;
+  font-size: 20px;
 }
 
 .auth-social__buttons button:hover,
 .auth-code-btn:hover:not(:disabled) {
-  background: rgb(255 255 255 / 0.9);
-  color: #111827;
+  border-color: #1565c0;
+  color: #1565c0;
+  background: #f7fbff;
 }
 
 .auth-code-row {
@@ -721,31 +828,46 @@ onBeforeUnmount(() => {
 }
 
 .auth-code-btn {
-  background: rgb(255 255 255 / 0.54);
+  min-width: 124px;
+  padding: 0 18px;
   border-radius: 18px;
-  color: #4b5563;
-  cursor: pointer;
+  color: #17202d;
   font-size: 13px;
   font-weight: 600;
-  min-width: 112px;
-  padding: 0 18px;
 }
 
-.auth-portal__footer {
-  color: #9ca3af;
-  font-size: 12px;
-  letter-spacing: 0.08em;
-  margin-top: 28px;
-  text-align: center;
-}
-
-@media (width <= 640px) {
-  .auth-portal {
-    padding: 18px;
+@media (max-width: 1024px) {
+  .auth-shell {
+    grid-template-columns: 1fr;
   }
 
-  .auth-panel__header h1 {
-    font-size: 26px;
+  .auth-shell__intro {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .auth-portal__inner {
+    width: min(100vw - 24px, 1180px);
+    padding: 24px 0;
+  }
+
+  .auth-panel {
+    padding: 22px 18px 18px;
+    border-radius: 28px;
+  }
+
+  .auth-panel__header {
+    grid-template-columns: 1fr;
+  }
+
+  .auth-panel__logo {
+    width: 52px;
+    height: 52px;
+  }
+
+  .auth-panel__header h2 {
+    font-size: 24px;
   }
 
   .auth-code-row {
@@ -753,7 +875,7 @@ onBeforeUnmount(() => {
   }
 
   .auth-code-btn {
-    min-height: 52px;
+    min-height: 54px;
   }
 }
 </style>

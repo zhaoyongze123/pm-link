@@ -167,10 +167,15 @@ defineExpose({
 </script>
 
 <template>
-  <div>
+  <div class="oa-process-records">
+    <div class="oa-process-records-head">
+      <div>
+        <div class="oa-process-records-title">审批记录</div>
+      </div>
+    </div>
     <Grid>
       <template #slot-reason="{ row }">
-        <div class="flex flex-wrap items-center justify-center">
+        <div class="oa-process-records-reason">
           <span v-if="row.reason">{{ row.reason }}</span>
           <span v-else>-</span>
           <Button
@@ -178,7 +183,7 @@ defineExpose({
             type="primary"
             size="small"
             ghost
-            class="ml-1"
+            class="oa-process-records-form-button"
             @click="handleShowFormDetail(row)"
           >
             <IconifyIcon icon="lucide:file-text" />
@@ -197,3 +202,37 @@ defineExpose({
     />
   </Modal>
 </template>
+
+<style scoped>
+.oa-process-records {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.oa-process-records-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.oa-process-records-title {
+  margin-top: 0;
+  color: var(--oa-ink);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.oa-process-records-reason {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.oa-process-records-form-button {
+  margin-left: 0 !important;
+}
+</style>

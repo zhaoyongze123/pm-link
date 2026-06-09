@@ -1,5 +1,7 @@
 import type { OAModuleApiKey } from '#/api/bpm/oa/common';
 
+import dayjs from 'dayjs';
+
 const BPM_OA_DICT_TYPE = 'bpm_oa_type';
 
 type OARouteNames = {
@@ -10,6 +12,7 @@ type OARouteNames = {
 
 interface OAModuleViewConfig {
   activePath: string;
+  buildProcessVariables?: (formData: Record<string, any>) => Record<string, any>;
   dictType: string;
   fallbackTypeOptions?: Array<{
     label: string;
@@ -69,8 +72,35 @@ const oaModuleViewConfigs: Record<OAModuleApiKey, OAModuleViewConfig> = {
     },
     title: '报销',
   },
+  leaveCancel: {
+    activePath: '/bpm/oa/leave-cancel',
+    buildProcessVariables: (formData) => ({
+      day: Math.max(
+        dayjs(formData?.endTime).diff(dayjs(formData?.startTime), 'day'),
+        0,
+      ),
+    }),
+    dictType: 'bpm_oa_leave_type',
+    fallbackTypeOptions: [
+      { label: '病假', value: 1 },
+      { label: '事假', value: 2 },
+      { label: '婚假', value: 3 },
+    ],
+    key: 'leaveCancel',
+    processDefinitionKey: 'oa_leave_cancel',
+    routeNames: {
+      create: 'OALeaveCancelCreate',
+      detail: 'OALeaveCancelDetail',
+      index: 'OALeaveCancelIndex',
+    },
+    title: '销假',
+  },
   overtime: {
     activePath: '/bpm/oa/overtime',
+    buildProcessVariables: (formData) => ({
+      durationHours: Number(formData?.durationHours || 0),
+      day: Number(formData?.durationHours || 0) / 8,
+    }),
     dictType: BPM_OA_DICT_TYPE,
     fallbackTypeOptions: [
       { label: '工作日加班', value: 1 },
@@ -85,6 +115,27 @@ const oaModuleViewConfigs: Record<OAModuleApiKey, OAModuleViewConfig> = {
       index: 'OAOvertimeIndex',
     },
     title: '加班',
+  },
+  outing: {
+    activePath: '/bpm/oa/outing',
+    buildProcessVariables: (formData) => ({
+      durationHours: Number(formData?.durationHours || 0),
+      day: Number(formData?.durationHours || 0) / 8,
+    }),
+    dictType: BPM_OA_DICT_TYPE,
+    fallbackTypeOptions: [
+      { label: '项目现场', value: 1 },
+      { label: '政府汇报', value: 2 },
+      { label: '商务洽谈', value: 3 },
+    ],
+    key: 'outing',
+    processDefinitionKey: 'oa_outing',
+    routeNames: {
+      create: 'OAOutingCreate',
+      detail: 'OAOutingDetail',
+      index: 'OAOutingIndex',
+    },
+    title: '临时外出',
   },
   project: {
     activePath: '/bpm/oa/project',

@@ -7,6 +7,10 @@ import cn.iocoder.yudao.module.infra.controller.admin.file.vo.file.FilePageReqVO
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileDO;
 import org.apache.ibatis.annotations.Mapper;
 
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+
 /**
  * 文件操作 Mapper
  *
@@ -20,6 +24,15 @@ public interface FileMapper extends BaseMapperX<FileDO> {
                 .likeIfPresent(FileDO::getPath, reqVO.getPath())
                 .likeIfPresent(FileDO::getType, reqVO.getType())
                 .betweenIfPresent(FileDO::getCreateTime, reqVO.getCreateTime())
+                .orderByDesc(FileDO::getId));
+    }
+
+    default List<FileDO> selectListByUrls(Collection<String> urls) {
+        if (urls == null || urls.isEmpty()) {
+            return Collections.emptyList();
+        }
+        return selectList(new LambdaQueryWrapperX<FileDO>()
+                .in(FileDO::getUrl, urls)
                 .orderByDesc(FileDO::getId));
     }
 

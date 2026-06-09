@@ -25,7 +25,7 @@
     width: 100%;
     height: 1px;
     margin-top: 16px;
-    background: #eee;
+    background: var(--oa-shell-border);
   }
 
   .config-editable-input {
@@ -33,14 +33,14 @@
     height: 24px;
     font-size: 16px;
     line-height: 24px;
-    border: 1px solid #d9d9d9;
-    border-radius: 4px;
+    border: 1px solid var(--oa-shell-border);
+    border-radius: 0;
     transition: all 0.3s;
 
     &:focus {
       outline: 0;
-      border-color: #40a9ff;
-      box-shadow: 0 0 0 2px rgb(24 144 255 / 20%);
+      border-color: var(--oa-accent);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--oa-accent) 18%, transparent);
     }
   }
 }
@@ -63,13 +63,13 @@
     height: 50px;
     text-align: center;
     user-select: none;
-    background: #fff;
-    border: 1px solid #e2e2e2;
-    border-radius: 50%;
+    background: var(--oa-shell-surface);
+    border: 1px solid var(--oa-shell-border);
+    border-radius: 0;
 
     &:hover {
-      background: #e2e2e2;
-      box-shadow: 0 2px 4px 0 rgb(0 0 0 / 10%);
+      background: var(--oa-shell-surface-muted);
+      box-shadow: none;
     }
 
     .icon-size {
@@ -79,47 +79,47 @@
   }
 
   .approve {
-    color: #ff943e;
+    color: var(--oa-warning-text);
   }
 
   .copy {
-    color: #3296fa;
+    color: var(--oa-accent);
   }
 
   .condition {
-    color: #67c23a;
+    color: var(--oa-success-text);
   }
 
   .parallel {
-    color: #626aef;
+    color: color-mix(in srgb, var(--oa-accent) 78%, #5a67d8);
   }
 
   .inclusive {
-    color: #345da2;
+    color: color-mix(in srgb, var(--oa-accent) 72%, #2f855a);
   }
 
   .delay {
-    color: #e47470;
+    color: var(--oa-danger-text);
   }
 
   .trigger {
-    color: #3373d2;
+    color: color-mix(in srgb, var(--oa-accent) 82%, #2563eb);
   }
 
   .router {
-    color: #ca3a31;
+    color: color-mix(in srgb, var(--oa-danger-text) 82%, #9f1239);
   }
 
   .transactor {
-    color: #309;
+    color: color-mix(in srgb, var(--oa-accent) 58%, #5b21b6);
   }
 
   .child-process {
-    color: #963;
+    color: color-mix(in srgb, var(--oa-warning-text) 76%, #7c2d12);
   }
 
   .async-child-process {
-    color: #066;
+    color: color-mix(in srgb, var(--oa-info-text) 78%, #0f766e);
   }
 
   .handler-item-text {
@@ -133,9 +133,14 @@
 .simple-process-model-container {
   width: 100%;
   height: 100%;
-  padding-top: 32px;
+  padding-top: 24px;
   overflow-x: auto;
-  background-color: #fafafa;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--oa-shell-surface-raised) 92%, transparent) 0%,
+      var(--oa-shell-surface-subtle) 100%
+    );
 
   .simple-process-model {
     display: flex;
@@ -143,7 +148,13 @@
     align-items: center;
     justify-content: center;
     min-width: fit-content;
-    background: url('./svg/simple-process-bg.svg') 0 0 repeat;
+    background:
+      radial-gradient(
+        circle at 1px 1px,
+        color-mix(in srgb, var(--oa-shell-border) 58%, transparent) 1.3px,
+        transparent 0
+      );
+    background-size: 44px 44px;
     transform: scale(1);
     transform-origin: 50% 0 0;
     // 节点容器 定义节点宽度
@@ -155,44 +166,44 @@
       position: relative;
       display: flex;
       flex-direction: column;
-      min-height: 70px;
-      padding: 5px 10px 8px;
+      min-height: 78px;
+      padding: 8px 10px 10px;
       cursor: pointer;
-      background-color: #fff;
-      border: 2px solid transparent;
-      border-radius: 8px;
-      box-shadow: 0 1px 4px 0 rgb(10 30 65 / 16%);
+      background-color: var(--oa-shell-surface);
+      border: 1px solid var(--oa-shell-border);
+      border-radius: 0;
+      box-shadow: none;
       transition: all 0.1s cubic-bezier(0.645, 0.045, 0.355, 1);
 
       &.status-pass {
-        background-color: #a9da90;
-        border-color: #67c23a;
+        background-color: var(--oa-success-soft);
+        border-color: color-mix(in srgb, var(--oa-success-text) 40%, transparent);
       }
 
       &.status-pass:hover {
-        border-color: #67c23a;
+        border-color: color-mix(in srgb, var(--oa-success-text) 60%, transparent);
       }
 
       &.status-running {
-        background-color: #e7f0fe;
-        border-color: #5a9cf8;
+        background-color: var(--oa-accent-soft);
+        border-color: color-mix(in srgb, var(--oa-accent) 42%, transparent);
       }
 
       &.status-running:hover {
-        border-color: #5a9cf8;
+        border-color: color-mix(in srgb, var(--oa-accent) 62%, transparent);
       }
 
       &.status-reject {
-        background-color: #f6e5e5;
-        border-color: #e47470;
+        background-color: var(--oa-danger-soft);
+        border-color: color-mix(in srgb, var(--oa-danger-text) 42%, transparent);
       }
 
       &.status-reject:hover {
-        border-color: #e47470;
+        border-color: color-mix(in srgb, var(--oa-danger-text) 62%, transparent);
       }
 
       &:hover {
-        border-color: #0089ff;
+        border-color: var(--oa-accent);
 
         .node-toolbar {
           opacity: 1;
@@ -209,46 +220,46 @@
         align-items: center;
         padding: 4px;
         cursor: pointer;
-        border-radius: 4px 4px 0 0;
+        border-radius: 0;
 
         .node-title-icon {
           display: flex;
           align-items: center;
 
           &.user-task {
-            color: #ff943e;
+            color: var(--oa-warning-text);
           }
 
           &.copy-task {
-            color: #3296fa;
+            color: var(--oa-accent);
           }
 
           &.start-user {
-            color: #676565;
+            color: var(--oa-ink-soft);
           }
 
           &.delay-node {
-            color: #e47470;
+            color: var(--oa-danger-text);
           }
 
           &.trigger-node {
-            color: #3373d2;
+            color: color-mix(in srgb, var(--oa-accent) 82%, #2563eb);
           }
 
           &.router-node {
-            color: #ca3a31;
+            color: color-mix(in srgb, var(--oa-danger-text) 82%, #9f1239);
           }
 
           &.transactor-task {
-            color: #309;
+            color: color-mix(in srgb, var(--oa-accent) 58%, #5b21b6);
           }
 
           &.child-process {
-            color: #963;
+            color: color-mix(in srgb, var(--oa-warning-text) 76%, #7c2d12);
           }
 
           &.async-child-process {
-            color: #066;
+            color: color-mix(in srgb, var(--oa-info-text) 78%, #0f766e);
           }
         }
 
@@ -259,11 +270,11 @@
           font-size: 14px;
           font-weight: 600;
           line-height: 18px;
-          color: #1f1f1f;
+          color: var(--oa-ink);
           white-space: nowrap;
 
           &:hover {
-            border-bottom: 1px dashed #f60;
+            border-bottom: 1px dashed var(--oa-accent);
           }
         }
       }
@@ -275,7 +286,7 @@
         justify-content: space-between;
         padding: 4px 0;
         cursor: pointer;
-        border-radius: 4px 4px 0 0;
+        border-radius: 0;
 
         .input-max-width {
           max-width: 115px !important;
@@ -286,11 +297,11 @@
           text-overflow: ellipsis;
           font-size: 13px;
           font-weight: 600;
-          color: #f60;
+          color: var(--oa-accent);
           white-space: nowrap;
 
           &:hover {
-            border-bottom: 1px dashed #000;
+            border-bottom: 1px dashed var(--oa-ink);
           }
         }
 
@@ -305,12 +316,12 @@
         align-items: center;
         justify-content: space-between;
         min-height: 32px;
-        padding: 4px 8px;
+        padding: 6px 10px;
         margin-top: 4px;
         line-height: 32px;
-        color: #111f2c;
-        background: rgb(0 0 0 / 3%);
-        border-radius: 4px;
+        color: var(--oa-ink);
+        background: var(--oa-shell-surface-muted);
+        border-radius: 0;
 
         .node-text {
           display: -webkit-box;
@@ -332,9 +343,9 @@
         padding: 4px 0;
         margin-top: 4px;
         line-height: 32px;
-        color: #111f2c;
-        background: rgb(0 0 0 / 3%);
-        border-radius: 4px;
+        color: var(--oa-ink);
+        background: var(--oa-shell-surface-muted);
+        border-radius: 0;
 
         .branch-node-text {
           display: -webkit-box;
@@ -391,7 +402,7 @@
     }
 
     .node-config-error {
-      border-color: #ff5219 !important;
+      border-color: var(--oa-danger-text) !important;
     }
     // 普通节点包装
     .node-wrapper {
@@ -418,7 +429,7 @@
         height: 100%;
         margin: auto;
         content: '';
-        background-color: #dedede;
+        background-color: var(--oa-shell-border);
       }
 
       .node-handler {
@@ -430,10 +441,10 @@
           justify-content: center;
           width: 25px;
           height: 25px;
-          color: #fff;
+          color: var(--oa-accent-contrast);
           cursor: pointer;
-          background-color: #0089ff;
-          border-radius: 50%;
+          background-color: var(--oa-accent);
+          border-radius: 0;
 
           &:hover {
             transform: scale(1.1);
@@ -470,7 +481,7 @@
           width: 4px;
           height: 100%;
           content: '';
-          background-color: #fafafa;
+          background-color: var(--oa-shell-surface-subtle);
           transform: translate(-50%);
         }
 
@@ -485,8 +496,9 @@
           padding: 0 10px;
           font-size: 12px;
           line-height: 36px;
-          border: 2px solid #dedede;
-          border-radius: 18px;
+          border: 1px solid var(--oa-shell-border);
+          border-radius: 0;
+          background: var(--oa-shell-surface);
           transform: translateX(-50%);
           transform-origin: center center;
         }
@@ -501,34 +513,34 @@
           justify-content: center;
           width: 36px;
           height: 36px;
-          background-color: #fff;
-          border: 2px solid #dedede;
-          border-radius: 50%;
+          background-color: var(--oa-shell-surface);
+          border: 1px solid var(--oa-shell-border);
+          border-radius: 0;
           transform: translateX(-50%);
           transform-origin: center center;
 
           &.status-pass {
-            background-color: #e9f4e2;
-            border-color: #6bb63c;
+            background-color: var(--oa-success-soft);
+            border-color: color-mix(in srgb, var(--oa-success-text) 40%, transparent);
           }
 
           &.status-pass:hover {
-            border-color: #6bb63c;
+            border-color: color-mix(in srgb, var(--oa-success-text) 60%, transparent);
           }
 
           .icon-size {
             font-size: 22px;
 
             &.condition {
-              color: #67c23a;
+              color: var(--oa-success-text);
             }
 
             &.parallel {
-              color: #626aef;
+              color: color-mix(in srgb, var(--oa-accent) 78%, #5a67d8);
             }
 
             &.inclusive {
-              color: #345da2;
+              color: color-mix(in srgb, var(--oa-accent) 72%, #2f855a);
             }
           }
         }
@@ -542,8 +554,8 @@
           min-width: 280px;
           padding: 40px 40px 0;
           background: transparent;
-          border-top: 2px solid #dedede;
-          border-bottom: 2px solid #dedede;
+          border-top: 1px solid var(--oa-shell-border);
+          border-bottom: 1px solid var(--oa-shell-border);
 
           &::before {
             position: absolute;
@@ -552,7 +564,7 @@
             height: 100%;
             margin: auto;
             content: '';
-            background-color: #dedede;
+            background-color: var(--oa-shell-border);
           }
         }
         // 覆盖条件节点第一个节点左上角的线
@@ -563,7 +575,7 @@
           width: 50%;
           height: 7px;
           content: '';
-          background-color: #fafafa;
+          background-color: var(--oa-shell-surface-subtle);
         }
         // 覆盖条件节点第一个节点左下角的线
         .branch-line-first-bottom {
@@ -573,7 +585,7 @@
           width: 50%;
           height: 7px;
           content: '';
-          background-color: #fafafa;
+          background-color: var(--oa-shell-surface-subtle);
         }
         // 覆盖条件节点最后一个节点右上角的线
         .branch-line-last-top {
@@ -583,7 +595,7 @@
           width: 50%;
           height: 7px;
           content: '';
-          background-color: #fafafa;
+          background-color: var(--oa-shell-surface-subtle);
         }
         // 覆盖条件节点最后一个节点右下角的线
         .branch-line-last-bottom {
@@ -593,7 +605,7 @@
           width: 50%;
           height: 7px;
           content: '';
-          background-color: #fafafa;
+          background-color: var(--oa-shell-surface-subtle);
         }
       }
     }
@@ -626,11 +638,12 @@
           width: 90px;
           height: 36px;
           padding: 3px 4px;
-          color: #212121;
+          color: var(--oa-ink);
           cursor: pointer;
-          background: #fafafa;
-          border-radius: 30px;
-          box-shadow: 0 1px 5px 0 rgb(10 30 65 / 8%);
+          background: var(--oa-shell-surface);
+          border: 1px solid var(--oa-shell-border);
+          border-radius: 0;
+          box-shadow: none;
         }
       }
     }
@@ -646,37 +659,37 @@
         justify-content: center;
         width: 80px;
         height: 36px;
-        color: #212121;
-        background-color: #fff;
-        border: 2px solid transparent;
-        border-radius: 30px;
-        box-shadow: 0 1px 5px 0 rgb(10 30 65 / 8%);
+        color: var(--oa-ink);
+        background-color: var(--oa-shell-surface);
+        border: 1px solid var(--oa-shell-border);
+        border-radius: 0;
+        box-shadow: none;
 
         &.status-pass {
-          background-color: #a9da90;
-          border-color: #6bb63c;
+          background-color: var(--oa-success-soft);
+          border-color: color-mix(in srgb, var(--oa-success-text) 40%, transparent);
         }
 
         &.status-pass:hover {
-          border-color: #6bb63c;
+          border-color: color-mix(in srgb, var(--oa-success-text) 60%, transparent);
         }
 
         &.status-reject {
-          background-color: #f6e5e5;
-          border-color: #e47470;
+          background-color: var(--oa-danger-soft);
+          border-color: color-mix(in srgb, var(--oa-danger-text) 40%, transparent);
         }
 
         &.status-reject:hover {
-          border-color: #e47470;
+          border-color: color-mix(in srgb, var(--oa-danger-text) 60%, transparent);
         }
 
         &.status-cancel {
-          background-color: #eaeaeb;
-          border-color: #919398;
+          background-color: var(--oa-shell-surface-muted);
+          border-color: var(--oa-shell-border);
         }
 
         &.status-cancel:hover {
-          border-color: #919398;
+          border-color: var(--oa-shell-border-strong);
         }
       }
     }
@@ -688,14 +701,14 @@
       margin-left: 4px;
       font-size: 12px;
       line-height: 20px;
-      border: 1px solid #d9d9d9;
-      border-radius: 4px;
+      border: 1px solid var(--oa-shell-border);
+      border-radius: 0;
       transition: all 0.3s;
 
       &:focus {
         outline: 0;
-        border-color: #40a9ff;
-        box-shadow: 0 0 0 2px rgb(24 144 255 / 20%);
+        border-color: var(--oa-accent);
+        box-shadow: 0 0 0 2px color-mix(in srgb, var(--oa-accent) 18%, transparent);
       }
     }
   }

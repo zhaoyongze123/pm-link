@@ -5,7 +5,7 @@ import type { BpmProcessDefinitionApi } from '#/api/bpm/definition';
 import { onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
-import { DocAlert, Page, useVbenModal } from '@vben/common-ui';
+import { Page, useVbenModal } from '@vben/common-ui';
 import { BpmModelFormType } from '@vben/constants';
 
 import { Button, Tooltip } from 'ant-design-vue';
@@ -88,11 +88,8 @@ onMounted(() => {
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="流程定义">
     <FormCreateDetailModal />
-    <template #doc>
-      <DocAlert title="工作流手册" url="https://doc.iocoder.cn/bpm/" />
-    </template>
     <Grid table-title="流程定义列表">
       <template #startUsers="{ row }">
         <template v-if="!row.startUsers || row.startUsers.length === 0">

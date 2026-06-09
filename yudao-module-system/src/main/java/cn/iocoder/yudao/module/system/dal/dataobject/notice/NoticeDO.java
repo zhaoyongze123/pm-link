@@ -38,6 +38,18 @@ public class NoticeDO extends BaseDO {
      */
     private String content;
     /**
+     * 发布对象描述
+     */
+    private String publishTarget;
+    /**
+     * 是否置顶
+     */
+    private Boolean pinned;
+    /**
+     * 附件文件编号列表，逗号分隔
+     */
+    private String attachmentFileIds;
+    /**
      * 公告状态
      *
      * 枚举 {@link CommonStatusEnum}

@@ -248,9 +248,6 @@ onMounted(async () => {
         <div class="oa-lite-complex-title-row">
           <div>
             <h1 class="oa-lite-complex-title">{{ config.title }}</h1>
-            <p class="oa-lite-complex-subtitle">
-              {{ businessKey ? '重新发起复杂审批流程' : '在用户端完成复杂审批发起' }}
-            </p>
           </div>
           <IconifyIcon icon="lucide:files" class="oa-lite-complex-badge" />
         </div>
@@ -356,15 +353,15 @@ onMounted(async () => {
 .oa-lite-complex-shell {
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(340px, 0.8fr);
-  gap: 20px;
+  gap: 24px;
 }
 
 .oa-lite-complex-card {
-  border: 1px solid #e5edf5;
-  border-radius: 28px;
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
-  padding: 28px;
+  border-top: 1px solid var(--oa-shell-border);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  padding: 20px 0 0;
 }
 
 .oa-lite-complex-title-row,
@@ -377,38 +374,32 @@ onMounted(async () => {
 
 .oa-lite-complex-title {
   margin: 0;
-  font-size: 30px;
-  font-weight: 700;
-  color: #111827;
-}
-
-.oa-lite-complex-subtitle {
-  margin: 10px 0 0;
-  font-size: 14px;
-  color: #64748b;
+  font-size: 26px;
+  font-weight: 600;
+  color: var(--oa-ink);
 }
 
 .oa-lite-complex-badge {
   font-size: 30px;
-  color: #2563eb;
+  color: var(--oa-accent);
 }
 
 .oa-lite-complex-divider {
   height: 1px;
-  background: #e5edf5;
-  margin: 22px 0 10px;
+  background: var(--oa-shell-border);
+  margin: 18px 0 10px;
 }
 
 .oa-lite-complex-flow-title {
   font-size: 18px;
   font-weight: 600;
-  color: #111827;
+  color: var(--oa-ink);
 }
 
 .oa-lite-complex-flow-tag {
-  border-radius: 999px;
-  background: #eff6ff;
-  color: #2563eb;
+  border-radius: 0;
+  background: var(--oa-accent-soft);
+  color: var(--oa-accent);
   font-size: 12px;
   padding: 6px 12px;
 }

@@ -26,6 +26,17 @@ public class NoticeSaveReqVO {
     @Schema(description = "公告内容", requiredMode = Schema.RequiredMode.REQUIRED, example = "半生编码")
     private String content;
 
+    @Schema(description = "发布对象", example = "全体后台用户")
+    @Size(max = 255, message = "发布对象不能超过255个字符")
+    private String publishTarget;
+
+    @Schema(description = "是否置顶", example = "false")
+    private Boolean pinned;
+
+    @Schema(description = "附件文件编号列表，逗号分隔", example = "1,2,3")
+    @Size(max = 512, message = "附件文件编号列表长度不能超过512个字符")
+    private String attachmentFileIds;
+
     @Schema(description = "状态，参见 CommonStatusEnum 枚举类", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
     private Integer status;
 

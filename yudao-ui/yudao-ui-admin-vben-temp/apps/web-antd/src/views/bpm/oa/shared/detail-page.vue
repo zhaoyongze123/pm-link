@@ -10,7 +10,9 @@ import { Spin } from 'ant-design-vue';
 
 import { getAttendance } from '#/api/bpm/oa/attendance';
 import { getExpense } from '#/api/bpm/oa/expense';
+import { getLeaveCancel } from '#/api/bpm/oa/leave-cancel';
 import { getOvertime } from '#/api/bpm/oa/overtime';
+import { getOuting } from '#/api/bpm/oa/outing';
 import { getSeal } from '#/api/bpm/oa/seal';
 import { getTrip } from '#/api/bpm/oa/trip';
 import { useDescription } from '#/components/description';
@@ -25,13 +27,15 @@ const props = defineProps<{
 
 const { query } = useRoute();
 const config = getOAModuleViewConfig(props.moduleKey);
-const detailRequestMap: Record<
+const detailRequestMap: Partial<Record<
   OAModuleApiKey,
   (id: number) => Promise<BpmOACommonApi.OARecord>
-> = {
+>> = {
   attendance: getAttendance,
   expense: getExpense,
+  leaveCancel: getLeaveCancel,
   overtime: getOvertime,
+  outing: getOuting,
   seal: getSeal,
   trip: getTrip,
 };
@@ -50,9 +54,11 @@ const [Descriptions] = useDescription({
 async function getDetailData() {
   try {
     loading.value = true;
-    formData.value = await detailRequestMap[props.moduleKey](
-      Number(props.id || queryId.value),
-    );
+    const request = detailRequestMap[props.moduleKey];
+    if (!request) {
+      return;
+    }
+    formData.value = await request(Number(props.id || queryId.value));
   } finally {
     loading.value = false;
   }

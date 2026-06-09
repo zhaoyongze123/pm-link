@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.module.infra.framework.file.core.utils.FileTypeUtils.writeAttachment;
@@ -78,6 +79,16 @@ public class FileController {
     @PreAuthorize("@ss.hasPermission('infra:file:query')")
     public CommonResult<FileRespVO> getFile(@RequestParam("id") Long id) {
         return success(BeanUtils.toBean(fileService.getFile(id), FileRespVO.class));
+    }
+
+    @GetMapping("/list-by-urls")
+    @Operation(summary = "根据访问地址批量获得文件")
+    @Parameter(name = "urls", description = "访问地址列表", required = true)
+    @PreAuthorize("@ss.hasPermission('infra:file:query')")
+    public CommonResult<List<FileRespVO>> getFileListByUrls(@RequestParam("urls") List<String> urls) {
+        return success(fileService.getFileListByUrls(urls).stream()
+                .map(file -> BeanUtils.toBean(file, FileRespVO.class))
+                .collect(Collectors.toList()));
     }
 
     @DeleteMapping("/delete")

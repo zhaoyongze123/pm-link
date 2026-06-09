@@ -22,6 +22,20 @@ export namespace SystemNotifyMessageApi {
   }
 }
 
+export function extractNoticeId(
+  message?: Pick<SystemNotifyMessageApi.NotifyMessage, 'templateCode' | 'templateParams'>,
+) {
+  if (!message || message.templateCode !== 'system_notice_push') {
+    return undefined;
+  }
+  const noticeId = message.templateParams?.noticeId;
+  if (noticeId === undefined || noticeId === null || noticeId === '') {
+    return undefined;
+  }
+  const parsed = Number(noticeId);
+  return Number.isFinite(parsed) ? parsed : undefined;
+}
+
 /** 查询站内信消息列表 */
 export function getNotifyMessagePage(params: PageParam) {
   return requestClient.get<PageResult<SystemNotifyMessageApi.NotifyMessage>>(

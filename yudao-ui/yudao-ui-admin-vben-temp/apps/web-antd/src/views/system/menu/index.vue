@@ -97,7 +97,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="菜单与路由">
     <template #doc>
       <DocAlert
         title="功能权限"
@@ -107,74 +107,86 @@ const [Grid, gridApi] = useVbenVxeGrid({
     </template>
 
     <FormModal @success="handleRefresh" />
-    <Grid table-title="菜单列表">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: $t('ui.actionTitle.create', ['菜单']),
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              auth: ['system:menu:create'],
-              onClick: handleCreate,
-            },
-            {
-              label: isExpanded ? '收缩' : '展开',
-              type: 'primary',
-              onClick: handleExpand,
-            },
-          ]"
-        />
-      </template>
-      <template #name="{ row }">
-        <div class="flex w-full items-center gap-1">
-          <div class="size-5 flex-shrink-0">
-            <IconifyIcon
-              v-if="row.type === SystemMenuTypeEnum.BUTTON"
-              icon="carbon:square-outline"
-              class="size-full"
-            />
-            <IconifyIcon
-              v-else-if="row.icon"
-              :icon="row.icon || 'carbon:circle-dash'"
-              class="size-full"
-            />
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">菜单列表</h3>
           </div>
-          <span class="flex-auto">{{ $t(row.name) }}</span>
-          <div class="items-center justify-end"></div>
         </div>
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: '新增下级',
-              type: 'link',
-              icon: ACTION_ICON.ADD,
-              auth: ['system:menu:create'],
-              onClick: handleAppend.bind(null, row),
-            },
-            {
-              label: $t('common.edit'),
-              type: 'link',
-              icon: ACTION_ICON.EDIT,
-              auth: ['system:menu:update'],
-              onClick: handleEdit.bind(null, row),
-            },
-            {
-              label: $t('common.delete'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:menu:delete'],
-              popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.name]),
-                confirm: handleDelete.bind(null, row),
-              },
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="菜单列表">
+            <template #toolbar-tools>
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('ui.actionTitle.create', ['菜单']),
+                    type: 'primary',
+                    icon: ACTION_ICON.ADD,
+                    auth: ['system:menu:create'],
+                    onClick: handleCreate,
+                  },
+                  {
+                    label: isExpanded ? '收缩' : '展开',
+                    type: 'primary',
+                    onClick: handleExpand,
+                  },
+                ]"
+              />
+            </template>
+            <template #name="{ row }">
+              <div class="flex w-full items-center gap-1">
+                <div class="size-5 flex-shrink-0">
+                  <IconifyIcon
+                    v-if="row.type === SystemMenuTypeEnum.BUTTON"
+                    icon="carbon:square-outline"
+                    class="size-full"
+                  />
+                  <IconifyIcon
+                    v-else-if="row.icon"
+                    :icon="row.icon || 'carbon:circle-dash'"
+                    class="size-full"
+                  />
+                </div>
+                <span class="flex-auto">{{ $t(row.name) }}</span>
+                <div class="items-center justify-end"></div>
+              </div>
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: '新增下级',
+                    type: 'link',
+                    icon: ACTION_ICON.ADD,
+                    auth: ['system:menu:create'],
+                    onClick: handleAppend.bind(null, row),
+                  },
+                  {
+                    label: $t('common.edit'),
+                    type: 'link',
+                    icon: ACTION_ICON.EDIT,
+                    auth: ['system:menu:update'],
+                    onClick: handleEdit.bind(null, row),
+                  },
+                  {
+                    label: $t('common.delete'),
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['system:menu:delete'],
+                    popConfirm: {
+                      title: $t('ui.actionMessage.deleteConfirm', [row.name]),
+                      confirm: handleDelete.bind(null, row),
+                    },
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

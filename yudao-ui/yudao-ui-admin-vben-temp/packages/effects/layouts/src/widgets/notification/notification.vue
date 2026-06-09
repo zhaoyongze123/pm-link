@@ -35,6 +35,7 @@ withDefaults(defineProps<Props>(), {
 
 const emit = defineEmits<{
   clear: [];
+  itemClick: [NotificationItem];
   makeAll: [];
   open: [boolean];
   read: [NotificationItem];
@@ -63,6 +64,7 @@ function handleClear() {
 }
 
 function handleClick(item: NotificationItem) {
+  emit('itemClick', item);
   // 如果通知项有链接，点击时跳转
   if (item.link) {
     navigateTo(item.link, item.query, item.state);

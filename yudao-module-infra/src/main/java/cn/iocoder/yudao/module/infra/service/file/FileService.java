@@ -64,6 +64,14 @@ public interface FileService {
     FileDO getFile(Long id);
 
     /**
+     * 根据访问地址列表获得文件列表
+     *
+     * @param urls 访问地址列表
+     * @return 文件列表
+     */
+    List<FileDO> getFileListByUrls(List<String> urls);
+
+    /**
      * 删除文件
      *
      * @param id 编号

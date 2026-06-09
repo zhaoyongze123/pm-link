@@ -7,8 +7,6 @@ import { $t } from '#/locales';
 
 const BasicLayout = () => import('#/layouts/basic.vue');
 const AuthPageLayout = () => import('#/layouts/auth.vue');
-const OALitePage = () => import('#/views/oa-lite/index.vue');
-const OALiteNotificationsPage = () => import('#/views/oa-lite/notifications.vue');
 /** 全局404页面 */
 const fallbackNotFoundRoute: RouteRecordRaw = {
   component: () => import('#/views/_core/fallback/not-found.vue'),
@@ -38,7 +36,20 @@ const coreRoutes: RouteRecordRaw[] = [
     name: 'Root',
     path: '/',
     redirect: preferences.app.defaultHomePath,
-    children: [],
+    children: [
+      {
+        path: '/bpm/process-instance/create',
+        name: 'BpmProcessInstanceCreate',
+        component: () => import('#/views/bpm/processInstance/create/index.vue'),
+        meta: {
+          title: '发起流程',
+          activePath: '/oa-lite',
+          hideInMenu: true,
+          hideInTab: true,
+          keepAlive: false,
+        },
+      },
+    ],
   },
   {
     component: AuthPageLayout,
@@ -134,30 +145,6 @@ const coreRoutes: RouteRecordRaw[] = [
     },
     name: 'BpmMobileFormPreview',
     path: '/bpm/mobile/form-preview',
-  },
-  {
-    component: OALitePage,
-    meta: {
-      hideInBreadcrumb: true,
-      hideInMenu: true,
-      hideInTab: true,
-      ignoreAccess: true,
-      title: 'OA 审批',
-    },
-    name: 'OALite',
-    path: '/oa-lite',
-  },
-  {
-    component: OALiteNotificationsPage,
-    meta: {
-      hideInBreadcrumb: true,
-      hideInMenu: true,
-      hideInTab: true,
-      ignoreAccess: true,
-      title: 'OA 通知中心',
-    },
-    name: 'OALiteNotifications',
-    path: '/oa-lite/notifications',
   },
 ];
 

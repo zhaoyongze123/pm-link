@@ -52,6 +52,20 @@ public interface NotifyMessageMapper extends BaseMapperX<NotifyMessageDO> {
                         .eq(NotifyMessageDO::getReadStatus, false));
     }
 
+    default List<NotifyMessageDO> selectListByIdsAndUser(Collection<Long> ids, Long userId, Integer userType) {
+        return selectList(new LambdaQueryWrapperX<NotifyMessageDO>()
+                .in(NotifyMessageDO::getId, ids)
+                .eq(NotifyMessageDO::getUserId, userId)
+                .eq(NotifyMessageDO::getUserType, userType));
+    }
+
+    default List<NotifyMessageDO> selectUnreadListByUser(Long userId, Integer userType) {
+        return selectList(new LambdaQueryWrapperX<NotifyMessageDO>()
+                .eq(NotifyMessageDO::getUserId, userId)
+                .eq(NotifyMessageDO::getUserType, userType)
+                .eq(NotifyMessageDO::getReadStatus, false));
+    }
+
     default List<NotifyMessageDO> selectUnreadListByUserIdAndUserType(Long userId, Integer userType, Integer size) {
         return selectList(new QueryWrapperX<NotifyMessageDO>() // 由于要使用 limitN 语句，所以只能用 QueryWrapperX
                 .eq("user_id", userId)

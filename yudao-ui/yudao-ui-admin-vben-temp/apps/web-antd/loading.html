@@ -1,0 +1,153 @@
+<style data-app-loading="inject-css">
+  html {
+    line-height: 1.15;
+  }
+
+  #__app-loading__.hidden {
+    visibility: hidden;
+    opacity: 0;
+    transition: opacity 0.45s ease-out, visibility 0.45s ease-out;
+  }
+
+  .oa-lite-loading {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    pointer-events: none;
+    background:
+      linear-gradient(
+        0deg,
+        transparent 0,
+        transparent calc(100% - 1px),
+        rgb(148 163 184 / 8%) calc(100% - 1px),
+        rgb(148 163 184 / 8%) 100%
+      ),
+      linear-gradient(
+        90deg,
+        transparent 0,
+        transparent calc(100% - 1px),
+        rgb(148 163 184 / 8%) calc(100% - 1px),
+        rgb(148 163 184 / 8%) 100%
+      ),
+      radial-gradient(circle at 18% 12%, rgb(21 101 192 / 10%), transparent 22%),
+      radial-gradient(circle at 86% 0%, rgb(11 87 161 / 8%), transparent 20%),
+      linear-gradient(180deg, #f3f7fc 0%, #eaf0f7 100%);
+    background-size: 100% 36px, 36px 100%, auto, auto, auto;
+  }
+
+  .oa-lite-loading::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background:
+      linear-gradient(135deg, rgb(255 255 255 / 72%), transparent 54%),
+      radial-gradient(circle at 20% 0%, rgb(37 99 235 / 6%), transparent 30%);
+  }
+
+  .oa-lite-loading-card {
+    position: relative;
+    display: grid;
+    min-width: 360px;
+    gap: 14px;
+    padding: 18px 0 14px;
+    border-top: 1px solid rgb(215 222 232 / 92%);
+    border-bottom: 1px solid rgb(215 222 232 / 92%);
+    background: transparent;
+  }
+
+  .oa-lite-loading-brand {
+    display: flex;
+    height: 28px;
+    width: 28px;
+    align-items: center;
+    justify-content: center;
+    border-right: 1px solid rgb(215 222 232 / 92%);
+    border-radius: 0;
+    background: transparent;
+  }
+
+  .oa-lite-loading-brand::before {
+    content: '';
+    width: 10px;
+    height: 10px;
+    border-right: 1.5px solid #1565c0;
+    border-bottom: 1.5px solid #1565c0;
+    transform: rotate(-45deg);
+    animation: oa-lite-loading-pulse 1.15s ease-in-out infinite;
+  }
+
+  .oa-lite-loading-copy {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .oa-lite-loading-title {
+    color: #17202d;
+    font-size: 16px;
+    font-weight: 600;
+    letter-spacing: normal;
+  }
+
+  .oa-lite-loading-subtitle {
+    color: #4c5b70;
+    font-size: 12px;
+    line-height: 1.6;
+  }
+
+  .oa-lite-loading-progress {
+    position: relative;
+    height: 2px;
+    overflow: hidden;
+    border-radius: 0;
+    background: rgb(203 213 225 / 72%);
+  }
+
+  .oa-lite-loading-progress::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    width: 24%;
+    border-radius: 0;
+    background: #1565c0;
+    animation: oa-lite-loading-slide 1.25s ease-in-out infinite;
+  }
+
+  @keyframes oa-lite-loading-slide {
+    0% {
+      transform: translateX(-120%);
+    }
+
+    60%,
+    100% {
+      transform: translateX(220%);
+    }
+  }
+
+  @keyframes oa-lite-loading-pulse {
+    0%,
+    100% {
+      opacity: 0.82;
+      transform: rotate(-45deg) scale(0.94);
+    }
+
+    50% {
+      opacity: 1;
+      transform: rotate(-45deg) scale(1);
+    }
+  }
+</style>
+<div class="oa-lite-loading" id="__app-loading__">
+  <div class="oa-lite-loading-card">
+    <div class="oa-lite-loading-brand"></div>
+    <div class="oa-lite-loading-copy">
+      <div class="oa-lite-loading-title">正在进入工作台</div>
+      <div class="oa-lite-loading-subtitle">加载审批、通知与管理功能</div>
+    </div>
+    <div class="oa-lite-loading-progress"></div>
+  </div>
+</div>

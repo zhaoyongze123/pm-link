@@ -9,7 +9,6 @@ import { Page } from '@vben/common-ui';
 import { groupBy } from '@vben/utils';
 
 import {
-  Card,
   Col,
   InputSearch,
   message,
@@ -31,6 +30,10 @@ const route = useRoute();
 
 const loading = ref(true); // 加载中
 const processInstanceId: any = route.query.processInstanceId; // 流程实例编号。场景：重新发起时
+const processDefinitionIdQuery = computed(() => {
+  const value = route.query.processDefinitionId;
+  return Array.isArray(value) ? value[0] : value;
+});
 
 const categoryList: any = ref([]); // 分类的列表
 const activeCategory = ref(''); // 当前选中的分类
@@ -70,6 +73,19 @@ async function getList() {
         return;
       }
       await handleSelect(processDefinition, processInstance.formVariables);
+      return;
+    }
+
+    // 3. 如果 processDefinitionId 非空，直接进入对应流程定义
+    if (processDefinitionIdQuery.value) {
+      const processDefinition = processDefinitionList.value.find(
+        (item) => item.id === processDefinitionIdQuery.value,
+      );
+      if (!processDefinition) {
+        message.error('发起流程失败，原因：流程定义不存在');
+        return;
+      }
+      await handleSelect(processDefinition);
     }
   } finally {
     loading.value = false;
@@ -187,16 +203,19 @@ onMounted(() => {
     <!-- TODO @jason：这里交互，可以做成类似 vue3 + element-plus 那个一样，滚动切换分类哈？对标钉钉、飞书哈； -->
     <!-- 第一步，通过流程定义的列表，选择对应的流程 -->
     <template v-if="!selectProcessDefinition">
-      <Card
-        class="h-full"
-        title="全部流程"
+      <section
+        class="oa-process-create-shell"
         :class="{
           'process-definition-container': filteredProcessDefinitionList?.length,
         }"
-        :loading="loading"
+        v-loading="loading"
       >
-        <template #extra>
-          <div class="flex h-full items-center justify-center">
+        <header class="oa-process-create-head">
+          <div>
+            <div class="oa-process-create-eyebrow">All Processes</div>
+            <h3 class="oa-process-create-title">全部流程</h3>
+          </div>
+          <div class="oa-process-create-search">
             <InputSearch
               v-model:value="searchName"
               class="!w-50%"
@@ -206,9 +225,9 @@ onMounted(() => {
               @clear="handleQuery"
             />
           </div>
-        </template>
+        </header>
 
-        <div v-if="filteredProcessDefinitionList?.length" class="-ml-6">
+        <div v-if="filteredProcessDefinitionList?.length" class="oa-process-create-body">
           <Tabs v-model:active-key="activeCategory" tab-position="left">
             <Tabs.TabPane
               v-for="category in availableCategories"
@@ -224,36 +243,32 @@ onMounted(() => {
                   :md="8"
                   :lg="8"
                   :xl="6"
-                  @click="handleSelect(definition)"
                 >
-                  <Card
-                    hoverable
-                    class="w-full cursor-pointer"
+                  <button
+                    type="button"
+                    class="oa-process-create-item"
                     :class="{
                       'animate-bounce-once !bg-[rgb(63_115_247_/_10%)]':
                         searchName.trim().length > 0,
                     }"
-                    :body-style="{
-                      width: '100%',
-                      padding: '16px',
-                    }"
+                    @click="handleSelect(definition)"
                   >
-                    <div class="flex items-center">
+                    <div class="oa-process-create-item-row">
                       <img
                         v-if="definition.icon"
                         :src="definition.icon"
-                        class="size-12 rounded object-contain"
+                        class="oa-process-create-item-icon"
                         alt="流程图标"
                       />
                       <div
                         v-else
-                        class="flex size-12 flex-shrink-0 items-center justify-center rounded bg-primary"
+                        class="oa-process-create-item-fallback"
                       >
-                        <span class="text-xs text-white">
+                        <span class="oa-process-create-item-fallback-text">
                           {{ definition.name?.slice(0, 2) }}
                         </span>
                       </div>
-                      <span class="ml-3 flex-1 truncate text-base">
+                      <span class="oa-process-create-item-text">
                         <Tooltip
                           placement="topLeft"
                           :title="`${definition.description}`"
@@ -262,18 +277,18 @@ onMounted(() => {
                         </Tooltip>
                       </span>
                     </div>
-                  </Card>
+                  </button>
                 </Col>
               </Row>
             </Tabs.TabPane>
           </Tabs>
         </div>
-        <div v-else class="!py-48 text-center">
+        <div v-else class="oa-process-create-empty">
           <Space direction="vertical" size="large">
             <span class="text-gray-500">没有找到搜索结果</span>
           </Space>
         </div>
-      </Card>
+      </section>
     </template>
 
     <!-- 第二步，填写表单，进行流程的提交 -->
@@ -300,5 +315,102 @@ onMounted(() => {
 
 .animate-bounce-once {
   animation: bounce 0.5s ease;
+}
+
+.oa-process-create-shell {
+  border-top: 1px solid var(--oa-shell-border);
+  padding-top: 18px;
+}
+
+.oa-process-create-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.oa-process-create-eyebrow {
+  color: var(--oa-ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.oa-process-create-title {
+  margin: 6px 0 0;
+  color: var(--oa-ink);
+  font-size: 20px;
+  font-weight: 600;
+}
+
+.oa-process-create-search {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 280px;
+}
+
+.oa-process-create-body {
+  margin-top: 18px;
+}
+
+.oa-process-create-item {
+  width: 100%;
+  border: 0;
+  border-top: 1px solid var(--oa-shell-border);
+  background: transparent;
+  padding: 16px 0;
+  text-align: left;
+  cursor: pointer;
+  transition:
+    border-color 0.18s ease,
+    color 0.18s ease;
+}
+
+.oa-process-create-item:hover {
+  border-top-color: color-mix(in srgb, var(--oa-accent) 26%, var(--oa-shell-border));
+}
+
+.oa-process-create-item-row {
+  display: flex;
+  align-items: center;
+}
+
+.oa-process-create-item-icon {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+}
+
+.oa-process-create-item-fallback {
+  display: flex;
+  width: 48px;
+  height: 48px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--oa-shell-border);
+  color: var(--oa-accent);
+}
+
+.oa-process-create-item-fallback-text {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.oa-process-create-item-text {
+  margin-left: 12px;
+  flex: 1;
+  min-width: 0;
+  color: var(--oa-ink);
+  font-size: 15px;
+}
+
+.oa-process-create-empty {
+  padding: 96px 0;
+  text-align: center;
 }
 </style>

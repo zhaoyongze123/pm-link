@@ -86,6 +86,17 @@ public interface NotifyMessageService {
     int updateNotifyMessageRead(Collection<Long> ids, Long userId, Integer userType);
 
     /**
+     * 标记站内信为已读，并同步公告阅读记录
+     *
+     * @param ids 站内信编号集合
+     * @param userId 用户编号
+     * @param userType 用户类型
+     * @param userNickname 用户昵称
+     * @return 更新到的条数
+     */
+    int updateNotifyMessageRead(Collection<Long> ids, Long userId, Integer userType, String userNickname);
+
+    /**
      * 标记所有站内信为已读
      *
      * @param userId   用户编号
@@ -93,5 +104,15 @@ public interface NotifyMessageService {
      * @return 更新到的条数
      */
     int updateAllNotifyMessageRead(Long userId, Integer userType);
+
+    /**
+     * 标记所有站内信为已读，并同步公告阅读记录
+     *
+     * @param userId 用户编号
+     * @param userType 用户类型
+     * @param userNickname 用户昵称
+     * @return 更新到的条数
+     */
+    int updateAllNotifyMessageRead(Long userId, Integer userType, String userNickname);
 
 }

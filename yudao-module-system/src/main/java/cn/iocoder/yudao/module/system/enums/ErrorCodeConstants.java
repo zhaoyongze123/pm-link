@@ -83,6 +83,25 @@ public interface ErrorCodeConstants {
     // ========== 通知公告 1-002-008-000 ==========
     ErrorCode NOTICE_NOT_FOUND = new ErrorCode(1_002_008_001, "当前通知公告不存在");
 
+    // ========== 会议室 1-002-009-000 ==========
+    ErrorCode MEETING_ROOM_NOT_EXISTS = new ErrorCode(1_002_009_000, "会议室不存在");
+    ErrorCode MEETING_ROOM_NAME_DUPLICATE = new ErrorCode(1_002_009_001, "已经存在名为【{}】的会议室");
+    ErrorCode MEETING_ROOM_DISABLED = new ErrorCode(1_002_009_002, "会议室【{}】已停用，无法预定");
+
+    // ========== 会议室预定 1-002-010-000 ==========
+    ErrorCode MEETING_BOOKING_NOT_EXISTS = new ErrorCode(1_002_010_000, "会议室预定不存在");
+    ErrorCode MEETING_BOOKING_TIME_INVALID = new ErrorCode(1_002_010_001, "会议时间不合法");
+    ErrorCode MEETING_BOOKING_TIME_SLOT_INVALID = new ErrorCode(1_002_010_002, "当前仅支持整点开始的固定两小时预定");
+    ErrorCode MEETING_BOOKING_CONFLICT_EXISTS = new ErrorCode(1_002_010_003, "当前时段存在冲突预定，请确认后重试");
+    ErrorCode MEETING_BOOKING_NOT_OWNER = new ErrorCode(1_002_010_004, "只能操作自己的会议室预定");
+    ErrorCode MEETING_BOOKING_STARTED_CANNOT_OPERATE = new ErrorCode(1_002_010_005, "会议已开始，无法继续修改或取消");
+    ErrorCode MEETING_BOOKING_CROSS_DAY_NOT_SUPPORTED = new ErrorCode(1_002_010_006, "暂不支持跨天预定");
+
+    // ========== 个人日程 1-002-017-000 ==========
+    ErrorCode PERSONAL_SCHEDULE_NOT_EXISTS = new ErrorCode(1_002_017_000, "个人日程不存在");
+    ErrorCode PERSONAL_SCHEDULE_TIME_INVALID = new ErrorCode(1_002_017_001, "日程时间不合法");
+    ErrorCode PERSONAL_SCHEDULE_NOT_OWNER = new ErrorCode(1_002_017_002, "只能操作自己的个人日程");
+
     // ========== 短信渠道 1-002-011-000 ==========
     ErrorCode SMS_CHANNEL_NOT_EXISTS = new ErrorCode(1_002_011_000, "短信渠道不存在");
     ErrorCode SMS_CHANNEL_DISABLE = new ErrorCode(1_002_011_001, "短信渠道不处于开启状态，不允许选择");

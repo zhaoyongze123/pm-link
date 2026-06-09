@@ -33,6 +33,13 @@ export namespace InfraFileApi {
   }
 }
 
+/** 根据 URL 列表获取文件列表 */
+export function getFileListByUrls(urls: string[]) {
+  return requestClient.get<InfraFileApi.File[]>('/infra/file/list-by-urls', {
+    params: { urls },
+  });
+}
+
 /** 查询文件列表 */
 export function getFilePage(params: PageParam) {
   return requestClient.get<PageResult<InfraFileApi.File>>('/infra/file/page', {

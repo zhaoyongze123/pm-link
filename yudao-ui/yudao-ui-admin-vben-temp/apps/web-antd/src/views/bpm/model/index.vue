@@ -8,7 +8,7 @@ import { IconifyIcon } from '@vben/icons';
 import { cloneDeep } from '@vben/utils';
 
 import { useSortable } from '@vueuse/integrations/useSortable';
-import { Button, Card, Dropdown, Input, Menu, message } from 'ant-design-vue';
+import { Button, Dropdown, Input, Menu, message } from 'ant-design-vue';
 
 import {
   getCategorySimpleList,
@@ -140,69 +140,59 @@ async function handleCategorySortSubmit() {
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="流程模型">
     <!-- 流程分类表单弹窗 -->
     <CategoryFormModal @success="getList" />
-    <Card
-      :body-style="{ padding: '10px' }"
-      class="mb-4"
-      title="流程模型"
-      v-spinning="modelListSpinning"
-    >
-      <template #extra>
-        <div v-if="!isCategorySorting">
-          <Input
-            v-model:value="queryParams.name"
-            placeholder="搜索流程"
-            allow-clear
-            @press-enter="getList"
-            class="!w-60"
-          />
-          <Button class="ml-2" type="primary" @click="createModel">
-            <IconifyIcon icon="lucide:plus" /> 新建模型
-          </Button>
-          <Dropdown class="ml-2" placement="bottomRight" arrow>
-            <Button>
-              <template #icon>
-                <div class="flex items-center justify-center">
-                  <IconifyIcon icon="lucide:settings" />
-                </div>
-              </template>
-            </Button>
-            <template #overlay>
-              <Menu @click="(e) => handleCommand(e.key as string)">
-                <Menu.Item key="handleCategoryAdd">
-                  <div class="flex items-center gap-1">
-                    <IconifyIcon icon="lucide:plus" />
-                    新建分类
-                  </div>
-                </Menu.Item>
-                <Menu.Item key="handleCategorySort">
-                  <div class="flex items-center gap-1">
-                    <IconifyIcon icon="lucide:align-start-vertical" />
-                    分类排序
-                  </div>
-                </Menu.Item>
-              </Menu>
+    <div v-spinning="modelListSpinning">
+      <div v-if="!isCategorySorting" class="oa-filter-strip">
+        <Input
+          v-model:value="queryParams.name"
+          placeholder="搜索流程名称"
+          allow-clear
+          @press-enter="getList"
+          class="!w-72"
+        />
+        <Button type="primary" @click="createModel">
+          <IconifyIcon icon="lucide:plus" /> 新建模型
+        </Button>
+        <Dropdown placement="bottomRight" arrow>
+          <Button aria-label="流程模型设置">
+            <template #icon>
+              <div class="flex items-center justify-center">
+                <IconifyIcon icon="lucide:settings-2" />
+              </div>
             </template>
-          </Dropdown>
-        </div>
-        <div class="flex h-full items-center justify-between" v-else>
-          <Button @click="handleCategorySortCancel" class="mr-3">
-            取 消
           </Button>
-          <Button
-            type="primary"
-            :loading="saveSortLoading"
-            @click="handleCategorySortSubmit"
-          >
-            保存排序
-          </Button>
-        </div>
-      </template>
+          <template #overlay>
+            <Menu @click="(e) => handleCommand(e.key as string)">
+              <Menu.Item key="handleCategoryAdd">
+                <div class="flex items-center gap-1">
+                  <IconifyIcon icon="lucide:folder-plus" />
+                  新建分类
+                </div>
+              </Menu.Item>
+              <Menu.Item key="handleCategorySort">
+                <div class="flex items-center gap-1">
+                  <IconifyIcon icon="lucide:align-start-vertical" />
+                  分类排序
+                </div>
+              </Menu.Item>
+            </Menu>
+          </template>
+        </Dropdown>
+      </div>
+      <div v-else class="oa-filter-strip justify-end">
+        <Button @click="handleCategorySortCancel">取 消</Button>
+        <Button
+          type="primary"
+          :loading="saveSortLoading"
+          @click="handleCategorySortSubmit"
+        >
+          保存排序
+        </Button>
+      </div>
 
-      <!-- 按照分类，展示其所属的模型列表 -->
-      <div class="px-3" ref="categoryGroupRef">
+      <div ref="categoryGroupRef" class="oa-model-category-list mt-4">
         <CategoryDraggableModel
           v-for="(element, index) in categoryGroup"
           :class="isCategorySorting ? 'cursor-move' : ''"
@@ -213,6 +203,14 @@ async function handleCategorySortSubmit() {
           @success="getList"
         />
       </div>
-    </Card>
+    </div>
   </Page>
 </template>
+
+<style scoped>
+.oa-model-category-list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+</style>

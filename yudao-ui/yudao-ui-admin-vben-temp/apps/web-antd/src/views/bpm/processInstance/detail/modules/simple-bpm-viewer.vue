@@ -182,11 +182,81 @@ const setSimpleModelNodeTaskStatus = (
 };
 </script>
 <template>
-  <div v-loading="loading">
-    <SimpleProcessViewer
-      :flow-node="simpleModel"
-      :tasks="tasks"
-      :process-instance="processInstance"
-    />
+  <div v-loading="loading" class="oa-process-viewer-shell">
+    <div class="oa-process-viewer-head">
+      <div>
+        <div class="oa-process-viewer-eyebrow">Process Map</div>
+        <div class="oa-process-viewer-title">流程节点视图</div>
+      </div>
+      <div class="oa-process-viewer-caption">按审批状态高亮当前流程节点与连线</div>
+    </div>
+    <div class="oa-process-viewer-body">
+      <SimpleProcessViewer
+        :flow-node="simpleModel"
+        :tasks="tasks"
+        :process-instance="processInstance"
+      />
+    </div>
   </div>
 </template>
+
+<style scoped>
+.oa-process-viewer-shell {
+  display: flex;
+  min-height: 520px;
+  flex-direction: column;
+  min-width: 0;
+  border-top: 1px solid var(--oa-shell-border);
+  background: transparent;
+}
+
+.oa-process-viewer-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 0 14px;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.oa-process-viewer-eyebrow {
+  color: var(--oa-ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.oa-process-viewer-title {
+  margin-top: 6px;
+  color: var(--oa-ink);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.oa-process-viewer-caption {
+  color: var(--oa-ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+  text-align: right;
+}
+
+.oa-process-viewer-body {
+  flex: 1;
+  min-height: 0;
+  padding: 18px 0 0;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--oa-grid-line) 100%, transparent),
+      color-mix(in srgb, var(--oa-grid-line) 100%, transparent)
+    )
+    0 0 / 100% 1px no-repeat;
+}
+
+.oa-process-viewer-body :deep(.simple-process-viewer) {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+</style>

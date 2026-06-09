@@ -6,7 +6,6 @@ import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { LOGIN_PATH } from '@vben/constants';
-import { preferences } from '@vben/preferences';
 import { resetAllStores, useAccessStore, useUserStore } from '@vben/stores';
 
 import { notification } from 'ant-design-vue';
@@ -25,13 +24,17 @@ import { $t } from '#/locales';
 import { filterAccessMenus } from '#/utils/menu-filter';
 import { resolveUserHomePath } from '#/utils/oa-user';
 
-const MENU_WHITELIST = new Set(['系统管理', '基础设施', '工作流程']);
+type UserInfoWithEmail = UserInfo & {
+  email?: string;
+};
 
-function filterTopLevelMenus<T extends { children?: T[]; name?: string }>(
-  menus: T[],
-) {
-  return menus.filter((menu) => MENU_WHITELIST.has(menu.name ?? ''));
-}
+type NormalizedUserInfo = UserInfoWithEmail & {
+  avatar: string;
+  homePath: string;
+  nickname: string;
+  userId: string;
+  username: string;
+};
 
 export const useAuthStore = defineStore('auth', () => {
   const accessStore = useAccessStore();
@@ -53,7 +56,7 @@ export const useAuthStore = defineStore('auth', () => {
     onSuccess?: () => Promise<void> | void,
   ) {
     // 异步处理用户登录操作并获取 accessToken
-    let userInfo: null | UserInfo = null;
+    let userInfo: null | UserInfoWithEmail = null;
     try {
       let loginResult: AuthApi.LoginResult;
       loginLoading.value = true;
@@ -99,8 +102,7 @@ export const useAuthStore = defineStore('auth', () => {
             ? await onSuccess?.()
             : await router.push(
                 resolveUserHomePath(
-                  preferences.app.defaultHomePath,
-                  userInfo.homePath,
+                  userInfo?.homePath,
                   userStore.userRoles,
                 ),
               );
@@ -155,21 +157,20 @@ export const useAuthStore = defineStore('auth', () => {
       getUserProfile().catch(() => null),
     ]);
     authPermissionInfo = permissionInfo;
-    const filteredMenus = filterAccessMenus(
-      filterTopLevelMenus(authPermissionInfo.menus || []),
-    );
     const userRoles = authPermissionInfo.roles || [];
-    const normalizedUser = {
-      ...authPermissionInfo.user,
-      avatar: profile?.avatar || authPermissionInfo.user?.avatar || '',
-      email: profile?.email ?? authPermissionInfo.user?.email,
+    const filteredMenus = filterAccessMenus(authPermissionInfo.menus || []);
+    const rawUser = (authPermissionInfo.user || {}) as Partial<UserInfoWithEmail>;
+    const normalizedUser: NormalizedUserInfo = {
+      ...rawUser,
+      avatar: profile?.avatar || rawUser.avatar || '',
+      email: profile?.email ?? rawUser.email,
       homePath: resolveUserHomePath(
-        preferences.app.defaultHomePath,
-        authPermissionInfo.user?.homePath,
+        rawUser.homePath,
         userRoles,
       ),
-      nickname: profile?.nickname ?? authPermissionInfo.user?.nickname,
-      username: profile?.username ?? authPermissionInfo.user?.username,
+      nickname: profile?.nickname ?? rawUser.nickname ?? '',
+      userId: String(rawUser.userId ?? (rawUser as Record<string, any>).id ?? ''),
+      username: profile?.username ?? rawUser.username ?? '',
     };
     // userStore
     userStore.setUserInfo(normalizedUser);

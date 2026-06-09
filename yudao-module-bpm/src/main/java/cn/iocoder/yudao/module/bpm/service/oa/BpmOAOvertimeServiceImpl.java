@@ -15,6 +15,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.Resource;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -46,14 +48,20 @@ public class BpmOAOvertimeServiceImpl implements BpmOAOvertimeService {
     @Transactional(rollbackFor = Exception.class)
     public Long createOvertime(Long userId, BpmOAOvertimeCreateReqVO createReqVO) {
         // 插入 OA 加班单
-        long day = LocalDateTimeUtil.between(createReqVO.getStartTime(), createReqVO.getEndTime()).toDays();
+        BigDecimal durationHours = calculateDurationHours(createReqVO);
+        long day = durationHours.divide(new BigDecimal("8"), 0, RoundingMode.UP).longValue();
         BpmOAOvertimeDO overtime = BeanUtils.toBean(createReqVO, BpmOAOvertimeDO.class)
-                .setUserId(userId).setDay(day).setStatus(BpmTaskStatusEnum.RUNNING.getStatus());
+                .setUserId(userId)
+                .setDay(day)
+                .setDurationHours(durationHours)
+                .setWorkDate(createReqVO.getWorkDate() != null ? createReqVO.getWorkDate() : createReqVO.getStartTime().toLocalDate())
+                .setStatus(BpmTaskStatusEnum.RUNNING.getStatus());
         overtimeMapper.insert(overtime);
 
         // 发起 BPM 流程
         Map<String, Object> processInstanceVariables = new HashMap<>();
         processInstanceVariables.put("day", day);
+        processInstanceVariables.put("durationHours", durationHours);
         String processInstanceId = processInstanceApi.createProcessInstance(userId,
                 new BpmProcessInstanceCreateReqDTO().setProcessDefinitionKey(PROCESS_KEY)
                         .setVariables(processInstanceVariables).setBusinessKey(String.valueOf(overtime.getId()))
@@ -84,6 +92,15 @@ public class BpmOAOvertimeServiceImpl implements BpmOAOvertimeService {
     @Override
     public PageResult<BpmOAOvertimeDO> getOvertimePage(Long userId, BpmOAOvertimePageReqVO pageReqVO) {
         return overtimeMapper.selectPage(userId, pageReqVO);
+    }
+
+    private BigDecimal calculateDurationHours(BpmOAOvertimeCreateReqVO createReqVO) {
+        if (createReqVO.getDurationHours() != null) {
+            return createReqVO.getDurationHours();
+        }
+        long minutes = LocalDateTimeUtil.between(createReqVO.getStartTime(), createReqVO.getEndTime()).toMinutes();
+        return BigDecimal.valueOf(minutes)
+                .divide(new BigDecimal("60"), 2, RoundingMode.HALF_UP);
     }
 
 }

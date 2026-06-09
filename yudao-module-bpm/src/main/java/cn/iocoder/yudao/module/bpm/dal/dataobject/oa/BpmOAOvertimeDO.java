@@ -10,6 +10,8 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -48,6 +50,10 @@ public class BpmOAOvertimeDO extends BaseDO {
      */
     private String reason;
     /**
+     * 加班日期
+     */
+    private LocalDate workDate;
+    /**
      * 开始时间
      */
     private LocalDateTime startTime;
@@ -59,6 +65,30 @@ public class BpmOAOvertimeDO extends BaseDO {
      * 加班天数
      */
     private Long day;
+    /**
+     * 加班时长（小时）
+     */
+    private BigDecimal durationHours;
+    /**
+     * 加班地点
+     */
+    private String workLocation;
+    /**
+     * 加班内容
+     */
+    private String workContent;
+    /**
+     * 补偿方式
+     */
+    private Integer compensationType;
+    /**
+     * 关联项目
+     */
+    private String projectName;
+    /**
+     * 备注
+     */
+    private String remark;
     /**
      * 审批结果
      *

@@ -107,7 +107,7 @@ function nodeClick() {
           <div class="node-text" v-else>
             {{ NODE_DEFAULT_TEXT.get(BpmNodeTypeEnum.START_USER_NODE) }}
           </div>
-          <IconifyIcon icon="lucide:chevron-right" v-if="!readonly" />
+          <IconifyIcon icon="solar:alt-arrow-right-outline" v-if="!readonly" />
         </div>
       </div>
       <!-- 传递子节点给添加节点组件。会在子节点前面添加节点 -->

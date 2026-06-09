@@ -2,7 +2,7 @@
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BpmCategoryApi } from '#/api/bpm/category';
 
-import { DocAlert, Page, useVbenModal } from '@vben/common-ui';
+import { Page, useVbenModal } from '@vben/common-ui';
 
 import { message } from 'ant-design-vue';
 
@@ -56,6 +56,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
     columns: useGridColumns(),
     height: 'auto',
     keepSource: true,
+    pagerConfig: {
+      pageSize: 10,
+    },
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
@@ -80,50 +83,137 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
-    <template #doc>
-      <DocAlert title="工作流手册" url="https://doc.iocoder.cn/bpm/" />
-    </template>
-
+  <Page auto-content-height title="流程分类">
     <FormModal @success="handleRefresh" />
-    <Grid table-title="流程分类">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: $t('ui.actionTitle.create', ['流程分类']),
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              auth: ['bpm:category:create'],
-              onClick: handleCreate,
-            },
-          ]"
-        />
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.edit'),
-              type: 'link',
-              icon: ACTION_ICON.EDIT,
-              auth: ['bpm:category:update'],
-              onClick: handleEdit.bind(null, row),
-            },
-            {
-              label: $t('common.delete'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['bpm:category:delete'],
-              popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.name]),
-                confirm: handleDelete.bind(null, row),
-              },
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page oa-category-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">流程分类</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="流程分类">
+            <template #toolbar-tools>
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('ui.actionTitle.create', ['流程分类']),
+                    type: 'primary',
+                    icon: ACTION_ICON.ADD,
+                    auth: ['bpm:category:create'],
+                    onClick: handleCreate,
+                  },
+                ]"
+              />
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('common.edit'),
+                    type: 'link',
+                    icon: ACTION_ICON.EDIT,
+                    auth: ['bpm:category:update'],
+                    onClick: handleEdit.bind(null, row),
+                  },
+                  {
+                    label: $t('common.delete'),
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['bpm:category:delete'],
+                    popConfirm: {
+                      title: $t('ui.actionMessage.deleteConfirm', [row.name]),
+                      confirm: handleDelete.bind(null, row),
+                    },
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>
+
+<style scoped>
+.oa-category-page :deep(.oa-workspace-panel-body) {
+  padding-top: 8px;
+}
+
+.oa-category-page :deep(.vxe-grid--form-wrapper) {
+  padding-bottom: 4px;
+}
+
+.oa-category-page :deep(.vxe-grid--toolbar-wrapper) {
+  padding-bottom: 4px;
+}
+
+.oa-category-page :deep(.vxe-table--body-wrapper) {
+  min-height: calc(100vh - 456px);
+  max-height: calc(100vh - 456px);
+  overflow: auto;
+}
+
+.oa-category-page :deep(.vxe-table--header-wrapper),
+.oa-category-page :deep(.vxe-table--body-wrapper) {
+  font-size: 13px;
+}
+
+.oa-category-page :deep(.vxe-body--column),
+.oa-category-page :deep(.vxe-header--column) {
+  padding-inline: 10px;
+}
+
+.oa-category-page :deep(.vxe-pager) {
+  padding-top: 4px;
+}
+
+@media (max-width: 1440px) {
+  .oa-category-page :deep(.vxe-toolbar) {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 0 8px;
+  }
+
+  .oa-category-page :deep(.vxe-buttons--wrapper),
+  .oa-category-page :deep(.vxe-tools--wrapper),
+  .oa-category-page :deep(.vxe-tools--operate) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .oa-category-page :deep(.vben-form) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .oa-category-page :deep(.vxe-table--body-wrapper) {
+    min-height: calc(100vh - 492px);
+    max-height: calc(100vh - 492px);
+  }
+
+  .oa-category-page :deep(.vxe-pager--wrapper) {
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 1320px) {
+  .oa-category-page :deep(.vben-form) {
+    grid-template-columns: 1fr;
+  }
+
+  .oa-category-page :deep(.vxe-table--body-wrapper) {
+    min-height: calc(100vh - 548px);
+    max-height: calc(100vh - 548px);
+  }
+}
+</style>

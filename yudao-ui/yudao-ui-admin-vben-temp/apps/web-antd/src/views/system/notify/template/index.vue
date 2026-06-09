@@ -135,74 +135,86 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="站内信模板">
     <template #doc>
       <DocAlert title="站内信" url="https://doc.iocoder.cn/notify/" />
     </template>
 
     <FormModal @success="handleRefresh" />
     <SendModal />
-    <Grid table-title="站内信模板列表">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: $t('ui.actionTitle.create', ['站内信模板']),
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              auth: ['system:notify-template:create'],
-              onClick: handleCreate,
-            },
-            {
-              label: $t('ui.actionTitle.export'),
-              type: 'primary',
-              icon: ACTION_ICON.DOWNLOAD,
-              auth: ['system:notify-template:export'],
-              onClick: handleExport,
-            },
-            {
-              label: $t('ui.actionTitle.deleteBatch'),
-              type: 'primary',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              disabled: isEmpty(checkedIds),
-              auth: ['system:notify-template:delete'],
-              onClick: handleDeleteBatch,
-            },
-          ]"
-        />
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.edit'),
-              type: 'link',
-              icon: ACTION_ICON.EDIT,
-              auth: ['system:notify-template:update'],
-              onClick: handleEdit.bind(null, row),
-            },
-            {
-              label: '测试',
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              auth: ['system:notify-template:send-notify'],
-              onClick: handleSend.bind(null, row),
-            },
-            {
-              label: $t('common.delete'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:notify-template:delete'],
-              popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.name]),
-                confirm: handleDelete.bind(null, row),
-              },
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">站内信模板列表</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="站内信模板列表">
+            <template #toolbar-tools>
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('ui.actionTitle.create', ['站内信模板']),
+                    type: 'primary',
+                    icon: ACTION_ICON.ADD,
+                    auth: ['system:notify-template:create'],
+                    onClick: handleCreate,
+                  },
+                  {
+                    label: $t('ui.actionTitle.export'),
+                    type: 'primary',
+                    icon: ACTION_ICON.DOWNLOAD,
+                    auth: ['system:notify-template:export'],
+                    onClick: handleExport,
+                  },
+                  {
+                    label: $t('ui.actionTitle.deleteBatch'),
+                    type: 'primary',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    disabled: isEmpty(checkedIds),
+                    auth: ['system:notify-template:delete'],
+                    onClick: handleDeleteBatch,
+                  },
+                ]"
+              />
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('common.edit'),
+                    type: 'link',
+                    icon: ACTION_ICON.EDIT,
+                    auth: ['system:notify-template:update'],
+                    onClick: handleEdit.bind(null, row),
+                  },
+                  {
+                    label: '测试',
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    auth: ['system:notify-template:send-notify'],
+                    onClick: handleSend.bind(null, row),
+                  },
+                  {
+                    label: $t('common.delete'),
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['system:notify-template:delete'],
+                    popConfirm: {
+                      title: $t('ui.actionMessage.deleteConfirm', [row.name]),
+                      confirm: handleDelete.bind(null, row),
+                    },
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

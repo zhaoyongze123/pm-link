@@ -7,7 +7,6 @@ export function isAdminUser(roles: string[] = []) {
 }
 
 export function resolveUserHomePath(
-  defaultHomePath: string,
   homePath?: string,
   roles: string[] = [],
 ) {
@@ -15,7 +14,7 @@ export function resolveUserHomePath(
     return OA_LITE_HOME_PATH;
   }
   if (!homePath || REMOVED_HOME_PATHS.has(homePath)) {
-    return defaultHomePath;
+    return OA_LITE_HOME_PATH;
   }
   return homePath;
 }

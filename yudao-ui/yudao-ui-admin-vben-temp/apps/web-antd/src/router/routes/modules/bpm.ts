@@ -29,6 +29,30 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'category',
+        component: () => import('#/views/bpm/category/index.vue'),
+        name: 'BpmCategory',
+        meta: {
+          title: '流程分类',
+          activePath: '/bpm/category',
+          icon: 'carbon:categories',
+          hideInMenu: true,
+          keepAlive: true,
+        },
+      },
+      {
+        path: 'manager/form',
+        component: () => import('#/views/bpm/form/index.vue'),
+        name: 'BpmForm',
+        meta: {
+          title: '流程表单',
+          activePath: '/bpm/manager/form',
+          icon: 'carbon:document',
+          hideInMenu: true,
+          keepAlive: true,
+        },
+      },
+      {
         path: '/bpm/manager/form/edit',
         name: 'BpmFormEditor',
         component: () => import('#/views/bpm/form/designer/index.vue'),
@@ -42,6 +66,18 @@ const routes: RouteRecordRaw[] = [
             type: route.query.type,
             copyId: route.query.copyId,
           };
+        },
+      },
+      {
+        path: 'manager/model',
+        component: () => import('#/views/bpm/model/index.vue'),
+        name: 'BpmModel',
+        meta: {
+          title: '流程模型',
+          activePath: '/bpm/manager/model',
+          icon: 'carbon:flow',
+          hideInMenu: true,
+          keepAlive: true,
         },
       },
       {
@@ -76,6 +112,42 @@ const routes: RouteRecordRaw[] = [
           title: '流程定义',
           activePath: '/bpm/manager/model',
           icon: 'carbon:flow-modeler',
+          hideInMenu: true,
+          keepAlive: true,
+        },
+      },
+      {
+        path: 'group',
+        component: () => import('#/views/bpm/group/index.vue'),
+        name: 'BpmGroup',
+        meta: {
+          title: '用户组',
+          activePath: '/bpm/group',
+          icon: 'carbon:user-multiple',
+          hideInMenu: true,
+          keepAlive: true,
+        },
+      },
+      {
+        path: 'process-expression',
+        component: () => import('#/views/bpm/processExpression/index.vue'),
+        name: 'BpmProcessExpression',
+        meta: {
+          title: '流程表达式',
+          activePath: '/bpm/process-expression',
+          icon: 'carbon:function-math',
+          hideInMenu: true,
+          keepAlive: true,
+        },
+      },
+      {
+        path: 'process-listener',
+        component: () => import('#/views/bpm/processListener/index.vue'),
+        name: 'BpmProcessListener',
+        meta: {
+          title: '流程监听器',
+          activePath: '/bpm/process-listener',
+          icon: 'carbon:notification',
           hideInMenu: true,
           keepAlive: true,
         },

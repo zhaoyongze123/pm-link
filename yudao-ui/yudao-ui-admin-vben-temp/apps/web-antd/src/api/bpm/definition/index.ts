@@ -18,6 +18,7 @@ export namespace BpmProcessDefinitionApi {
     suspensionState: number;
     modelType: number;
     modelId: string;
+    sort?: null | number | string;
     formType?: number;
     formId?: number;
     formName?: string;

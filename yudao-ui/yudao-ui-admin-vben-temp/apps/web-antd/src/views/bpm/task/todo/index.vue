@@ -55,7 +55,7 @@ const [Grid] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="待办任务">
     <template #doc>
       <DocAlert
         title="审批通过、不通过、驳回"
@@ -69,20 +69,32 @@ const [Grid] = useVbenVxeGrid({
       <DocAlert title="审批加签、减签" url="https://doc.iocoder.cn/bpm/sign/" />
     </template>
 
-    <Grid table-title="待办任务">
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: '办理',
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              auth: ['bpm:task:query'],
-              onClick: handleAudit.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">待办任务</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="待办任务">
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: '办理',
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    auth: ['bpm:task:query'],
+                    onClick: handleAudit.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

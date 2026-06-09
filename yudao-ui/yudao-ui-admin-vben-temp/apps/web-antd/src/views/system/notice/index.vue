@@ -19,10 +19,16 @@ import {
 import { $t } from '#/locales';
 
 import { useGridColumns, useGridFormSchema } from './data';
+import Detail from './modules/detail.vue';
 import Form from './modules/form.vue';
 
 const [FormModal, formModalApi] = useVbenModal({
   connectedComponent: Form,
+  destroyOnClose: true,
+});
+
+const [DetailModal, detailModalApi] = useVbenModal({
+  connectedComponent: Detail,
   destroyOnClose: true,
 });
 
@@ -39,6 +45,11 @@ function handleCreate() {
 /** 编辑公告 */
 function handleEdit(row: SystemNoticeApi.Notice) {
   formModalApi.setData(row).open();
+}
+
+/** 查看详情 */
+function handleDetail(row: SystemNoticeApi.Notice) {
+  detailModalApi.setData(row).open();
 }
 
 /** 删除公告 */
@@ -131,62 +142,81 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="公告与消息推送">
     <FormModal @success="handleRefresh" />
-    <Grid table-title="公告列表">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: $t('ui.actionTitle.create', ['公告']),
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              auth: ['system:notice:create'],
-              onClick: handleCreate,
-            },
-            {
-              label: $t('ui.actionTitle.deleteBatch'),
-              type: 'primary',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:notice:delete'],
-              disabled: isEmpty(checkedIds),
-              onClick: handleDeleteBatch,
-            },
-          ]"
-        />
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.edit'),
-              type: 'link',
-              icon: ACTION_ICON.EDIT,
-              auth: ['system:notice:update'],
-              onClick: handleEdit.bind(null, row),
-            },
-            {
-              label: '推送',
-              type: 'link',
-              icon: ACTION_ICON.ADD,
-              auth: ['system:notice:update'],
-              onClick: handlePush.bind(null, row),
-            },
-            {
-              label: $t('common.delete'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:notice:delete'],
-              popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.title]),
-                confirm: handleDelete.bind(null, row),
-              },
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <DetailModal />
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">公告列表</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="公告列表">
+            <template #toolbar-tools>
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('ui.actionTitle.create', ['公告']),
+                    type: 'primary',
+                    icon: ACTION_ICON.ADD,
+                    auth: ['system:notice:create'],
+                    onClick: handleCreate,
+                  },
+                  {
+                    label: $t('ui.actionTitle.deleteBatch'),
+                    type: 'primary',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['system:notice:delete'],
+                    disabled: isEmpty(checkedIds),
+                    onClick: handleDeleteBatch,
+                  },
+                ]"
+              />
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: '详情',
+                    type: 'link',
+                    auth: ['system:notice:query'],
+                    onClick: handleDetail.bind(null, row),
+                  },
+                  {
+                    label: $t('common.edit'),
+                    type: 'link',
+                    icon: ACTION_ICON.EDIT,
+                    auth: ['system:notice:update'],
+                    onClick: handleEdit.bind(null, row),
+                  },
+                  {
+                    label: '推送',
+                    type: 'link',
+                    icon: ACTION_ICON.ADD,
+                    auth: ['system:notice:update'],
+                    onClick: handlePush.bind(null, row),
+                  },
+                  {
+                    label: $t('common.delete'),
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['system:notice:delete'],
+                    popConfirm: {
+                      title: $t('ui.actionMessage.deleteConfirm', [row.title]),
+                      confirm: handleDelete.bind(null, row),
+                    },
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

@@ -6,7 +6,9 @@ export type OAModuleApiKey =
   | 'attendance'
   | 'document'
   | 'expense'
+  | 'leaveCancel'
   | 'overtime'
+  | 'outing'
   | 'project'
   | 'seal'
   | 'staffing'
@@ -31,7 +33,7 @@ export async function createOARecord(
   moduleKey: OAModuleApiKey,
   data: BpmOACommonApi.OARecord,
 ) {
-  return requestClient.post(`/bpm/oa/${moduleKey}/create`, data);
+  return requestClient.post(`/bpm/oa/${getOAApiPath(moduleKey)}/create`, data);
 }
 
 export async function getOARecord(
@@ -39,7 +41,7 @@ export async function getOARecord(
   id: number,
 ) {
   return requestClient.get<BpmOACommonApi.OARecord>(
-    `/bpm/oa/${moduleKey}/get?id=${id}`,
+    `/bpm/oa/${getOAApiPath(moduleKey)}/get?id=${id}`,
   );
 }
 
@@ -48,7 +50,16 @@ export async function getOARecordPage(
   params: PageParam,
 ) {
   return requestClient.get<PageResult<BpmOACommonApi.OARecord>>(
-    `/bpm/oa/${moduleKey}/page`,
+    `/bpm/oa/${getOAApiPath(moduleKey)}/page`,
     { params },
   );
+}
+
+function getOAApiPath(moduleKey: OAModuleApiKey) {
+  switch (moduleKey) {
+    case 'leaveCancel':
+      return 'leave-cancel';
+    default:
+      return moduleKey;
+  }
 }

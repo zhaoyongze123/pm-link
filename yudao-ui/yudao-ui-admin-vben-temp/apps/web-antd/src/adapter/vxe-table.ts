@@ -89,7 +89,11 @@ setupVbenVxeTable({
       renderTableDefault(renderOpts, params) {
         const { props } = renderOpts;
         const { column, row } = params;
-        return h(Image, { src: row[column.field], ...props });
+        const imageSrc = column?.field ? row[column.field] : undefined;
+        if (!imageSrc) {
+          return '';
+        }
+        return h(Image, { src: imageSrc, ...props });
       },
     });
 

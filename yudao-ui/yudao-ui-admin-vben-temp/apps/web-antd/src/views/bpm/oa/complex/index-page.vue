@@ -7,7 +7,7 @@ import { Page, prompt } from '@vben/common-ui';
 import { BpmProcessInstanceStatus } from '@vben/constants';
 import { formatDateTime } from '@vben/utils';
 
-import { Button, Card, Col, DatePicker, Form, Input, message, Row, Select, Space, Table, Tag, Textarea } from 'ant-design-vue';
+import { Button, Col, DatePicker, Form, Input, message, Row, Select, Space, Table, Tag, Textarea } from 'ant-design-vue';
 
 import { cancelProcessInstanceByStartUser } from '#/api/bpm/processInstance';
 import { router } from '#/router';
@@ -192,7 +192,13 @@ onActivated(() => {
 
 <template>
   <Page auto-content-height>
-    <Card :title="`${config.title}列表`">
+    <section class="oa-bpm-complex-index-shell">
+      <header class="oa-bpm-complex-index-head">
+        <div>
+          <div class="oa-bpm-complex-index-eyebrow">Request Directory</div>
+          <h3 class="oa-bpm-complex-index-title">{{ `${config.title}列表` }}</h3>
+        </div>
+      </header>
       <Form layout="vertical">
         <Row :gutter="16">
           <Col
@@ -273,6 +279,38 @@ onActivated(() => {
           </template>
         </template>
       </Table>
-    </Card>
+    </section>
   </Page>
 </template>
+
+<style lang="scss" scoped>
+.oa-bpm-complex-index-shell {
+  border-top: 1px solid var(--oa-shell-border);
+  padding-top: 18px;
+}
+
+.oa-bpm-complex-index-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.oa-bpm-complex-index-eyebrow {
+  color: var(--oa-ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.oa-bpm-complex-index-title {
+  margin: 6px 0 0;
+  color: var(--oa-ink);
+  font-size: 20px;
+  font-weight: 600;
+}
+</style>

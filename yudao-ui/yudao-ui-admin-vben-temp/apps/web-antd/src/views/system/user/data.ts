@@ -301,22 +301,22 @@ export function useGridColumns(
     {
       field: 'id',
       title: '用户编号',
-      minWidth: 100,
+      minWidth: 84,
     },
     {
       field: 'username',
       title: '用户名称',
-      minWidth: 120,
+      minWidth: 110,
     },
     {
       field: 'nickname',
       title: '用户昵称',
-      minWidth: 120,
+      minWidth: 110,
     },
     {
       field: 'deptName',
       title: '部门',
-      minWidth: 120,
+      minWidth: 100,
     },
     {
       field: 'mobile',
@@ -326,7 +326,7 @@ export function useGridColumns(
     {
       field: 'status',
       title: '状态',
-      minWidth: 100,
+      minWidth: 92,
       align: 'center',
       cellRender: {
         attrs: { beforeChange: onStatusChange },
@@ -340,12 +340,12 @@ export function useGridColumns(
     {
       field: 'createTime',
       title: '创建时间',
-      minWidth: 180,
+      minWidth: 144,
       formatter: 'formatDateTime',
     },
     {
       title: '操作',
-      width: 180,
+      width: 156,
       fixed: 'right',
       slots: { default: 'actions' },
     },

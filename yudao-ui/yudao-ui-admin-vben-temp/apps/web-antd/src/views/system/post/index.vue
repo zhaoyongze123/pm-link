@@ -124,62 +124,74 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="岗位与职责编排">
     <FormModal @success="handleRefresh" />
-    <Grid table-title="岗位列表">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: $t('ui.actionTitle.create', ['岗位']),
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              auth: ['system:post:create'],
-              onClick: handleCreate,
-            },
-            {
-              label: $t('ui.actionTitle.export'),
-              type: 'primary',
-              icon: ACTION_ICON.DOWNLOAD,
-              auth: ['system:post:export'],
-              onClick: handleExport,
-            },
-            {
-              label: $t('ui.actionTitle.deleteBatch'),
-              type: 'primary',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:post:delete'],
-              disabled: isEmpty(checkedIds),
-              onClick: handleDeleteBatch,
-            },
-          ]"
-        />
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.edit'),
-              type: 'link',
-              icon: ACTION_ICON.EDIT,
-              auth: ['system:post:update'],
-              onClick: handleEdit.bind(null, row),
-            },
-            {
-              label: $t('common.delete'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['system:post:delete'],
-              popConfirm: {
-                title: $t('ui.actionMessage.deleteConfirm', [row.name]),
-                confirm: handleDelete.bind(null, row),
-              },
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">岗位列表</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="岗位列表">
+            <template #toolbar-tools>
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('ui.actionTitle.create', ['岗位']),
+                    type: 'primary',
+                    icon: ACTION_ICON.ADD,
+                    auth: ['system:post:create'],
+                    onClick: handleCreate,
+                  },
+                  {
+                    label: $t('ui.actionTitle.export'),
+                    type: 'primary',
+                    icon: ACTION_ICON.DOWNLOAD,
+                    auth: ['system:post:export'],
+                    onClick: handleExport,
+                  },
+                  {
+                    label: $t('ui.actionTitle.deleteBatch'),
+                    type: 'primary',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['system:post:delete'],
+                    disabled: isEmpty(checkedIds),
+                    onClick: handleDeleteBatch,
+                  },
+                ]"
+              />
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('common.edit'),
+                    type: 'link',
+                    icon: ACTION_ICON.EDIT,
+                    auth: ['system:post:update'],
+                    onClick: handleEdit.bind(null, row),
+                  },
+                  {
+                    label: $t('common.delete'),
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['system:post:delete'],
+                    popConfirm: {
+                      title: $t('ui.actionMessage.deleteConfirm', [row.name]),
+                      confirm: handleDelete.bind(null, row),
+                    },
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

@@ -3,19 +3,19 @@ import type { BpmProcessDefinitionApi } from '#/api/bpm/definition';
 import type { BpmProcessInstanceApi } from '#/api/bpm/processInstance';
 
 import { computed, nextTick, ref, watch } from 'vue';
+import { useRoute } from 'vue-router';
 
 import {
   BpmCandidateStrategyEnum,
   BpmFieldPermissionType,
   BpmModelFormType,
-  BpmModelType,
   BpmNodeIdEnum,
 } from '@vben/constants';
 import { useTabs } from '@vben/hooks';
 import { IconifyIcon } from '@vben/icons';
 
 import formCreate from '@form-create/ant-design-vue';
-import { Button, Card, Col, message, Row, Space, Tabs } from 'ant-design-vue';
+import { Button, Col, message, Row, Space } from 'ant-design-vue';
 
 import { getProcessDefinition } from '#/api/bpm/definition';
 import {
@@ -24,8 +24,6 @@ import {
 } from '#/api/bpm/processInstance';
 import { decodeFields, setConfAndFields2 } from '#/components/form-create';
 import { router } from '#/router';
-import ProcessInstanceBpmnViewer from '#/views/bpm/processInstance/detail/modules/bpm-viewer.vue';
-import ProcessInstanceSimpleViewer from '#/views/bpm/processInstance/detail/modules/simple-bpm-viewer.vue';
 import ProcessInstanceTimeline from '#/views/bpm/processInstance/detail/modules/time-line.vue';
 
 /** 类型定义 */
@@ -50,7 +48,8 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['cancel']);
-const { closeCurrentTab } = useTabs();
+const route = useRoute();
+const { closeCurrentTab, getTabDisableState } = useTabs();
 
 const getTitle = computed(() => {
   return `流程表单 - ${props.selectProcessDefinition.name}`;
@@ -67,13 +66,23 @@ const startUserSelectTasks = ref<UserTask[]>([]);
 const startUserSelectAssignees = ref<Record<string, string[]>>({});
 const tempStartUserSelectAssignees = ref<Record<string, string[]>>({});
 
-const bpmnXML = ref<string | undefined>(undefined);
-const simpleJson = ref<string | undefined>(undefined);
-
 const timelineRef = ref<any>();
-const activeTab = ref('form');
 const activityNodes = ref<BpmProcessInstanceApi.ApprovalNodeInfo[]>([]);
 const processInstanceStartLoading = ref(false);
+const initializedDefinitionId = ref<string>();
+
+async function closeCurrentTabIfPossible() {
+  if (!getTabDisableState().disabledCloseCurrent) {
+    await closeCurrentTab();
+  }
+}
+
+function shouldReturnToOaLite() {
+  const returnTo = Array.isArray(route.query.returnTo)
+    ? route.query.returnTo[0]
+    : route.query.returnTo;
+  return returnTo === 'oa-lite';
+}
 
 /** 提交按钮 */
 async function submitForm() {
@@ -103,8 +112,12 @@ async function submitForm() {
     });
     // 关闭并提示
     message.success('发起流程成功');
-    await closeCurrentTab();
-    await router.push({ name: 'BpmProcessInstanceMy' });
+    await closeCurrentTabIfPossible();
+    await router.push(
+      shouldReturnToOaLite()
+        ? { name: 'OALite' }
+        : { name: 'BpmProcessInstanceMy' },
+    );
   } finally {
     processInstanceStartLoading.value = false;
   }
@@ -112,9 +125,17 @@ async function submitForm() {
 
 /** 设置表单信息、获取流程图数据 */
 async function initProcessInfo(row: any, formVariables?: any) {
+  initializedDefinitionId.value = row?.id;
   // 重置指定审批人
   startUserSelectTasks.value = [];
   startUserSelectAssignees.value = {};
+  tempStartUserSelectAssignees.value = {};
+  detailForm.value = {
+    rule: [],
+    option: {},
+    value: {},
+  };
+  activityNodes.value = [];
 
   // 情况一：流程表单
   if (row.formType === BpmModelFormType.NORMAL) {
@@ -155,16 +176,8 @@ async function initProcessInfo(row: any, formVariables?: any) {
       processVariablesStr: JSON.stringify(formVariables),
     });
 
-    // 加载流程图
-    const processDefinitionDetail: BpmProcessDefinitionApi.ProcessDefinition =
-      await getProcessDefinition(row.id);
-    if (processDefinitionDetail) {
-      bpmnXML.value = processDefinitionDetail.bpmnXml;
-      simpleJson.value = processDefinitionDetail.simpleModel;
-    }
     // 情况二：业务表单
   } else if (row.formCustomCreatePath) {
-    // 这里暂时无需加载流程图，因为跳出到另外个 Tab；
     await router.push({
       path: row.formCustomCreatePath,
     });
@@ -172,6 +185,23 @@ async function initProcessInfo(row: any, formVariables?: any) {
 }
 
 /** 预测流程节点会因为输入的参数值而产生新的预测结果值，所以需重新预测一次 */
+watch(
+  () => props.selectProcessDefinition,
+  async (definition) => {
+    if (!definition?.id) {
+      return;
+    }
+    if (initializedDefinitionId.value === definition.id) {
+      return;
+    }
+    await initProcessInfo(definition);
+  },
+  {
+    deep: true,
+    immediate: true,
+  },
+);
+
 watch(
   () => detailForm.value.value,
   (newValue) => {
@@ -248,7 +278,12 @@ function setFieldPermission(field: string, permission: string) {
 }
 
 /** 取消发起审批 */
-function handleCancel() {
+async function handleCancel() {
+  if (shouldReturnToOaLite()) {
+    await closeCurrentTabIfPossible();
+    await router.push({ name: 'OALite' });
+    return;
+  }
   emit('cancel');
 }
 
@@ -262,93 +297,129 @@ defineExpose({ initProcessInfo });
 </script>
 
 <template>
-  <Card
-    :title="getTitle"
-    class="h-full overflow-hidden"
-    :body-style="{
-      height: 'calc(100% - 112px)',
-      paddingTop: '12px',
-      overflowY: 'auto',
-    }"
-  >
-    <template #extra>
+  <section class="bpm-create-form-shell">
+    <header class="bpm-create-form-header">
+      <div>
+        <div class="bpm-create-form-eyebrow">Process Launch</div>
+        <h2 class="bpm-create-form-title">{{ getTitle }}</h2>
+      </div>
       <Space wrap>
         <Button plain type="default" @click="handleCancel">
           <IconifyIcon icon="lucide:arrow-left" />&nbsp; 返回
         </Button>
       </Space>
-    </template>
+    </header>
 
-    <Tabs
-      v-model:active-key="activeTab"
-      class="flex flex-1 flex-col overflow-hidden"
-    >
-      <Tabs.TabPane tab="表单填写" key="form">
-        <Row :gutter="[48, 16]" class="pt-4">
-          <Col
-            :xs="24"
-            :sm="24"
-            :md="18"
-            :lg="18"
-            :xl="18"
-            class="flex-1 overflow-auto"
-          >
-            <form-create
-              :rule="detailForm.rule"
-              v-model:api="fApi"
-              v-model="detailForm.value"
-              :option="detailForm.option"
-              @submit="submitForm"
-            />
-          </Col>
-          <Col :xs="24" :sm="24" :md="6" :lg="6" :xl="6">
-            <ProcessInstanceTimeline
-              ref="timelineRef"
-              :activity-nodes="activityNodes"
-              :show-status-icon="false"
-              @select-user-confirm="selectUserConfirm"
-            />
-          </Col>
-        </Row>
-      </Tabs.TabPane>
-      <Tabs.TabPane
-        tab="流程图"
-        key="flow"
-        class="flex flex-1 overflow-hidden"
-        :force-render="true"
-      >
-        <div class="h-full w-full">
-          <!-- BPMN 流程图预览 -->
-          <ProcessInstanceBpmnViewer
-            :bpmn-xml="bpmnXML"
-            v-if="BpmModelType.BPMN === selectProcessDefinition.modelType"
+    <section class="bpm-create-form-tabs">
+      <div class="bpm-create-form-tab-active">表单填写</div>
+      <Row :gutter="[40, 16]" class="bpm-create-form-panel">
+        <Col
+          :xs="24"
+          :sm="24"
+          :md="18"
+          :lg="18"
+          :xl="18"
+          class="flex-1 overflow-auto"
+        >
+          <form-create
+            :rule="detailForm.rule"
+            v-model:api="fApi"
+            v-model="detailForm.value"
+            :option="detailForm.option"
+            @submit="submitForm"
           />
-          <ProcessInstanceSimpleViewer
-            :simple-json="simpleJson"
-            v-if="BpmModelType.SIMPLE === selectProcessDefinition.modelType"
+        </Col>
+        <Col :xs="24" :sm="24" :md="6" :lg="6" :xl="6">
+          <ProcessInstanceTimeline
+            ref="timelineRef"
+            :activity-nodes="activityNodes"
+            :show-status-icon="false"
+            @select-user-confirm="selectUserConfirm"
           />
-        </div>
-      </Tabs.TabPane>
-    </Tabs>
+        </Col>
+      </Row>
+    </section>
 
-    <template #actions>
-      <template v-if="activeTab === 'form'">
-        <Space wrap class="flex w-full justify-center">
-          <Button
-            plain
-            type="primary"
-            @click="submitForm"
-            :loading="processInstanceStartLoading"
-          >
-            <IconifyIcon icon="lucide:check" />
-            发起
-          </Button>
-          <Button plain type="default" @click="handleCancel">
-            <IconifyIcon icon="lucide:x" />
-            取消
-          </Button>
-        </Space>
-      </template>
-    </template>
-  </Card>
+    <footer class="bpm-create-form-actions">
+      <Space wrap class="flex w-full justify-center">
+        <Button
+          plain
+          type="primary"
+          @click="submitForm"
+          :loading="processInstanceStartLoading"
+        >
+          <IconifyIcon icon="lucide:check" />
+          发起
+        </Button>
+        <Button plain type="default" @click="handleCancel">
+          <IconifyIcon icon="lucide:x" />
+          取消
+        </Button>
+      </Space>
+    </footer>
+  </section>
 </template>
+
+<style scoped>
+.bpm-create-form-shell {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  background: transparent;
+}
+
+.bpm-create-form-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 0 16px;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.bpm-create-form-eyebrow {
+  color: var(--oa-ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.bpm-create-form-title {
+  margin: 6px 0 0;
+  color: var(--oa-ink);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.bpm-create-form-tabs {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+  padding-top: 12px;
+}
+
+.bpm-create-form-tab-active {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 0 0 12px;
+  border-bottom: 3px solid var(--oa-accent);
+  color: var(--oa-accent);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1;
+}
+
+.bpm-create-form-panel {
+  padding-top: 8px;
+  border-top: 1px solid var(--oa-shell-border);
+  margin-top: -1px;
+}
+
+.bpm-create-form-actions {
+  padding: 16px 0 0;
+  border-top: 1px solid var(--oa-shell-border);
+}
+</style>

@@ -38,10 +38,35 @@ export function useFormSchema(): VbenFormSchema[] {
       rules: 'required',
     },
     {
+      fieldName: 'publishTarget',
+      label: '发布对象',
+      component: 'Input',
+      componentProps: {
+        placeholder: '请输入发布对象',
+      },
+    },
+    {
+      fieldName: 'pinned',
+      label: '置顶状态',
+      component: 'Switch',
+      defaultValue: false,
+    },
+    {
       fieldName: 'content',
       label: '公告内容',
       component: 'RichTextarea',
       rules: 'required',
+    },
+    {
+      fieldName: 'attachmentFileIds',
+      label: '附件',
+      component: 'FileUpload',
+      componentProps: {
+        maxNumber: 10,
+        multiple: true,
+        showDescription: true,
+        accept: [],
+      },
     },
     {
       fieldName: 'status',
@@ -53,14 +78,6 @@ export function useFormSchema(): VbenFormSchema[] {
         optionType: 'button',
       },
       rules: z.number().default(CommonStatusEnum.ENABLE),
-    },
-    {
-      fieldName: 'remark',
-      label: '备注',
-      component: 'Textarea',
-      componentProps: {
-        placeholder: '请输入备注',
-      },
     },
   ];
 }
@@ -123,6 +140,13 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
       },
     },
     {
+      field: 'pinned',
+      title: '置顶',
+      minWidth: 80,
+      formatter: ({ cellValue }: { cellValue: boolean }) =>
+        cellValue ? '置顶' : '否',
+    },
+    {
       field: 'createTime',
       title: '创建时间',
       minWidth: 180,
@@ -130,7 +154,7 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
     },
     {
       title: '操作',
-      width: 220,
+      width: 280,
       fixed: 'right',
       slots: { default: 'actions' },
     },

@@ -10,7 +10,7 @@ import { BpmCandidateStrategyEnum, BpmNodeIdEnum } from '@vben/constants';
 import { useTabs } from '@vben/hooks';
 import { IconifyIcon } from '@vben/icons';
 
-import { Button, Card, Col, message, Row, Space } from 'ant-design-vue';
+import { Button, Col, message, Row, Space } from 'ant-design-vue';
 import dayjs from 'dayjs';
 
 import { getProcessDefinition } from '#/api/bpm/definition';
@@ -22,7 +22,7 @@ import ProcessInstanceTimeline from '#/views/bpm/processInstance/detail/modules/
 
 import { useFormSchema } from './data';
 
-const { closeCurrentTab } = useTabs();
+const { closeCurrentTab, getTabDisableState } = useTabs();
 const { query } = useRoute();
 
 const formLoading = ref(false); // 表单的加载中：1）修改时的数据加载；2）提交的按钮禁用
@@ -54,6 +54,17 @@ const [Form, formApi] = useVbenForm({
   schema: useFormSchema(),
   showDefaultActions: false,
 });
+
+async function closeCurrentTabIfPossible() {
+  if (!getTabDisableState().disabledCloseCurrent) {
+    await closeCurrentTab();
+  }
+}
+
+function shouldReturnToOaLite() {
+  const returnTo = Array.isArray(query.returnTo) ? query.returnTo[0] : query.returnTo;
+  return returnTo === 'oa-lite';
+}
 
 /** 提交申请 */
 async function onSubmit() {
@@ -93,10 +104,12 @@ async function onSubmit() {
       : createLeave(submitData));
     // 关闭并提示
     message.success($t('ui.actionMessage.operationSuccess'));
-    await closeCurrentTab();
-    await router.push({
-      name: 'BpmOALeave',
-    });
+    await closeCurrentTabIfPossible();
+    await router.push(
+      shouldReturnToOaLite()
+        ? { name: 'OALite' }
+        : { name: 'BpmOALeave' },
+    );
   } finally {
     formLoading.value = false;
   }
@@ -107,9 +120,12 @@ function onBack() {
   confirm({
     content: '确定要返回上一页吗？请先保存您填写的信息！',
     icon: 'warning',
-    beforeClose({ isConfirm }) {
+    async beforeClose({ isConfirm }) {
       if (isConfirm) {
-        closeCurrentTab();
+        await closeCurrentTabIfPossible();
+        if (shouldReturnToOaLite()) {
+          await router.push({ name: 'OALite' });
+        }
       }
       return Promise.resolve(true);
     },
@@ -235,35 +251,87 @@ onMounted(async () => {
 
 <template>
   <Page>
-    <Row :gutter="16">
+    <Row :gutter="20" class="oa-bpm-leave-shell">
       <Col :span="16">
-        <Card :title="getTitle" class="w-full" v-loading="formLoading">
-          <template #extra>
+        <section class="oa-bpm-leave-panel" v-loading="formLoading">
+          <header class="oa-bpm-leave-panel-head">
+            <div>
+              <div class="oa-bpm-leave-eyebrow">Request Form</div>
+              <h3 class="oa-bpm-leave-title">{{ getTitle }}</h3>
+            </div>
             <Button type="default" @click="onBack">
               <IconifyIcon icon="lucide:arrow-left" />
               返回
             </Button>
-          </template>
-
+          </header>
           <Form />
-          <template #actions>
-            <Space warp :size="12" class="w-full px-6">
+          <div class="oa-bpm-leave-actions">
+            <Space warp :size="12">
               <Button type="primary" @click="onSubmit" :loading="formLoading">
                 提交
               </Button>
             </Space>
-          </template>
-        </Card>
+          </div>
+        </section>
       </Col>
       <Col :span="8">
-        <Card title="流程" class="w-full" v-loading="processTimeLineLoading">
+        <aside class="oa-bpm-leave-panel" v-loading="processTimeLineLoading">
+          <header class="oa-bpm-leave-panel-head">
+            <div>
+              <div class="oa-bpm-leave-eyebrow">Process Timeline</div>
+              <h3 class="oa-bpm-leave-title">流程</h3>
+            </div>
+          </header>
           <ProcessInstanceTimeline
             :activity-nodes="activityNodes"
             :show-status-icon="false"
             @select-user-confirm="selectUserConfirm"
           />
-        </Card>
+        </aside>
       </Col>
     </Row>
   </Page>
 </template>
+
+<style lang="scss" scoped>
+.oa-bpm-leave-shell {
+  align-items: start;
+}
+
+.oa-bpm-leave-panel {
+  min-width: 0;
+  border-top: 1px solid var(--oa-shell-border);
+  padding-top: 18px;
+}
+
+.oa-bpm-leave-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--oa-shell-border);
+  margin-bottom: 18px;
+}
+
+.oa-bpm-leave-eyebrow {
+  color: var(--oa-ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.oa-bpm-leave-title {
+  margin: 6px 0 0;
+  color: var(--oa-ink);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.oa-bpm-leave-actions {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--oa-shell-border);
+}
+</style>

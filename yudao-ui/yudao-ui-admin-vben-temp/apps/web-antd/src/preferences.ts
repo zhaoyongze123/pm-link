@@ -20,6 +20,7 @@ export const overridesPreferences = defineOverridesPreferences({
   app: {
     /** 后端路由模式 */
     accessMode: 'backend',
+    defaultHomePath: '/oa-lite',
     name: import.meta.env.VITE_APP_TITLE,
     enableRefreshToken: true,
   },

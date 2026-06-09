@@ -141,52 +141,64 @@ const [Grid, gridApi] = useVbenVxeGrid({
 });
 </script>
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="我的站内信">
     <template #doc>
       <DocAlert title="站内信配置" url="https://doc.iocoder.cn/notify/" />
     </template>
 
     <DetailModal @success="handleRefresh" />
-    <Grid table-title="我的站内信">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: '标记已读',
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              disabled: isEmpty(checkedIds),
-              onClick: handleMarkRead,
-            },
-            {
-              label: '全部已读',
-              type: 'primary',
-              icon: ACTION_ICON.ADD,
-              onClick: handleMarkAllRead,
-            },
-          ]"
-        />
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: '查看',
-              type: 'link',
-              ifShow: row.readStatus,
-              icon: ACTION_ICON.VIEW,
-              onClick: handleDetail.bind(null, row),
-            },
-            {
-              label: '已读',
-              type: 'link',
-              ifShow: !row.readStatus,
-              icon: ACTION_ICON.ADD,
-              onClick: handleRead.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">我的站内信</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="我的站内信">
+            <template #toolbar-tools>
+              <TableAction
+                :actions="[
+                  {
+                    label: '标记已读',
+                    type: 'primary',
+                    icon: ACTION_ICON.ADD,
+                    disabled: isEmpty(checkedIds),
+                    onClick: handleMarkRead,
+                  },
+                  {
+                    label: '全部已读',
+                    type: 'primary',
+                    icon: ACTION_ICON.ADD,
+                    onClick: handleMarkAllRead,
+                  },
+                ]"
+              />
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: '查看',
+                    type: 'link',
+                    ifShow: row.readStatus,
+                    icon: ACTION_ICON.VIEW,
+                    onClick: handleDetail.bind(null, row),
+                  },
+                  {
+                    label: '已读',
+                    type: 'link',
+                    ifShow: !row.readStatus,
+                    icon: ACTION_ICON.ADD,
+                    onClick: handleRead.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

@@ -23,6 +23,7 @@ import java.util.List;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserId;
+import static cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils.getLoginUserNickname;
 
 @Tag(name = "管理后台 - 我的站内信")
 @RestController
@@ -66,14 +67,16 @@ public class NotifyMessageController {
     @Operation(summary = "标记站内信为已读")
     @Parameter(name = "ids", description = "编号列表", required = true, example = "1024,2048")
     public CommonResult<Boolean> updateNotifyMessageRead(@RequestParam("ids") List<Long> ids) {
-        notifyMessageService.updateNotifyMessageRead(ids, getLoginUserId(), UserTypeEnum.ADMIN.getValue());
+        notifyMessageService.updateNotifyMessageRead(ids, getLoginUserId(), UserTypeEnum.ADMIN.getValue(),
+                getLoginUserNickname());
         return success(Boolean.TRUE);
     }
 
     @PutMapping("/update-all-read")
     @Operation(summary = "标记所有站内信为已读")
     public CommonResult<Boolean> updateAllNotifyMessageRead() {
-        notifyMessageService.updateAllNotifyMessageRead(getLoginUserId(), UserTypeEnum.ADMIN.getValue());
+        notifyMessageService.updateAllNotifyMessageRead(getLoginUserId(), UserTypeEnum.ADMIN.getValue(),
+                getLoginUserNickname());
         return success(Boolean.TRUE);
     }
 

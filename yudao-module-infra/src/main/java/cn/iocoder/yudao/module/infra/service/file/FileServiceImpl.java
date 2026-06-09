@@ -171,6 +171,11 @@ public class FileServiceImpl implements FileService {
     }
 
     @Override
+    public List<FileDO> getFileListByUrls(List<String> urls) {
+        return fileMapper.selectListByUrls(urls);
+    }
+
+    @Override
     public void deleteFile(Long id) throws Exception {
         // 校验存在
         FileDO file = validateFileExists(id);

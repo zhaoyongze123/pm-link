@@ -3,6 +3,20 @@ import type { PageParam, PageResult } from '@vben/request';
 import { requestClient } from '#/api/request';
 
 export namespace SystemNoticeApi {
+  export interface NoticeAttachment {
+    id: number;
+    name: string;
+    url: string;
+    size?: number;
+    type?: string;
+  }
+
+  export interface NoticeRead {
+    userId: number;
+    userNickname: string;
+    readTime?: Date | string;
+  }
+
   /** 公告信息 */
   export interface Notice {
     id?: number;
@@ -10,9 +24,14 @@ export namespace SystemNoticeApi {
     type: number;
     content: string;
     status: number;
-    remark: string;
+    publishTarget?: string;
+    pinned?: boolean;
+    attachmentFileIds?: string;
     creator?: string;
     createTime?: Date;
+    attachments?: NoticeAttachment[];
+    readCount?: number;
+    readList?: NoticeRead[];
   }
 }
 
@@ -29,6 +48,11 @@ export function getNotice(id: number) {
   return requestClient.get<SystemNoticeApi.Notice>(
     `/system/notice/get?id=${id}`,
   );
+}
+
+/** 记录公告已读 */
+export function readNotice(id: number) {
+  return requestClient.post(`/system/notice/read?id=${id}`);
 }
 
 /** 新增公告 */

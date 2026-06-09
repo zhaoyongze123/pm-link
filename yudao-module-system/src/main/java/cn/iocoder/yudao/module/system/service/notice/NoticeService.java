@@ -2,6 +2,7 @@ package cn.iocoder.yudao.module.system.service.notice;
 
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticePageReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticeRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticeSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.notice.NoticeDO;
 
@@ -56,5 +57,22 @@ public interface NoticeService {
      * @return 通知公告
      */
     NoticeDO getNotice(Long id);
+
+    /**
+     * 获得通知公告详情
+     *
+     * @param id 编号
+     * @return 通知公告详情
+     */
+    NoticeRespVO getNoticeDetail(Long id);
+
+    /**
+     * 标记通知公告为已读
+     *
+     * @param id 编号
+     * @param userId 用户编号
+     * @param userNickname 用户昵称
+     */
+    void markNoticeRead(Long id, Long userId, String userNickname);
 
 }

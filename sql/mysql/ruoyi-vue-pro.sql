@@ -3204,6 +3204,9 @@ CREATE TABLE `system_notice`  (
   `title` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '公告标题',
   `content` text CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '公告内容',
   `type` tinyint NOT NULL COMMENT '公告类型（1通知 2公告）',
+  `publish_target` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '全体后台用户' COMMENT '发布对象',
+  `pinned` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否置顶',
+  `attachment_file_ids` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '附件文件编号列表，逗号分隔',
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '公告状态（0正常 1关闭）',
   `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -3213,6 +3216,26 @@ CREATE TABLE `system_notice`  (
   `tenant_id` bigint NOT NULL DEFAULT 0 COMMENT '租户编号',
   PRIMARY KEY (`id`) USING BTREE
 ) ENGINE = InnoDB AUTO_INCREMENT = 5 CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '通知公告表';
+
+-- ----------------------------
+-- Table structure for system_notice_read
+-- ----------------------------
+DROP TABLE IF EXISTS `system_notice_read`;
+CREATE TABLE `system_notice_read`  (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+  `notice_id` bigint NOT NULL COMMENT '公告编号',
+  `user_id` bigint NOT NULL COMMENT '用户编号',
+  `user_nickname` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '' COMMENT '用户姓名',
+  `read_time` datetime NOT NULL COMMENT '阅读时间',
+  `creator` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '创建者',
+  `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `updater` varchar(64) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT '' COMMENT '更新者',
+  `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `deleted` bit(1) NOT NULL DEFAULT b'0' COMMENT '是否删除',
+  PRIMARY KEY (`id`) USING BTREE,
+  UNIQUE INDEX `uk_notice_user`(`notice_id` ASC, `user_id` ASC) USING BTREE,
+  INDEX `idx_notice_id`(`notice_id` ASC) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '通知公告阅读记录表';
 
 -- ----------------------------
 -- Records of system_notice

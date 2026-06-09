@@ -3,7 +3,6 @@ import { onMounted, ref } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 
 import { AuthenticationAuthTitle } from '@vben/common-ui';
-import { preferences } from '@vben/preferences';
 import { useAccessStore, useUserStore } from '@vben/stores';
 
 import { message, Spin } from 'ant-design-vue';
@@ -55,7 +54,6 @@ async function handleKodSsoLogin() {
 
   const authPermissionInfo = await authStore.fetchUserInfo();
   const targetPath = resolveUserHomePath(
-    preferences.app.defaultHomePath,
     authPermissionInfo.user?.homePath,
     userStore.userRoles,
   );

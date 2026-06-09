@@ -23,6 +23,9 @@ const SYSTEM_DICT = {
   SYSTEM_MAIL_SEND_STATUS: 'system_mail_send_status',
   SYSTEM_NOTIFY_TEMPLATE_TYPE: 'system_notify_template_type',
   SYSTEM_SOCIAL_TYPE: 'system_social_type',
+  SYSTEM_MEETING_ROOM_EQUIPMENT: 'system_meeting_room_equipment',
+  SYSTEM_MEETING_BOOKING_STATUS: 'system_meeting_booking_status',
+  SYSTEM_MEETING_BOOKING_CANCEL_TYPE: 'system_meeting_booking_cancel_type',
 } as const;
 
 /** ========== INFRA - 基础设施模块 ========== */

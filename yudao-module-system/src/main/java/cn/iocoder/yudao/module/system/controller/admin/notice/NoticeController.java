@@ -1,16 +1,22 @@
 package cn.iocoder.yudao.module.system.controller.admin.notice;
 
 import cn.hutool.core.lang.Assert;
+import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.enums.UserTypeEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.module.infra.api.websocket.WebSocketSenderApi;
 import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticePageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticeRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.notice.vo.NoticeSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.notice.NoticeDO;
+import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
+import cn.iocoder.yudao.module.system.framework.notify.SystemNoticeNotifyTemplateInitRunner;
+import cn.iocoder.yudao.module.system.service.notify.NotifySendService;
 import cn.iocoder.yudao.module.system.service.notice.NoticeService;
+import cn.iocoder.yudao.module.system.service.user.AdminUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -20,7 +26,9 @@ import org.springframework.web.bind.annotation.*;
 
 import javax.annotation.Resource;
 import javax.validation.Valid;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 
@@ -35,6 +43,12 @@ public class NoticeController {
 
     @Resource
     private WebSocketSenderApi webSocketSenderApi;
+
+    @Resource
+    private NotifySendService notifySendService;
+
+    @Resource
+    private AdminUserService adminUserService;
 
     @PostMapping("/create")
     @Operation(summary = "创建通知公告")
@@ -83,17 +97,37 @@ public class NoticeController {
     @Parameter(name = "id", description = "编号", required = true, example = "1024")
     @PreAuthorize("@ss.hasPermission('system:notice:query')")
     public CommonResult<NoticeRespVO> getNotice(@RequestParam("id") Long id) {
-        NoticeDO notice = noticeService.getNotice(id);
-        return success(BeanUtils.toBean(notice, NoticeRespVO.class));
+        return success(noticeService.getNoticeDetail(id));
+    }
+
+    @PostMapping("/read")
+    @Operation(summary = "记录通知公告已读")
+    @Parameter(name = "id", description = "编号", required = true, example = "1024")
+    @PreAuthorize("@ss.hasPermission('system:notice:query')")
+    public CommonResult<Boolean> readNotice(@RequestParam("id") Long id) {
+        noticeService.markNoticeRead(id, SecurityFrameworkUtils.getLoginUserId(),
+                SecurityFrameworkUtils.getLoginUserNickname());
+        return success(true);
     }
 
     @PostMapping("/push")
-    @Operation(summary = "推送通知公告", description = "只发送给 websocket 连接在线的用户")
+    @Operation(summary = "推送通知公告", description = "同时写入消息中心，并广播给在线的后台用户")
     @Parameter(name = "id", description = "编号", required = true, example = "1024")
     @PreAuthorize("@ss.hasPermission('system:notice:update')")
     public CommonResult<Boolean> push(@RequestParam("id") Long id) {
         NoticeDO notice = noticeService.getNotice(id);
         Assert.notNull(notice, "公告不能为空");
+        // 1. 写入站内信，保证离线用户回到系统后也能在消息中心看到
+        Map<String, Object> templateParams = new HashMap<>();
+        templateParams.put("noticeId", notice.getId());
+        templateParams.put("title", notice.getTitle());
+        templateParams.put("content", notice.getContent());
+        List<AdminUserDO> users = adminUserService.getUserListByStatus(CommonStatusEnum.ENABLE.getStatus());
+        users.forEach(user -> notifySendService.sendSingleNotifyToAdmin(
+                user.getId(),
+                SystemNoticeNotifyTemplateInitRunner.SYSTEM_NOTICE_NOTIFY_TEMPLATE_CODE,
+                templateParams
+        ));
         // 通过 websocket 推送给在线的用户
         webSocketSenderApi.sendObject(UserTypeEnum.ADMIN.getValue(), "notice-push", notice);
         return success(true);

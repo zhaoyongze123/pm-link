@@ -8,7 +8,7 @@ import { ref } from 'vue';
 import { useVbenModal } from '@vben/common-ui';
 import { handleTree } from '@vben/utils';
 
-import { Card, Col, Row, Tree } from 'ant-design-vue';
+import { Col, Row, Tree } from 'ant-design-vue';
 
 import { getSimpleDeptList } from '#/api/system/dept';
 
@@ -112,10 +112,10 @@ function handleCheck() {
 }
 </script>
 <template>
-  <Modal :title="title" key="dept-select-modal" class="w-2/5">
-    <Row class="h-full">
+  <Modal :title="title" key="dept-select-modal" class="w-2/5 oa-dept-select-modal">
+    <Row class="h-full oa-dept-select-shell">
       <Col :span="24">
-        <Card class="h-full">
+        <div class="oa-dept-select-tree-shell h-full">
           <Tree
             :tree-data="deptTree"
             v-if="deptTree.length > 0"
@@ -126,8 +126,61 @@ function handleCheck() {
             :default-expand-all="true"
             @check="handleCheck"
           />
-        </Card>
+        </div>
       </Col>
     </Row>
   </Modal>
 </template>
+
+<style lang="scss" scoped>
+.oa-dept-select-shell {
+  min-height: 420px;
+}
+
+.oa-dept-select-tree-shell {
+  height: 100%;
+  min-height: 420px;
+  overflow: auto;
+  border-top: 1px solid var(--oa-shell-border);
+  border-bottom: 1px solid var(--oa-shell-border);
+  padding: 12px 0;
+}
+
+.oa-dept-select-tree-shell :deep(.ant-tree) {
+  background: transparent;
+}
+
+.oa-dept-select-tree-shell :deep(.ant-tree-treenode) {
+  padding: 2px 0;
+}
+
+.oa-dept-select-tree-shell :deep(.ant-tree-node-content-wrapper) {
+  border-radius: 0;
+}
+</style>
+
+<style lang="scss">
+body.oa-lite-theme-light .oa-dept-select-modal,
+body.oa-lite-theme-dark .oa-dept-select-modal {
+  color: var(--oa-ink) !important;
+}
+
+body.oa-lite-theme-light .oa-dept-select-modal .ant-tree,
+body.oa-lite-theme-dark .oa-dept-select-modal .ant-tree {
+  background: transparent !important;
+  color: var(--oa-ink) !important;
+}
+
+body.oa-lite-theme-light .oa-dept-select-modal .ant-tree-node-content-wrapper:hover,
+body.oa-lite-theme-dark .oa-dept-select-modal .ant-tree-node-content-wrapper:hover {
+  background: var(--oa-shell-surface-muted) !important;
+}
+
+body.oa-lite-theme-light .oa-dept-select-modal .ant-tree-node-content-wrapper.ant-tree-node-selected,
+body.oa-lite-theme-light .oa-dept-select-modal .ant-tree-treenode-checkbox-checked .ant-tree-node-content-wrapper,
+body.oa-lite-theme-dark .oa-dept-select-modal .ant-tree-node-content-wrapper.ant-tree-node-selected,
+body.oa-lite-theme-dark .oa-dept-select-modal .ant-tree-treenode-checkbox-checked .ant-tree-node-content-wrapper {
+  background: transparent !important;
+  color: var(--oa-accent) !important;
+}
+</style>

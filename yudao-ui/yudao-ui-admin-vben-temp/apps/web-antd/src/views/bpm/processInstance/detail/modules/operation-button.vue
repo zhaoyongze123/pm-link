@@ -26,9 +26,7 @@ import { isEmpty } from '@vben/utils';
 import FormCreate from '@form-create/ant-design-vue';
 import { until, useDebounceFn } from '@vueuse/core';
 import {
-  Alert,
   Button,
-  Card,
   Form,
   FormItem,
   Image,
@@ -761,10 +759,15 @@ function handlePopoverVisible(visible: boolean) {
 defineExpose({ loadTodoTask });
 </script>
 <template>
-  <div class="flex items-center">
+  <div class="oa-process-actions">
+    <div class="oa-process-actions-head">
+      <div>
+        <div class="oa-process-actions-title">审批操作台</div>
+      </div>
+    </div>
     <!-- 【通过】按钮 -->
     <!-- z-index 设置为300 避免覆盖签名弹窗 -->
-    <Space size="middle">
+    <Space size="middle" class="oa-process-actions-bar">
       <Popover
         v-model:open="popOverVisible.approve"
         placement="top"
@@ -783,35 +786,36 @@ defineExpose({ loadTodoTask });
         </Button>
         <template #content>
           <!-- 办理表单 -->
-          <div class="flex flex-1 flex-col px-5 pt-5" v-loading="formLoading">
+          <div
+            class="oa-process-action-panel"
+            v-loading="formLoading"
+          >
             <Form
               layout="vertical"
-              class="mb-auto"
+              class="oa-process-action-form"
               ref="approveFormRef"
               :model="approveReasonForm"
               :rules="approveReasonRule"
               label-width="100px"
             >
-              <Card v-if="runningTask?.formId > 0" class="!-mt-2.5 mb-3.5">
-                <template #title>
-                  <span class="el-icon-picture-outline">
-                    填写表单【{{ runningTask?.formName }}】
-                  </span>
-                </template>
+              <div v-if="runningTask?.formId > 0" class="oa-process-inline-section">
+                <div class="oa-process-inline-section-title">
+                  填写表单【{{ runningTask?.formName }}】
+                </div>
                 <FormCreate
                   v-model:value="approveForm.value"
                   v-model:api="approveFormFApi"
                   :option="approveForm.option"
                   :rule="approveForm.rule"
                 />
-              </Card>
+              </div>
 
               <FormItem
                 label="下一个节点的审批人"
                 name="nextAssignees"
                 v-if="nextAssigneesActivityNode.length > 0"
               >
-                <div class="-mb-8 -mt-3.5 ml-2.5">
+                <div class="oa-process-next-approver">
                   <ProcessInstanceTimeline
                     ref="nextAssigneesTimelineRef"
                     :activity-nodes="nextAssigneesActivityNode"
@@ -886,10 +890,10 @@ defineExpose({ loadTodoTask });
         </Button>
         <template #content>
           <!-- 审批表单 -->
-          <div class="flex flex-1 flex-col px-5 pt-5" v-loading="formLoading">
+          <div class="oa-process-action-panel" v-loading="formLoading">
             <Form
               layout="vertical"
-              class="mb-auto"
+              class="oa-process-action-form"
               ref="rejectFormRef"
               :model="rejectReasonForm"
               :rules="rejectReasonRule"
@@ -942,10 +946,10 @@ defineExpose({ loadTodoTask });
           {{ getButtonDisplayName(BpmTaskOperationButtonTypeEnum.COPY) }}
         </Button>
         <template #content>
-          <div class="flex flex-1 flex-col px-5 pt-5" v-loading="formLoading">
+          <div class="oa-process-action-panel" v-loading="formLoading">
             <Form
               layout="vertical"
-              class="mb-auto"
+              class="oa-process-action-form"
               ref="copyFormRef"
               :model="copyForm"
               :rules="copyFormRule"
@@ -1014,10 +1018,10 @@ defineExpose({ loadTodoTask });
           {{ getButtonDisplayName(BpmTaskOperationButtonTypeEnum.TRANSFER) }}
         </Button>
         <template #content>
-          <div class="flex flex-1 flex-col px-5 pt-5" v-loading="formLoading">
+          <div class="oa-process-action-panel" v-loading="formLoading">
             <Form
               layout="vertical"
-              class="mb-auto"
+              class="oa-process-action-form"
               ref="transferFormRef"
               :model="transferForm"
               :rules="transferFormRule"
@@ -1087,10 +1091,10 @@ defineExpose({ loadTodoTask });
           {{ getButtonDisplayName(BpmTaskOperationButtonTypeEnum.DELEGATE) }}
         </Button>
         <template #content>
-          <div class="flex flex-1 flex-col px-5 pt-5" v-loading="formLoading">
+          <div class="oa-process-action-panel" v-loading="formLoading">
             <Form
               layout="vertical"
-              class="mb-auto"
+              class="oa-process-action-form"
               ref="delegateFormRef"
               :model="delegateForm"
               :rules="delegateFormRule"
@@ -1160,10 +1164,10 @@ defineExpose({ loadTodoTask });
           {{ getButtonDisplayName(BpmTaskOperationButtonTypeEnum.ADD_SIGN) }}
         </Button>
         <template #content>
-          <div class="flex flex-1 flex-col px-5 pt-5" v-loading="formLoading">
+          <div class="oa-process-action-panel" v-loading="formLoading">
             <Form
               layout="vertical"
-              class="mb-auto"
+              class="oa-process-action-form"
               ref="addSignFormRef"
               :model="addSignForm"
               :rules="addSignFormRule"
@@ -1240,10 +1244,10 @@ defineExpose({ loadTodoTask });
           <IconifyIcon :size="14" icon="icon-park-outline:minus" /> 减签
         </Button>
         <template #content>
-          <div class="flex flex-1 flex-col px-5 pt-5" v-loading="formLoading">
+          <div class="oa-process-action-panel" v-loading="formLoading">
             <Form
               layout="vertical"
-              class="mb-auto"
+              class="oa-process-action-form"
               ref="deleteSignFormRef"
               :model="deleteSignForm"
               :rules="deleteSignFormRule"
@@ -1311,10 +1315,10 @@ defineExpose({ loadTodoTask });
           {{ getButtonDisplayName(BpmTaskOperationButtonTypeEnum.RETURN) }}
         </Button>
         <template #content>
-          <div class="flex flex-1 flex-col px-5 pt-5" v-loading="formLoading">
+          <div class="oa-process-action-panel" v-loading="formLoading">
             <Form
               layout="vertical"
-              class="mb-auto"
+              class="oa-process-action-form"
               ref="returnFormRef"
               :model="returnForm"
               :rules="returnFormRule"
@@ -1383,26 +1387,19 @@ defineExpose({ loadTodoTask });
           取消
         </Button>
         <template #content>
-          <div
-            class="flex w-96 flex-1 flex-col px-5 pt-5"
-            v-loading="formLoading"
-          >
+          <div class="oa-process-action-panel oa-process-action-panel-wide" v-loading="formLoading">
             <Form
               layout="vertical"
-              class="mb-auto"
+              class="oa-process-action-form"
               ref="cancelFormRef"
               :model="cancelForm"
               :rules="cancelFormRule"
               label-width="100px"
             >
               <FormItem label="取消理由" name="cancelReason">
-                <Alert
-                  class="mb-2 text-xs"
-                  type="warning"
-                  size="small"
-                  show-icon
-                  message="友情提醒：取消后，该审批流程将自动结束。"
-                />
+                <div class="oa-process-inline-note">
+                  友情提醒：取消后，该审批流程将自动结束。
+                </div>
                 <Textarea
                   v-model:value="cancelForm.cancelReason"
                   allow-clear
@@ -1447,3 +1444,166 @@ defineExpose({ loadTodoTask });
   <!-- 签名弹窗 -->
   <SignatureModal @success="handleSignFinish" />
 </template>
+
+<style scoped>
+.oa-process-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding-top: 2px;
+  border-top: 1px solid var(--oa-shell-border);
+}
+
+.oa-process-actions-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: 16px;
+}
+
+.oa-process-actions-title {
+  margin-top: 0;
+  color: var(--oa-ink);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.oa-process-actions-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.oa-process-actions :deep(.ant-btn) {
+  min-height: 38px;
+  border-radius: 0;
+  font-weight: 500;
+}
+
+.oa-process-actions :deep(.ant-popover-inner) {
+  padding: 0;
+  border: 1px solid var(--oa-shell-border);
+  border-radius: 0;
+  background: var(--oa-shell-surface);
+  box-shadow: 0 10px 24px rgb(15 23 42 / 5%);
+}
+
+.oa-process-actions :deep(.ant-popover-inner-content) {
+  padding: 0;
+}
+
+.oa-process-action-panel {
+  min-width: 360px;
+  padding: 18px 18px 16px;
+}
+
+.oa-process-action-panel-wide {
+  width: 384px;
+}
+
+.oa-process-action-form {
+  min-width: 0;
+}
+
+.oa-process-actions :deep(.ant-form-item:last-child) {
+  margin-bottom: 0;
+}
+
+.oa-process-actions :deep(.ant-form-item-label > label),
+.oa-process-actions :deep(.ant-select-selection-item),
+.oa-process-actions :deep(.ant-select-arrow),
+.oa-process-actions :deep(.ant-input),
+.oa-process-actions :deep(.ant-input-affix-wrapper),
+.oa-process-actions :deep(.ant-input-show-count-suffix) {
+  color: var(--oa-ink);
+}
+
+.oa-process-actions :deep(.ant-input::placeholder),
+.oa-process-actions :deep(.ant-select-selection-placeholder) {
+  color: var(--oa-ink-soft);
+}
+
+.oa-process-actions :deep(.ant-input),
+.oa-process-actions :deep(.ant-input-affix-wrapper),
+.oa-process-actions :deep(.ant-select-selector) {
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.oa-process-actions :deep(.ant-btn[disabled]),
+.oa-process-actions :deep(.ant-btn[disabled]:hover) {
+  color: var(--oa-ink-soft);
+}
+
+.oa-process-inline-section {
+  margin-bottom: 14px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.oa-process-inline-section-title {
+  margin-bottom: 12px;
+  color: var(--oa-ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.oa-process-next-approver {
+  margin-top: 2px;
+}
+
+.oa-process-inline-note {
+  margin-bottom: 8px;
+  padding-left: 10px;
+  border-left: 2px solid color-mix(in srgb, var(--oa-danger) 54%, var(--oa-shell-border));
+  color: var(--oa-ink-soft);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+:global(body.oa-lite-theme-dark) .oa-process-actions {
+  :deep(.ant-popover-inner) {
+    border-color: color-mix(
+      in srgb,
+      var(--oa-shell-border-strong, var(--oa-shell-border)) 90%,
+      transparent
+    );
+    background: var(--oa-shell-surface-raised);
+    box-shadow: 0 20px 48px rgb(1 8 20 / 48%);
+  }
+
+  :deep(.ant-popover-inner-content),
+  .oa-process-action-panel {
+    background: var(--oa-shell-surface-raised);
+  }
+
+  :deep(.ant-input),
+  :deep(.ant-input-affix-wrapper),
+  :deep(.ant-select-selector) {
+    border-color: color-mix(
+      in srgb,
+      var(--oa-shell-border-strong, var(--oa-shell-border)) 92%,
+      transparent
+    ) !important;
+    background: color-mix(
+      in srgb,
+      var(--oa-shell-surface-subtle) 92%,
+      black 8%
+    ) !important;
+    color: var(--oa-ink) !important;
+  }
+
+  :deep(.ant-btn[disabled]),
+  :deep(.ant-btn[disabled]:hover) {
+    border-color: color-mix(in srgb, var(--oa-shell-border) 90%, transparent) !important;
+    background: color-mix(
+      in srgb,
+      var(--oa-shell-surface-subtle) 88%,
+      var(--oa-shell-surface) 12%
+    ) !important;
+    color: var(--oa-ink-soft) !important;
+    opacity: 0.88;
+  }
+}
+</style>

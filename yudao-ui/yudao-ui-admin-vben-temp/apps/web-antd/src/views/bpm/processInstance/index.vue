@@ -126,7 +126,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="我发起的流程">
     <template #doc>
       <DocAlert
         title="流程发起、取消、重新发起"
@@ -134,84 +134,93 @@ const [Grid, gridApi] = useVbenVxeGrid({
       />
     </template>
 
-    <Grid table-title="流程状态">
-      <template #slot-summary="{ row }">
-        <div
-          class="flex flex-col py-2"
-          v-if="row.summary && row.summary.length > 0"
-        >
-          <div v-for="(item, index) in row.summary" :key="index">
-            <span class="text-gray-500">
-              {{ item.key }} : {{ item.value }}
-            </span>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">流程状态</h3>
           </div>
         </div>
-        <div v-else>-</div>
-      </template>
-      <template #slot-status="{ row }">
-        <template
-          v-if="
-            row.status === BpmProcessInstanceStatus.RUNNING &&
-            row.tasks?.length! > 0
-          "
-        >
-          <!-- 单人审批 -->
-          <template v-if="row.tasks!.length === 1">
-            <span>
-              <Button type="link" @click="handleDetail(row)">
-                {{ row.tasks![0]!.assigneeUser?.nickname }}
-              </Button>
-              ({{ row.tasks![0]!.name }}) 审批中
-            </span>
-          </template>
-          <!-- 多人审批 -->
-          <template v-else>
-            <span>
-              <Button type="link" @click="handleDetail(row)">
-                {{ row.tasks![0]!.assigneeUser?.nickname }}
-              </Button>
-              等 {{ row.tasks!.length }} 人 ({{ row.tasks![0]!.name }})审批中
-            </span>
-          </template>
-        </template>
-        <!-- 非审批中状态 -->
-        <template v-else>
-          <DictTag
-            :type="DICT_TYPE.BPM_PROCESS_INSTANCE_STATUS"
-            :value="row.status"
-          />
-        </template>
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.detail'),
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              auth: ['bpm:process-instance:query'],
-              onClick: handleDetail.bind(null, row),
-            },
-            {
-              label: $t('ui.actionTitle.cancel'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              ifShow: row.status === BpmProcessInstanceStatus.RUNNING,
-              auth: ['bpm:process-instance:cancel'],
-              onClick: handleCancel.bind(null, row),
-            },
-            {
-              label: '重新发起',
-              type: 'link',
-              icon: ACTION_ICON.ADD,
-              ifShow: row.status !== BpmProcessInstanceStatus.RUNNING,
-              auth: ['bpm:process-instance:create'],
-              onClick: handleCreate.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="流程状态">
+            <template #slot-summary="{ row }">
+              <div
+                class="flex flex-col py-2"
+                v-if="row.summary && row.summary.length > 0"
+              >
+                <div v-for="(item, index) in row.summary" :key="index">
+                  <span class="text-gray-500">
+                    {{ item.key }} : {{ item.value }}
+                  </span>
+                </div>
+              </div>
+              <div v-else>-</div>
+            </template>
+            <template #slot-status="{ row }">
+              <template
+                v-if="
+                  row.status === BpmProcessInstanceStatus.RUNNING &&
+                  row.tasks?.length! > 0
+                "
+              >
+                <template v-if="row.tasks!.length === 1">
+                  <span>
+                    <Button type="link" @click="handleDetail(row)">
+                      {{ row.tasks![0]!.assigneeUser?.nickname }}
+                    </Button>
+                    ({{ row.tasks![0]!.name }}) 审批中
+                  </span>
+                </template>
+                <template v-else>
+                  <span>
+                    <Button type="link" @click="handleDetail(row)">
+                      {{ row.tasks![0]!.assigneeUser?.nickname }}
+                    </Button>
+                    等 {{ row.tasks!.length }} 人 ({{ row.tasks![0]!.name }})审批中
+                  </span>
+                </template>
+              </template>
+              <template v-else>
+                <DictTag
+                  :type="DICT_TYPE.BPM_PROCESS_INSTANCE_STATUS"
+                  :value="row.status"
+                />
+              </template>
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('common.detail'),
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    auth: ['bpm:process-instance:query'],
+                    onClick: handleDetail.bind(null, row),
+                  },
+                  {
+                    label: $t('ui.actionTitle.cancel'),
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    ifShow: row.status === BpmProcessInstanceStatus.RUNNING,
+                    auth: ['bpm:process-instance:cancel'],
+                    onClick: handleCancel.bind(null, row),
+                  },
+                  {
+                    label: '重新发起',
+                    type: 'link',
+                    icon: ACTION_ICON.ADD,
+                    ifShow: row.status !== BpmProcessInstanceStatus.RUNNING,
+                    auth: ['bpm:process-instance:create'],
+                    onClick: handleCreate.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

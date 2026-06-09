@@ -18,7 +18,7 @@ import { useTabs } from '@vben/hooks';
 import { IconifyIcon } from '@vben/icons';
 import { useUserStore } from '@vben/stores';
 
-import { Button, Card, message } from 'ant-design-vue';
+import { Button, message } from 'ant-design-vue';
 
 import { getCategorySimpleList } from '#/api/bpm/category';
 import { getProcessDefinition } from '#/api/bpm/definition';
@@ -468,8 +468,8 @@ onBeforeUnmount(() => {
         </div>
       </div>
       <!-- 主体内容 -->
-      <Card :body-style="{ padding: '10px' }" class="mb-4">
-        <div class="mt-12">
+      <section class="bpm-model-form-shell">
+        <div class="bpm-model-form-content">
           <!-- 第一步：基本信息 -->
           <div v-if="currentStep === 0" class="mx-auto w-4/6">
             <BasicInfo
@@ -501,7 +501,18 @@ onBeforeUnmount(() => {
             <ExtraSetting v-model="formData" ref="extraSettingRef" />
           </div>
         </div>
-      </Card>
+      </section>
     </div>
   </Page>
 </template>
+
+<style scoped>
+.bpm-model-form-shell {
+  margin-top: 48px;
+  border-top: 1px solid var(--oa-shell-border);
+}
+
+.bpm-model-form-content {
+  padding: 28px 0 24px;
+}
+</style>

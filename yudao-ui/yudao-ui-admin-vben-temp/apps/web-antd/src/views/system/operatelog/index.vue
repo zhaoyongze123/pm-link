@@ -65,39 +65,51 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="操作日志审计">
     <template #doc>
       <DocAlert title="系统日志" url="https://doc.iocoder.cn/system-log/" />
     </template>
 
     <DetailModal @success="handleRefresh" />
-    <Grid table-title="操作日志列表">
-      <template #toolbar-tools>
-        <TableAction
-          :actions="[
-            {
-              label: $t('ui.actionTitle.export'),
-              type: 'primary',
-              icon: ACTION_ICON.DOWNLOAD,
-              auth: ['system:operate-log:export'],
-              onClick: handleExport,
-            },
-          ]"
-        />
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.detail'),
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              auth: ['system:operate-log:query'],
-              onClick: handleDetail.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">操作日志列表</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="操作日志列表">
+            <template #toolbar-tools>
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('ui.actionTitle.export'),
+                    type: 'primary',
+                    icon: ACTION_ICON.DOWNLOAD,
+                    auth: ['system:operate-log:export'],
+                    onClick: handleExport,
+                  },
+                ]"
+              />
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('common.detail'),
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    auth: ['system:operate-log:query'],
+                    onClick: handleDetail.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

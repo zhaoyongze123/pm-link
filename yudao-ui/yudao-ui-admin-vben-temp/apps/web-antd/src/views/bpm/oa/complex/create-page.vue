@@ -12,7 +12,7 @@ import { BpmCandidateStrategyEnum, BpmNodeIdEnum } from '@vben/constants';
 import { useTabs } from '@vben/hooks';
 import { IconifyIcon } from '@vben/icons';
 
-import { Button, Card, Col, DatePicker, Form, Input, InputNumber, message, Row, Select, Space, Switch } from 'ant-design-vue';
+import { Button, Col, DatePicker, Form, Input, InputNumber, message, Row, Select, Space, Switch } from 'ant-design-vue';
 
 import { getProcessDefinition } from '#/api/bpm/definition';
 import { getApprovalDetail } from '#/api/bpm/processInstance';
@@ -39,7 +39,7 @@ const props = defineProps<{
 }>();
 
 const route = useRoute();
-const { closeCurrentTab } = useTabs();
+const { closeCurrentTab, getTabDisableState } = useTabs();
 const config = getComplexModuleViewConfig(props.moduleKey);
 
 const formLoading = ref(false);
@@ -53,6 +53,19 @@ const activityNodes = ref<BpmProcessInstanceApi.ApprovalNodeInfo[]>([]);
 const startUserSelectTasks = ref<BpmProcessInstanceApi.ApprovalNodeInfo[]>([]);
 const startUserSelectAssignees = ref<Record<string, number[]>>({});
 const formState = reactive<Record<string, any>>({});
+
+async function closeCurrentTabIfPossible() {
+  if (!getTabDisableState().disabledCloseCurrent) {
+    await closeCurrentTab();
+  }
+}
+
+function shouldReturnToOaLite() {
+  const returnTo = Array.isArray(route.query.returnTo)
+    ? route.query.returnTo[0]
+    : route.query.returnTo;
+  return returnTo === 'oa-lite';
+}
 
 function getFieldOptions(field: ComplexFieldConfig) {
   if (field.type === 'dept-multi-select') {
@@ -190,8 +203,12 @@ async function handleSubmit() {
     payload.startUserSelectAssignees = startUserSelectAssignees.value;
     await config.createRequest(payload);
     message.success(`${config.title}发起成功`);
-    await closeCurrentTab();
-    await router.push({ name: config.routeNames.index });
+    await closeCurrentTabIfPossible();
+    await router.push(
+      shouldReturnToOaLite()
+        ? { name: 'OALite' }
+        : { name: config.routeNames.index },
+    );
   } finally {
     formLoading.value = false;
   }
@@ -201,9 +218,12 @@ function handleBack() {
   confirm({
     content: '确定要返回上一页吗？未提交的内容将不会保留。',
     icon: 'warning',
-    beforeClose({ isConfirm }) {
+    async beforeClose({ isConfirm }) {
       if (isConfirm) {
-        closeCurrentTab();
+        await closeCurrentTabIfPossible();
+        if (shouldReturnToOaLite()) {
+          await router.push({ name: 'OALite' });
+        }
       }
       return Promise.resolve(true);
     },
@@ -238,16 +258,21 @@ onMounted(async () => {
 
 <template>
   <Page>
-    <Row :gutter="16">
+    <Row :gutter="20" class="oa-bpm-complex-create-shell">
       <Col :span="16">
-        <Card :title="route.query.id ? `重新发起${config.title}` : `创建${config.title}`" class="w-full">
-          <template #extra>
+        <section class="oa-bpm-complex-panel">
+          <header class="oa-bpm-complex-panel-head">
+            <div>
+              <div class="oa-bpm-complex-eyebrow">Request Form</div>
+              <h3 class="oa-bpm-complex-title">
+                {{ route.query.id ? `重新发起${config.title}` : `创建${config.title}` }}
+              </h3>
+            </div>
             <Button @click="handleBack">
               <IconifyIcon icon="lucide:arrow-left" />
               返回
             </Button>
-          </template>
-
+          </header>
           <Form layout="vertical">
             <Form.Item
               v-for="field in config.createFields"
@@ -308,23 +333,74 @@ onMounted(async () => {
             </Form.Item>
           </Form>
 
-          <Space :size="12">
-            <Button type="primary" :loading="formLoading" @click="handleSubmit">
-              提交
-            </Button>
-          </Space>
-        </Card>
+          <div class="oa-bpm-complex-actions">
+            <Space :size="12">
+              <Button type="primary" :loading="formLoading" @click="handleSubmit">
+                提交
+              </Button>
+            </Space>
+          </div>
+        </section>
       </Col>
       <Col :span="8">
-        <Card title="流程预览" class="w-full">
+        <aside class="oa-bpm-complex-panel">
+          <header class="oa-bpm-complex-panel-head">
+            <div>
+              <div class="oa-bpm-complex-eyebrow">Process Timeline</div>
+              <h3 class="oa-bpm-complex-title">流程预览</h3>
+            </div>
+          </header>
           <ProcessInstanceTimeline
             :activity-nodes="activityNodes"
             :show-status-icon="false"
             :loading="previewLoading"
             @select-user-confirm="handleSelectUserConfirm"
           />
-        </Card>
+        </aside>
       </Col>
     </Row>
   </Page>
 </template>
+
+<style lang="scss" scoped>
+.oa-bpm-complex-create-shell {
+  align-items: start;
+}
+
+.oa-bpm-complex-panel {
+  min-width: 0;
+  border-top: 1px solid var(--oa-shell-border);
+  padding-top: 18px;
+}
+
+.oa-bpm-complex-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.oa-bpm-complex-eyebrow {
+  color: var(--oa-ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.oa-bpm-complex-title {
+  margin: 6px 0 0;
+  color: var(--oa-ink);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.oa-bpm-complex-actions {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--oa-shell-border);
+}
+</style>

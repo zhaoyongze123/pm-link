@@ -132,30 +132,42 @@ onMounted(async () => {
 </script>
 
 <template>
-  <Page auto-content-height>
-    <Grid table-title="流程实例列表">
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: '详情',
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              auth: ['bpm:process-instance:query'],
-              onClick: handleDetail.bind(null, row),
-            },
-            {
-              label: '取消',
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              auth: ['bpm:process-instance:cancel'],
-              ifShow: row.status === 1,
-              onClick: handleCancel.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+  <Page auto-content-height title="流程报表">
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">流程实例列表</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="流程实例列表">
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: '详情',
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    auth: ['bpm:process-instance:query'],
+                    onClick: handleDetail.bind(null, row),
+                  },
+                  {
+                    label: '取消',
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    auth: ['bpm:process-instance:cancel'],
+                    ifShow: row.status === 1,
+                    onClick: handleCancel.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

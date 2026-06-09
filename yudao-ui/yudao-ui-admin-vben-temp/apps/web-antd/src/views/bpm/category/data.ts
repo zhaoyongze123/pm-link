@@ -131,27 +131,27 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
     {
       field: 'id',
       title: '分类编号',
-      minWidth: 100,
+      width: 96,
     },
     {
       field: 'name',
       title: '分类名',
-      minWidth: 200,
+      minWidth: 160,
     },
     {
       field: 'code',
       title: '分类标志',
-      minWidth: 200,
+      minWidth: 160,
     },
     {
       field: 'description',
       title: '分类描述',
-      minWidth: 200,
+      minWidth: 220,
     },
     {
       field: 'status',
       title: '分类状态',
-      minWidth: 100,
+      width: 110,
       cellRender: {
         name: 'CellDict',
         props: { type: DICT_TYPE.COMMON_STATUS },
@@ -160,17 +160,17 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
     {
       field: 'sort',
       title: '分类排序',
-      minWidth: 100,
+      width: 96,
     },
     {
       field: 'createTime',
       title: '创建时间',
-      minWidth: 180,
+      width: 172,
       formatter: 'formatDateTime',
     },
     {
       title: '操作',
-      width: 180,
+      width: 156,
       fixed: 'right',
       slots: { default: 'actions' },
     },

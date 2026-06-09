@@ -54,25 +54,37 @@ const [Grid] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="流程任务">
     <template #doc>
       <DocAlert title="工作流手册" url="https://doc.iocoder.cn/bpm/" />
     </template>
 
-    <Grid table-title="流程任务">
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: '历史',
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              auth: ['bpm:task:query'],
-              onClick: handleHistory.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">流程任务</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="流程任务">
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: '历史',
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    auth: ['bpm:task:query'],
+                    onClick: handleHistory.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

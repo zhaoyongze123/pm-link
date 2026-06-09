@@ -10,13 +10,14 @@ import { BpmCandidateStrategyEnum, BpmNodeIdEnum } from '@vben/constants';
 import { useTabs } from '@vben/hooks';
 import { IconifyIcon } from '@vben/icons';
 
-import { Button, Card, Col, message, Row, Space } from 'ant-design-vue';
-import dayjs from 'dayjs';
+import { Button, Col, message, Row, Space } from 'ant-design-vue';
 
 import { createAttendance, getAttendance } from '#/api/bpm/oa/attendance';
 import { getProcessDefinition } from '#/api/bpm/definition';
 import { createExpense, getExpense } from '#/api/bpm/oa/expense';
+import { createLeaveCancel, getLeaveCancel } from '#/api/bpm/oa/leave-cancel';
 import { createOvertime, getOvertime } from '#/api/bpm/oa/overtime';
+import { createOuting, getOuting } from '#/api/bpm/oa/outing';
 import { createSeal, getSeal } from '#/api/bpm/oa/seal';
 import { createTrip, getTrip } from '#/api/bpm/oa/trip';
 import { getApprovalDetail as getApprovalDetailApi } from '#/api/bpm/processInstance';
@@ -31,26 +32,30 @@ const props = defineProps<{
   moduleKey: OAModuleApiKey;
 }>();
 
-const { closeCurrentTab } = useTabs();
+const { closeCurrentTab, getTabDisableState } = useTabs();
 const { query } = useRoute();
 const config = getOAModuleViewConfig(props.moduleKey);
-const createRequestMap: Record<
+const createRequestMap: Partial<Record<
   OAModuleApiKey,
   (data: BpmOACommonApi.OARecord) => Promise<unknown>
-> = {
-  attendance: createAttendance,
-  expense: createExpense,
-  overtime: createOvertime,
-  seal: createSeal,
-  trip: createTrip,
+>> = {
+  attendance: (data) => createAttendance(data),
+  expense: (data) => createExpense(data),
+  leaveCancel: (data) => createLeaveCancel(data),
+  overtime: (data) => createOvertime(data),
+  outing: (data) => createOuting(data),
+  seal: (data) => createSeal(data as any),
+  trip: (data) => createTrip(data),
 };
-const detailRequestMap: Record<
+const detailRequestMap: Partial<Record<
   OAModuleApiKey,
   (id: number) => Promise<BpmOACommonApi.OARecord>
-> = {
+>> = {
   attendance: getAttendance,
   expense: getExpense,
+  leaveCancel: getLeaveCancel,
   overtime: getOvertime,
+  outing: getOuting,
   seal: getSeal,
   trip: getTrip,
 };
@@ -82,18 +87,27 @@ const [Form, formApi] = useVbenForm({
   showDefaultActions: false,
 });
 
+async function closeCurrentTabIfPossible() {
+  if (!getTabDisableState().disabledCloseCurrent) {
+    await closeCurrentTab();
+  }
+}
+
+function shouldReturnToOaLite() {
+  const returnTo = Array.isArray(query.returnTo) ? query.returnTo[0] : query.returnTo;
+  return returnTo === 'oa-lite';
+}
+
 async function getApprovalDetail() {
   processTimeLineLoading.value = true;
   try {
+    const processVariables = config.buildProcessVariables
+      ? config.buildProcessVariables((await formApi.getValues()) as Record<string, any>)
+      : {};
     const data = await getApprovalDetailApi({
       processDefinitionId: processDefinitionId.value,
       activityId: BpmNodeIdEnum.START_USER_NODE_ID,
-      processVariablesStr: JSON.stringify({
-        day: Math.max(
-          dayjs(formData.value?.endTime).diff(dayjs(formData.value?.startTime), 'day'),
-          0,
-        ),
-      }),
+      processVariablesStr: JSON.stringify(processVariables),
     });
     if (!data) {
       message.error('查询不到审批详情信息');
@@ -120,25 +134,21 @@ function selectUserConfirm(id: string, userList: any[]) {
 async function loadDetail(id: number) {
   try {
     formLoading.value = true;
-    const data = await detailRequestMap[props.moduleKey](id);
+    const request = detailRequestMap[props.moduleKey];
+    if (!request) {
+      message.error(`OA ${config.title}未配置详情接口`);
+      return;
+    }
+    const data = await request(id);
     if (!data) {
       message.error(`重新发起${config.title}失败，原因：原申请不存在`);
       return;
     }
     formData.value = {
       ...formData.value,
-      id: data.id,
-      type: data.type,
-      reason: data.reason,
-      startTime: data.startTime,
-      endTime: data.endTime,
+      ...data,
     };
-    await formApi.setValues({
-      type: data.type,
-      reason: data.reason,
-      startTime: data.startTime,
-      endTime: data.endTime,
-    });
+    await formApi.setValues(data);
   } finally {
     formLoading.value = false;
   }
@@ -150,9 +160,10 @@ async function onSubmit() {
     return;
   }
   for (const userTask of startUserSelectTasks.value) {
+    const selectedAssignees = startUserSelectAssignees.value[userTask.id] ?? [];
     if (
-      Array.isArray(startUserSelectAssignees.value[userTask.id]) &&
-      startUserSelectAssignees.value[userTask.id].length === 0
+      Array.isArray(selectedAssignees) &&
+      selectedAssignees.length === 0
     ) {
       return message.warning(`请选择${userTask.name}的审批人`);
     }
@@ -161,9 +172,9 @@ async function onSubmit() {
   const values = (await formApi.getValues()) as BpmOACommonApi.OARecord;
   const submitData: BpmOACommonApi.OARecord = {
     ...values,
-    endTime: Number(values.endTime),
-    reason: values.reason.trim(),
-    startTime: Number(values.startTime),
+    endTime: values.endTime ? Number(values.endTime) : values.endTime,
+    reason: typeof values.reason === 'string' ? values.reason.trim() : values.reason,
+    startTime: values.startTime ? Number(values.startTime) : values.startTime,
   };
   if (startUserSelectTasks.value.length > 0) {
     submitData.startUserSelectAssignees = startUserSelectAssignees.value;
@@ -171,12 +182,19 @@ async function onSubmit() {
 
   try {
     formLoading.value = true;
-    await createRequestMap[props.moduleKey](submitData);
+    const request = createRequestMap[props.moduleKey];
+    if (!request) {
+      message.error(`OA ${config.title}未配置提交流程`);
+      return;
+    }
+    await request(submitData);
     message.success($t('ui.actionMessage.operationSuccess'));
-    await closeCurrentTab();
-    await router.push({
-      name: config.routeNames.index,
-    });
+    await closeCurrentTabIfPossible();
+    await router.push(
+      shouldReturnToOaLite()
+        ? { name: 'OALite' }
+        : { name: config.routeNames.index },
+    );
   } finally {
     formLoading.value = false;
   }
@@ -186,9 +204,12 @@ function onBack() {
   confirm({
     content: '确定要返回上一页吗？请先保存您填写的信息！',
     icon: 'warning',
-    beforeClose({ isConfirm }) {
+    async beforeClose({ isConfirm }) {
       if (isConfirm) {
-        closeCurrentTab();
+        await closeCurrentTabIfPossible();
+        if (shouldReturnToOaLite()) {
+          await router.push({ name: 'OALite' });
+        }
       }
       return Promise.resolve(true);
     },
@@ -216,35 +237,87 @@ onMounted(async () => {
 
 <template>
   <Page>
-    <Row :gutter="16">
+    <Row :gutter="20" class="oa-bpm-create-shell">
       <Col :span="16">
-        <Card :title="getTitle" class="w-full" v-loading="formLoading">
-          <template #extra>
+        <section class="oa-bpm-create-panel" v-loading="formLoading">
+          <header class="oa-bpm-create-panel-head">
+            <div>
+              <div class="oa-bpm-create-eyebrow">Request Form</div>
+              <h3 class="oa-bpm-create-title">{{ getTitle }}</h3>
+            </div>
             <Button type="default" @click="onBack">
               <IconifyIcon icon="lucide:arrow-left" />
               返回
             </Button>
-          </template>
-
+          </header>
           <Form />
-          <template #actions>
-            <Space warp :size="12" class="w-full px-6">
+          <div class="oa-bpm-create-actions">
+            <Space warp :size="12">
               <Button type="primary" @click="onSubmit" :loading="formLoading">
                 提交
               </Button>
             </Space>
-          </template>
-        </Card>
+          </div>
+        </section>
       </Col>
       <Col :span="8">
-        <Card title="流程" class="w-full" v-loading="processTimeLineLoading">
+        <aside class="oa-bpm-create-panel" v-loading="processTimeLineLoading">
+          <header class="oa-bpm-create-panel-head">
+            <div>
+              <div class="oa-bpm-create-eyebrow">Process Timeline</div>
+              <h3 class="oa-bpm-create-title">流程</h3>
+            </div>
+          </header>
           <ProcessInstanceTimeline
             :activity-nodes="activityNodes"
             :show-status-icon="false"
             @select-user-confirm="selectUserConfirm"
           />
-        </Card>
+        </aside>
       </Col>
     </Row>
   </Page>
 </template>
+
+<style lang="scss" scoped>
+.oa-bpm-create-shell {
+  align-items: start;
+}
+
+.oa-bpm-create-panel {
+  min-width: 0;
+  border-top: 1px solid var(--oa-shell-border);
+  padding-top: 18px;
+}
+
+.oa-bpm-create-panel-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--oa-shell-border);
+  margin-bottom: 18px;
+}
+
+.oa-bpm-create-eyebrow {
+  color: var(--oa-ink-faint);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.oa-bpm-create-title {
+  margin: 6px 0 0;
+  color: var(--oa-ink);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.oa-bpm-create-actions {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--oa-shell-border);
+}
+</style>

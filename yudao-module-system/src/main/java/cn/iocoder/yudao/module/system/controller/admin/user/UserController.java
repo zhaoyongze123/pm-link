@@ -6,6 +6,7 @@ import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageParam;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
+import cn.iocoder.yudao.framework.datapermission.core.annotation.DataPermission;
 import cn.iocoder.yudao.framework.excel.core.util.ExcelUtils;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.*;
 import cn.iocoder.yudao.module.system.convert.user.UserConvert;
@@ -130,6 +131,7 @@ public class UserController {
 
     @GetMapping({"/list-all-simple", "/simple-list"})
     @Operation(summary = "获取用户精简信息列表", description = "只包含被开启的用户，主要用于前端的下拉选项")
+    @DataPermission(enable = false) // 会议室预定等跨部门场景需要完整用户列表，否则会出现参会人无法选择、昵称显示未知
     public CommonResult<List<UserSimpleRespVO>> getSimpleUserList() {
         List<AdminUserDO> list = userService.getUserListByStatus(CommonStatusEnum.ENABLE.getStatus());
         // 拼接数据

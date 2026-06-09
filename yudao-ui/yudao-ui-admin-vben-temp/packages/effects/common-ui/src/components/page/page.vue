@@ -57,13 +57,13 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="relative flex min-h-full flex-col">
+  <div class="oa-page-shell relative flex min-h-full min-w-0 flex-col">
     <div
       v-if="$slots.doc && isDocAlertEnable()"
       ref="docRef"
       :class="
         cn(
-          'bg-card border-border relative mx-4 flex items-start rounded-md border-b',
+          'oa-page-doc border-border relative mx-4 flex items-start border-b',
         )
       "
     >
@@ -83,20 +83,20 @@ onMounted(() => {
       ref="headerRef"
       :class="
         cn(
-          'relative flex items-end border-b border-border bg-card px-6 py-4',
+          'oa-page-header relative flex items-end border-b border-border px-0 py-5',
           headerClass,
         )
       "
     >
       <div class="flex-auto">
         <slot name="title">
-          <div v-if="title" class="mb-2 flex text-lg font-semibold">
+          <div v-if="title" class="oa-page-title mb-2 flex">
             {{ title }}
           </div>
         </slot>
 
         <slot name="description">
-          <p v-if="description" class="text-muted-foreground">
+          <p v-if="description" class="oa-page-description">
             {{ description }}
           </p>
         </slot>
@@ -107,15 +107,66 @@ onMounted(() => {
       </div>
     </div>
 
-    <div :class="cn('h-full p-4', contentClass)" :style="contentStyle">
+    <div
+      :class="cn('oa-page-content h-full min-w-0 px-5 py-4', contentClass)"
+      :style="contentStyle"
+    >
       <slot></slot>
     </div>
     <div
       v-if="$slots.footer"
       ref="footerRef"
-      :class="cn('align-center flex bg-card px-6 py-4', footerClass)"
+      :class="cn('oa-page-footer align-center flex px-6 py-4', footerClass)"
     >
       <slot name="footer"></slot>
     </div>
   </div>
 </template>
+
+<style scoped>
+.oa-page-shell {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border-radius: 0;
+  background: transparent;
+}
+
+.oa-page-doc {
+  margin-top: 16px;
+  background: transparent;
+  box-shadow: none;
+}
+
+.oa-page-header {
+  gap: 16px;
+  background: transparent;
+}
+
+.oa-page-title {
+  color: var(--oa-ink);
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+
+.oa-page-description {
+  max-width: 70ch;
+  color: var(--oa-ink-soft);
+  font-size: 14px;
+  line-height: 1.75;
+}
+
+.oa-page-content {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  background: transparent;
+}
+
+.oa-page-footer {
+  border-top: 1px solid var(--oa-shell-border);
+  background: transparent;
+}
+</style>

@@ -58,26 +58,38 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="站内信总览">
     <template #doc>
       <DocAlert title="站内信" url="https://doc.iocoder.cn/notify/" />
     </template>
 
     <DetailModal @success="handleRefresh" />
-    <Grid table-title="站内信列表">
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.detail'),
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              auth: ['system:notify-message:query'],
-              onClick: handleDetail.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">站内信列表</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="站内信列表">
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('common.detail'),
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    auth: ['system:notify-message:query'],
+                    onClick: handleDetail.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

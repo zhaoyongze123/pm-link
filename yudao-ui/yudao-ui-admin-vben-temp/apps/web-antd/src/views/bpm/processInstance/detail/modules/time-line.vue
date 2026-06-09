@@ -42,57 +42,57 @@ const statusIconMap: Record<
   string,
   { animation?: string; color: string; icon: string }
 > = {
-  '-2': { color: '#909398', icon: 'mdi:skip-forward-outline' }, // 跳过
-  '-1': { color: '#909398', icon: 'mdi:clock-outline' }, // 审批未开始
-  '0': { color: '#ff943e', icon: 'mdi:loading', animation: 'animate-spin' }, // 待审批
-  '1': { color: '#448ef7', icon: 'mdi:loading', animation: 'animate-spin' }, // 审批中
-  '2': { color: '#00b32a', icon: 'mdi:check' }, // 审批通过
-  '3': { color: '#f46b6c', icon: 'mdi:close' }, // 审批不通过
-  '4': { color: '#cccccc', icon: 'mdi:trash-can-outline' }, // 已取消
-  '5': { color: '#f46b6c', icon: 'mdi:arrow-left' }, // 退回
-  '6': { color: '#448ef7', icon: 'mdi:clock-outline' }, // 委派中
-  '7': { color: '#00b32a', icon: 'mdi:check' }, // 审批通过中
+  '-2': { color: '#909398', icon: 'lucide:skip-forward' }, // 跳过
+  '-1': { color: '#909398', icon: 'lucide:clock-3' }, // 审批未开始
+  '0': { color: '#ff943e', icon: 'lucide:loader-circle', animation: 'animate-spin' }, // 待审批
+  '1': { color: '#448ef7', icon: 'lucide:loader-circle', animation: 'animate-spin' }, // 审批中
+  '2': { color: '#00b32a', icon: 'lucide:check' }, // 审批通过
+  '3': { color: '#f46b6c', icon: 'lucide:x' }, // 审批不通过
+  '4': { color: '#cccccc', icon: 'lucide:ban' }, // 已取消
+  '5': { color: '#f46b6c', icon: 'lucide:corner-up-left' }, // 退回
+  '6': { color: '#448ef7', icon: 'lucide:clock-3' }, // 委派中
+  '7': { color: '#00b32a', icon: 'lucide:badge-check' }, // 审批通过中
 }; // 状态图标映射
 const nodeTypeSvgMap = {
   // 结束节点
   [BpmNodeTypeEnum.END_EVENT_NODE]: {
     color: '#909398',
-    icon: 'mdi:power',
+    icon: 'lucide:flag',
   },
   // 开始节点
   [BpmNodeTypeEnum.START_USER_NODE]: {
     color: '#909398',
-    icon: 'mdi:account-outline',
+    icon: 'lucide:user-round',
   },
   // 用户任务节点
   [BpmNodeTypeEnum.USER_TASK_NODE]: {
     color: '#ff943e',
-    icon: 'tdesign:seal',
+    icon: 'lucide:badge-check',
   },
   // 事务节点
   [BpmNodeTypeEnum.TRANSACTOR_NODE]: {
     color: '#ff943e',
-    icon: 'mdi:file-edit-outline',
+    icon: 'lucide:file-pen-line',
   },
   // 复制任务节点
   [BpmNodeTypeEnum.COPY_TASK_NODE]: {
     color: '#3296fb',
-    icon: 'mdi:content-copy',
+    icon: 'lucide:copy',
   },
   // 条件分支节点
   [BpmNodeTypeEnum.CONDITION_NODE]: {
     color: '#14bb83',
-    icon: 'carbon:flow',
+    icon: 'lucide:git-branch-plus',
   },
   // 并行分支节点
   [BpmNodeTypeEnum.PARALLEL_BRANCH_NODE]: {
     color: '#14bb83',
-    icon: 'si:flow-parallel-line',
+    icon: 'lucide:split',
   },
   // 子流程节点
   [BpmNodeTypeEnum.CHILD_PROCESS_NODE]: {
     color: '#14bb83',
-    icon: 'icon-park-outline:tree-diagram',
+    icon: 'lucide:workflow',
   },
 } as Record<BpmNodeTypeEnum, { color: string; icon: string }>; // 节点类型图标映射
 const onlyStatusIconShow = [-1, 0, 1]; // 只有状态是 -1、0、1 才展示头像右小角状态小 icon
@@ -230,8 +230,8 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
 </script>
 
 <template>
-  <div>
-    <Timeline class="pt-5">
+  <div class="oa-process-timeline">
+    <Timeline class="oa-process-timeline-list">
       <!-- 遍历每个审批节点 -->
       <Timeline.Item
         v-for="(activity, index) in activityNodes"
@@ -239,25 +239,28 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
         :color="getApprovalNodeColor(activity.status)"
       >
         <template #dot>
-          <div class="relative">
+          <div class="oa-process-timeline-dot-wrap">
             <div
-              class="position-absolute left--2.5 top--1.5 flex h-8 w-8 items-center justify-center rounded-full border border-solid border-gray-200 bg-blue-500 p-1.5"
+              class="oa-process-timeline-dot"
+              :style="{
+                backgroundColor: getApprovalNodeColor(activity.status) || 'var(--oa-accent)',
+              }"
             >
               <IconifyIcon
                 :icon="getApprovalNodeTypeIcon(activity.nodeType)"
-                class="size-6 text-white"
+                class="oa-process-timeline-dot-icon"
               />
             </div>
             <div
               v-if="showStatusIcon"
-              class="absolute left-4 top-4 flex size-4 items-center rounded-full border-2 border-solid border-white p-0.5"
+              class="oa-process-timeline-status"
               :style="{
                 backgroundColor: getApprovalNodeColor(activity.status),
               }"
             >
               <IconifyIcon
                 :icon="getApprovalNodeIcon(activity.status, activity.nodeType)"
-                class="text-white"
+                class="oa-process-timeline-status-icon"
                 :class="[statusIconMap[activity.status]?.animation]"
               />
             </div>
@@ -265,12 +268,12 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
         </template>
 
         <div
-          class="ml-2 flex flex-col items-start gap-2"
+          class="oa-process-timeline-card"
           :id="`activity-task-${activity.id}-${index}`"
         >
           <!-- 第一行：节点名称、时间 -->
-          <div class="flex w-full">
-            <div class="font-bold">
+          <div class="oa-process-timeline-head">
+            <div class="oa-process-timeline-title">
               {{ activity.name }}
               <span v-if="activity.status === BpmTaskStatusEnum.SKIP">
                 【跳过】
@@ -279,7 +282,7 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
             <!-- 信息：时间 -->
             <div
               v-if="activity.status !== BpmTaskStatusEnum.NOT_START"
-              class="ml-auto mt-1 text-sm text-gray-500"
+              class="oa-process-timeline-time"
             >
               {{ getApprovalNodeTime(activity) }}
             </div>
@@ -301,14 +304,14 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
           <!-- 需要自定义选择审批人 -->
           <div
             v-if="shouldShowCustomUserSelect(activity)"
-            class="flex flex-wrap items-center gap-2"
+            class="oa-process-timeline-users"
           >
             <Tooltip title="添加用户" placement="left">
               <Button
                 type="primary"
                 size="middle"
                 ghost
-                class="flex items-center justify-center"
+                class="oa-process-timeline-add-user"
                 @click="
                   handleSelectUser(
                     activity.id,
@@ -325,7 +328,7 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
             <div
               v-for="(user, userIndex) in customApproveUsers[activity.id]"
               :key="user.id || userIndex"
-              class="relative flex h-9 items-center gap-2 rounded-3xl bg-gray-100 pr-2 dark:bg-gray-600"
+              class="oa-process-timeline-user-chip"
             >
               <Avatar
                 class="!m-1"
@@ -337,11 +340,11 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
               <Avatar class="!m-1" :size="28" v-else>
                 <span>{{ user.nickname.substring(0, 1) }}</span>
               </Avatar>
-              <span class="text-sm">{{ user.nickname }}</span>
+              <span class="oa-process-timeline-user-name">{{ user.nickname }}</span>
             </div>
           </div>
 
-          <div v-else class="mt-1 flex flex-wrap items-center gap-2">
+          <div v-else class="oa-process-timeline-users">
             <!-- 情况一：遍历每个审批节点下的【进行中】task 任务 -->
             <div
               v-for="(task, idx) in activity.tasks"
@@ -349,11 +352,11 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
               class="flex flex-col gap-2 pr-2"
             >
               <div
-                class="relative flex flex-wrap gap-2"
+                class="oa-process-timeline-task-user"
                 v-if="task.assigneeUser || task.ownerUser"
               >
                 <!-- 信息：头像昵称 -->
-                <div class="relative flex h-8 items-center rounded-3xl pr-2">
+                <div class="oa-process-timeline-user-chip">
                   <template
                     v-if="
                       task.assigneeUser?.avatar || task.assigneeUser?.nickname
@@ -392,14 +395,14 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
                     v-if="
                       showStatusIcon && onlyStatusIconShow.includes(task.status)
                     "
-                    class="absolute left-5 top-5 flex items-center rounded-full border-2 border-solid border-white p-1"
+                    class="oa-process-timeline-mini-status"
                     :style="{
                       backgroundColor: statusIconMap[task.status]?.color,
                     }"
                   >
                     <IconifyIcon
                       :icon="statusIconMap[task.status]?.icon || 'lucide:clock'"
-                      class="size-1.5 text-white"
+                      class="oa-process-timeline-mini-status-icon"
                       :class="[statusIconMap[task.status]?.animation]"
                     />
                   </div>
@@ -410,7 +413,7 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
               <teleport defer :to="`#activity-task-${activity.id}-${index}`">
                 <div
                   v-if="shouldShowApprovalReason(task, activity.nodeType)"
-                  class="mt-1 w-full rounded-md bg-gray-100 p-2 text-sm text-gray-500"
+                  class="oa-process-timeline-note"
                 >
                   审批意见：{{ task.reason }}
                 </div>
@@ -419,7 +422,7 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
                     task.signPicUrl &&
                     activity.nodeType === BpmNodeTypeEnum.USER_TASK_NODE
                   "
-                  class="mt-1 flex w-full items-center rounded-md bg-gray-100 p-2 text-sm text-gray-500"
+                  class="oa-process-timeline-note oa-process-timeline-signature"
                 >
                   签名：
                   <Image
@@ -437,7 +440,7 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
             <div
               v-for="(user, userIndex) in activity.candidateUsers"
               :key="userIndex"
-              class="relative flex h-8 items-center rounded-3xl pr-2"
+              class="oa-process-timeline-user-chip"
             >
               <Avatar
                 class="!m-1"
@@ -448,18 +451,18 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
               <Avatar class="!m-1" :size="28" v-else>
                 {{ user.nickname.substring(0, 1) }}
               </Avatar>
-              <span class="text-sm">
+              <span class="oa-process-timeline-user-name">
                 {{ user.nickname }}
               </span>
 
               <!-- 候选任务状态图标 -->
               <div
                 v-if="showStatusIcon"
-                class="absolute left-6 top-5 flex items-center rounded-full border-2 border-solid border-white p-1"
+                class="oa-process-timeline-mini-status"
                 :style="{ backgroundColor: statusIconMap['-1']?.color }"
               >
                 <IconifyIcon
-                  class="text-xs text-white"
+                  class="oa-process-timeline-mini-status-icon"
                   :icon="statusIconMap['-1']?.icon || 'lucide:clock'"
                 />
               </div>
@@ -481,3 +484,184 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
     />
   </div>
 </template>
+
+<style scoped>
+.oa-process-timeline {
+  padding-top: 6px;
+}
+
+.oa-process-timeline-list {
+  padding-top: 0;
+}
+
+.oa-process-timeline :deep(.ant-timeline-item-tail) {
+  inset-inline-start: 17px;
+  border-inline-start: 1px solid var(--oa-shell-border);
+}
+
+.oa-process-timeline :deep(.ant-timeline-item-head) {
+  inset-inline-start: 6px;
+}
+
+.oa-process-timeline :deep(.ant-timeline-item-content) {
+  margin-inline-start: 48px;
+}
+
+.oa-process-timeline-dot-wrap {
+  position: relative;
+}
+
+.oa-process-timeline-dot {
+  display: flex;
+  width: 22px;
+  height: 22px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--oa-shell-border);
+  border-radius: 6px;
+  background: color-mix(
+    in srgb,
+    var(--oa-shell-surface-muted) 84%,
+    var(--oa-shell-surface) 16%
+  );
+  color: var(--oa-accent);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%);
+}
+
+.oa-process-timeline-dot-icon {
+  font-size: 13px;
+  color: inherit;
+  stroke-width: 2;
+}
+
+.oa-process-timeline-status {
+  position: absolute;
+  right: -2px;
+  bottom: -2px;
+  display: flex;
+  width: 12px;
+  height: 12px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--oa-shell-border);
+  border-radius: 999px;
+  background: var(--oa-shell-surface);
+}
+
+.oa-process-timeline-status-icon,
+.oa-process-timeline-mini-status-icon {
+  color: var(--oa-accent-contrast);
+  font-size: 10px;
+}
+
+.oa-process-timeline-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 10px;
+  padding: 2px 0 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--oa-shell-border) 88%, transparent);
+  background: transparent;
+}
+
+.oa-process-timeline-head {
+  display: flex;
+  width: 100%;
+  gap: 12px;
+  align-items: baseline;
+}
+
+.oa-process-timeline-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--oa-ink);
+  line-height: 1.4;
+}
+
+.oa-process-timeline-time {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--oa-ink-faint);
+  white-space: nowrap;
+}
+
+.oa-process-timeline-users {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 16px;
+  align-items: center;
+}
+
+.oa-process-timeline-add-user {
+  border-radius: 0;
+}
+
+.oa-process-timeline-user-chip {
+  position: relative;
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 0 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--oa-ink);
+}
+
+.oa-process-timeline-user-name {
+  font-size: 13px;
+  color: var(--oa-ink);
+  font-weight: 500;
+}
+
+.oa-process-timeline-task-user {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-right: 10px;
+}
+
+.oa-process-timeline-mini-status {
+  position: absolute;
+  right: 6px;
+  bottom: -1px;
+  display: flex;
+  width: 12px;
+  height: 12px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--oa-shell-border);
+  border-radius: 999px;
+  background: var(--oa-shell-surface);
+}
+
+.oa-process-timeline-note {
+  width: 100%;
+  padding: 0 0 0 14px;
+  font-size: 12px;
+  color: var(--oa-ink-soft);
+  line-height: 1.7;
+  border-left: 1px solid var(--oa-shell-border);
+  background: transparent;
+}
+
+.oa-process-timeline-signature {
+  align-items: center;
+}
+
+@media (max-width: 768px) {
+  .oa-process-timeline-card {
+    padding: 2px 0 16px;
+  }
+
+  .oa-process-timeline-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .oa-process-timeline-time {
+    margin-left: 0;
+  }
+}
+</style>

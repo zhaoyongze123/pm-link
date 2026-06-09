@@ -219,7 +219,7 @@ const options = computed(() => {
       {},
       mergedOptions.pagerConfig,
       {
-        pageSize: 20,
+        pageSize: 10,
         background: true,
         pageSizes: [10, 20, 30, 50, 100, 200],
         className: 'mt-2 w-full',
@@ -364,7 +364,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div :class="cn('h-full rounded-md bg-card', className)">
+  <div :class="cn('h-full', className)">
     <VxeGrid
       ref="gridRef"
       :class="

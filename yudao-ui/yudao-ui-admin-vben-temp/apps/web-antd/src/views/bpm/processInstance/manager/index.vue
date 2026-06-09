@@ -99,47 +99,59 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="流程实例管理">
     <template #doc>
       <DocAlert title="工作流手册" url="https://doc.iocoder.cn/bpm" />
     </template>
 
-    <Grid table-title="流程实例">
-      <template #tasks="{ row }">
-        <template v-if="row.tasks && row.tasks.length > 0">
-          <Button
-            v-for="task in row.tasks"
-            :key="task.id"
-            type="link"
-            @click="handleTaskDetail(row, task)"
-          >
-            {{ task.name }}
-          </Button>
-        </template>
-        <span v-else>-</span>
-      </template>
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: $t('common.detail'),
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              auth: ['bpm:process-instance:query'],
-              onClick: handleDetail.bind(null, row),
-            },
-            {
-              label: $t('ui.actionTitle.cancel'),
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              ifShow: row.status === BpmProcessInstanceStatus.RUNNING,
-              auth: ['bpm:process-instance:cancel'],
-              onClick: handleCancel.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">流程实例</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="流程实例">
+            <template #tasks="{ row }">
+              <template v-if="row.tasks && row.tasks.length > 0">
+                <Button
+                  v-for="task in row.tasks"
+                  :key="task.id"
+                  type="link"
+                  @click="handleTaskDetail(row, task)"
+                >
+                  {{ task.name }}
+                </Button>
+              </template>
+              <span v-else>-</span>
+            </template>
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: $t('common.detail'),
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    auth: ['bpm:process-instance:query'],
+                    onClick: handleDetail.bind(null, row),
+                  },
+                  {
+                    label: $t('ui.actionTitle.cancel'),
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    ifShow: row.status === BpmProcessInstanceStatus.RUNNING,
+                    auth: ['bpm:process-instance:cancel'],
+                    onClick: handleCancel.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

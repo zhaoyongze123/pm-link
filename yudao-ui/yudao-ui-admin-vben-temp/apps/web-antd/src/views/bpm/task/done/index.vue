@@ -72,7 +72,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
+  <Page auto-content-height title="已办任务">
     <template #doc>
       <DocAlert
         title="审批通过、不通过、驳回"
@@ -86,29 +86,41 @@ const [Grid, gridApi] = useVbenVxeGrid({
       <DocAlert title="审批加签、减签" url="https://doc.iocoder.cn/bpm/sign/" />
     </template>
 
-    <Grid table-title="已办任务">
-      <template #actions="{ row }">
-        <TableAction
-          :actions="[
-            {
-              label: '撤回',
-              type: 'link',
-              danger: true,
-              icon: ACTION_ICON.DELETE,
-              popConfirm: {
-                title: '确定要撤回该任务吗？',
-                confirm: handleWithdraw.bind(null, row),
-              },
-            },
-            {
-              label: '历史',
-              type: 'link',
-              icon: ACTION_ICON.VIEW,
-              onClick: handleHistory.bind(null, row),
-            },
-          ]"
-        />
-      </template>
-    </Grid>
+    <div class="oa-workspace-page">
+
+      <section class="oa-workspace-panel min-h-0">
+        <div class="oa-workspace-panel-header">
+          <div>
+            <h3 class="oa-workspace-panel-title">已办任务</h3>
+          </div>
+        </div>
+        <div class="oa-workspace-panel-body min-h-0">
+          <Grid table-title="已办任务">
+            <template #actions="{ row }">
+              <TableAction
+                :actions="[
+                  {
+                    label: '撤回',
+                    type: 'link',
+                    danger: true,
+                    icon: ACTION_ICON.DELETE,
+                    popConfirm: {
+                      title: '确定要撤回该任务吗？',
+                      confirm: handleWithdraw.bind(null, row),
+                    },
+                  },
+                  {
+                    label: '历史',
+                    type: 'link',
+                    icon: ACTION_ICON.VIEW,
+                    onClick: handleHistory.bind(null, row),
+                  },
+                ]"
+              />
+            </template>
+          </Grid>
+        </div>
+      </section>
+    </div>
   </Page>
 </template>

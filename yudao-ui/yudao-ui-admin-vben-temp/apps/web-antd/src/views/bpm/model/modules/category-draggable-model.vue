@@ -2,7 +2,7 @@
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BpmModelApi, ModelCategoryInfo } from '#/api/bpm/model';
 
-import { computed, ref, watchEffect } from 'vue';
+import { ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
@@ -16,8 +16,6 @@ import { useDebounceFn } from '@vueuse/core';
 import { useSortable } from '@vueuse/integrations/useSortable';
 import {
   Button,
-  Card,
-  Collapse,
   Dropdown,
   Menu,
   message,
@@ -68,8 +66,6 @@ const modelList = ref<BpmModelApi.Model[]>([]);
 const isExpand = ref(props.isFirst); // 根据是否为第一个分类, 来设置初始展开状态
 
 const sortableInstance = ref<any>(null); // 排序引用，以便后续启用或禁用排序
-/** 解决 v-model 问题，使用计算属性 */
-const expandKeys = computed(() => (isExpand.value ? ['1'] : []));
 
 const { hasAccessByCodes } = useAccess();
 /** 权限校验：通过 computed 解决列表的卡顿问题 */
@@ -458,52 +454,48 @@ function handleRenameSuccess() {
 
 <template>
   <div>
-    <Card
-      :body-style="{ padding: 0 }"
-      class="category-draggable-model mb-5 rounded-lg transition-all duration-300 ease-in-out hover:shadow-xl"
-    >
-      <div class="flex h-12 items-center">
-        <!-- 头部：分类名 -->
-        <div class="flex items-center">
+    <section class="category-draggable-model">
+      <div class="category-draggable-model__header">
+        <div class="category-draggable-model__title">
           <Tooltip v-if="isCategorySorting" title="拖动排序">
-            <!-- drag-handle 标识可以拖动，不能删掉 -->
             <IconifyIcon
               icon="ic:round-drag-indicator"
-              class="drag-handle ml-2.5 cursor-move text-2xl text-gray-500"
+              class="drag-handle category-draggable-model__handle"
             />
           </Tooltip>
-          <div class="ml-4 mr-2 text-lg font-medium">
-            {{ categoryInfo.name }}
-          </div>
-          <div class="text-gray-500">
-            ({{ categoryInfo.modelList?.length || 0 }})
+          <div class="category-draggable-model__heading-group">
+            <div class="category-draggable-model__heading">
+              {{ categoryInfo.name }}
+            </div>
+            <div class="category-draggable-model__count">
+              {{ categoryInfo.modelList?.length || 0 }} 个模型
+            </div>
           </div>
         </div>
 
-        <!-- 头部：操作 -->
-        <div class="flex flex-1 items-center" v-show="!isCategorySorting">
+        <div
+          class="category-draggable-model__actions"
+          v-show="!isCategorySorting"
+        >
           <div
             v-if="categoryInfo.modelList.length > 0"
-            class="ml-3 flex cursor-pointer items-center transition-transform duration-300"
+            class="category-draggable-model__toggle"
             :class="isExpand ? 'rotate-180' : 'rotate-0'"
             @click="isExpand = !isExpand"
           >
             <IconifyIcon
               icon="lucide:chevron-down"
-              class="text-3xl text-gray-400"
+              class="category-draggable-model__toggle-icon"
             />
           </div>
 
-          <div
-            class="ml-auto flex items-center"
-            :class="isModelSorting ? 'mr-4' : 'mr-8'"
-          >
+          <div class="category-draggable-model__toolbar">
             <template v-if="!isModelSorting">
               <Button
                 v-if="categoryInfo.modelList.length > 0"
                 type="link"
                 size="small"
-                class="flex items-center text-sm"
+                class="category-draggable-model__link-button"
                 @click.stop="handleModelSort"
               >
                 <template #icon>
@@ -515,7 +507,7 @@ function handleRenameSuccess() {
                 <Button
                   type="link"
                   size="small"
-                  class="flex items-center text-sm"
+                  class="category-draggable-model__link-button"
                 >
                   <template #icon>
                     <IconifyIcon icon="lucide:settings" />
@@ -532,7 +524,7 @@ function handleRenameSuccess() {
             </template>
 
             <template v-else>
-              <Button @click.stop="handleModelSortCancel" class="mr-2">
+              <Button @click.stop="handleModelSortCancel">
                 取 消
               </Button>
               <Button type="primary" @click.stop="handleModelSortSubmit">
@@ -543,193 +535,176 @@ function handleRenameSuccess() {
         </div>
       </div>
 
-      <!-- 模型列表 -->
-      <Collapse
-        :active-key="expandKeys"
-        :bordered="false"
-        class="collapse-no-padding bg-transparent"
+      <div
+        v-if="isExpand && modelList && modelList.length > 0"
+        class="category-draggable-model__content"
       >
-        <Collapse.Panel
-          key="1"
-          :show-arrow="false"
-          class="border-0 bg-transparent p-0"
-          v-show="isExpand"
-        >
-          <Grid
-            v-if="modelList && modelList.length > 0"
-            :class="`category-${categoryInfo.id}`"
-          >
-            <template #name="{ row }">
-              <div class="flex items-center overflow-hidden">
-                <Tooltip
-                  v-if="isModelSorting"
-                  title="拖动排序"
-                  placement="left"
-                >
-                  <!-- drag-handle 标识用于推动排序。 useSortable 用到 -->
-                  <IconifyIcon
-                    icon="ic:round-drag-indicator"
-                    class="drag-handle mr-2.5 flex-shrink-0 cursor-move text-2xl text-gray-500"
-                  />
-                </Tooltip>
-                <div
-                  v-if="!row.icon"
-                  class="mr-2.5 flex h-9 w-9 flex-shrink-0 items-center justify-center rounded bg-blue-500 text-white"
-                >
-                  <span class="text-xs">
-                    {{ row.name.substring(0, 2) }}
-                  </span>
-                </div>
-                <img
-                  v-else
-                  :src="row.icon"
-                  class="mr-2.5 h-9 w-9 flex-shrink-0 rounded"
-                  alt="图标"
+        <Grid :class="`category-${categoryInfo.id}`">
+          <template #name="{ row }">
+            <div class="flex items-center overflow-hidden">
+              <Tooltip
+                v-if="isModelSorting"
+                title="拖动排序"
+                placement="left"
+              >
+                <IconifyIcon
+                  icon="ic:round-drag-indicator"
+                  class="drag-handle category-draggable-model__row-handle"
                 />
-                <div class="min-w-0 overflow-hidden">
-                  <EllipsisText :tooltip-when-ellipsis="true">
-                    {{ row.name }}
-                  </EllipsisText>
-                </div>
-              </div>
-            </template>
-            <template #startUserIds="{ row }">
-              <span v-if="!row.startUsers?.length && !row.startDepts?.length">
-                全部可见
-              </span>
-              <span v-else-if="row.startUsers?.length === 1">
-                {{ row.startUsers[0].nickname }}
-              </span>
-              <span v-else-if="row.startDepts?.length === 1">
-                {{ row.startDepts[0].name }}
-              </span>
-              <span v-else-if="row.startDepts?.length > 1">
-                <Tooltip
-                  placement="top"
-                  :title="
-                    row.startDepts.map((dept: any) => dept.name).join('、')
-                  "
-                >
-                  {{ row.startDepts[0].name }}等
-                  {{ row.startDepts.length }} 个部门可见
-                </Tooltip>
-              </span>
-              <span v-else-if="row.startUsers?.length > 1">
-                <Tooltip
-                  placement="top"
-                  :title="
-                    row.startUsers.map((user: any) => user.nickname).join('、')
-                  "
-                >
-                  {{ row.startUsers[0].nickname }}等
-                  {{ row.startUsers.length }} 人可见
-                </Tooltip>
-              </span>
-            </template>
-            <template #formInfo="{ row }">
-              <Button
-                v-if="row.formType === BpmModelFormType.NORMAL"
-                type="link"
-                @click="handleFormDetail(row)"
+              </Tooltip>
+              <div
+                v-if="!row.icon"
+                class="category-draggable-model__avatar"
               >
-                {{ row.formName }}
-              </Button>
-              <Button
-                v-else-if="row.formType === BpmModelFormType.CUSTOM"
-                type="link"
-                @click="handleFormDetail(row)"
-              >
-                {{ row.formCustomCreatePath }}
-              </Button>
-              <span v-else>暂无表单</span>
-            </template>
-            <template #deploymentTime="{ row }">
-              <div class="flex items-center justify-center">
-                <span v-if="row.processDefinition" class="w-36">
-                  {{ formatDateTime(row.processDefinition.deploymentTime) }}
+                <span class="text-xs">
+                  {{ row.name.substring(0, 2) }}
                 </span>
-                <Tag v-if="row.processDefinition">
-                  v{{ row.processDefinition.version }}
-                </Tag>
-                <Tag v-else color="warning">未部署</Tag>
-                <Tag
-                  v-if="row.processDefinition?.suspensionState === 2"
-                  color="warning"
-                  class="ml-2.5"
-                >
-                  已停用
-                </Tag>
               </div>
-            </template>
-            <template #actions="{ row }">
-              <div class="flex items-center space-x-0">
-                <Button
-                  type="link"
-                  size="small"
-                  class="px-1"
-                  @click="modelOperation('update', row.id)"
-                  :disabled="!isManagerUser(row) && !hasPermiUpdate"
-                >
-                  修改
-                </Button>
-                <Button
-                  type="link"
-                  size="small"
-                  class="px-1"
-                  @click="handleDeploy(row)"
-                  :disabled="!isManagerUser(row) && !hasPermiDeploy"
-                >
-                  发布
-                </Button>
-                <Dropdown placement="bottomRight" arrow>
-                  <Button type="link" size="small" class="px-1">更多</Button>
-                  <template #overlay>
-                    <Menu
-                      @click="(e) => handleModelCommand(e.key as string, row)"
-                    >
-                      <Menu.Item key="handleCopy"> 复制 </Menu.Item>
-                      <Menu.Item key="handleDefinitionList"> 历史 </Menu.Item>
+              <img
+                v-else
+                :src="row.icon"
+                class="category-draggable-model__row-icon"
+                alt="图标"
+              />
+              <div class="min-w-0 overflow-hidden">
+                <EllipsisText :tooltip-when-ellipsis="true">
+                  {{ row.name }}
+                </EllipsisText>
+              </div>
+            </div>
+          </template>
+          <template #startUserIds="{ row }">
+            <span v-if="!row.startUsers?.length && !row.startDepts?.length">
+              全部可见
+            </span>
+            <span v-else-if="row.startUsers?.length === 1">
+              {{ row.startUsers[0].nickname }}
+            </span>
+            <span v-else-if="row.startDepts?.length === 1">
+              {{ row.startDepts[0].name }}
+            </span>
+            <span v-else-if="row.startDepts?.length > 1">
+              <Tooltip
+                placement="top"
+                :title="row.startDepts.map((dept: any) => dept.name).join('、')"
+              >
+                {{ row.startDepts[0].name }}等
+                {{ row.startDepts.length }} 个部门可见
+              </Tooltip>
+            </span>
+            <span v-else-if="row.startUsers?.length > 1">
+              <Tooltip
+                placement="top"
+                :title="row.startUsers.map((user: any) => user.nickname).join('、')"
+              >
+                {{ row.startUsers[0].nickname }}等
+                {{ row.startUsers.length }} 人可见
+              </Tooltip>
+            </span>
+          </template>
+          <template #formInfo="{ row }">
+            <Button
+              v-if="row.formType === BpmModelFormType.NORMAL"
+              type="link"
+              @click="handleFormDetail(row)"
+            >
+              {{ row.formName }}
+            </Button>
+            <Button
+              v-else-if="row.formType === BpmModelFormType.CUSTOM"
+              type="link"
+              @click="handleFormDetail(row)"
+            >
+              {{ row.formCustomCreatePath }}
+            </Button>
+            <span v-else>暂无表单</span>
+          </template>
+          <template #deploymentTime="{ row }">
+            <div class="flex items-center justify-center">
+              <span v-if="row.processDefinition" class="w-36">
+                {{ formatDateTime(row.processDefinition.deploymentTime) }}
+              </span>
+              <Tag v-if="row.processDefinition">
+                v{{ row.processDefinition.version }}
+              </Tag>
+              <Tag v-else color="warning">未部署</Tag>
+              <Tag
+                v-if="row.processDefinition?.suspensionState === 2"
+                color="warning"
+                class="ml-2.5"
+              >
+                已停用
+              </Tag>
+            </div>
+          </template>
+          <template #actions="{ row }">
+            <div class="flex items-center space-x-0">
+              <Button
+                type="link"
+                size="small"
+                class="px-1"
+                @click="modelOperation('update', row.id)"
+                :disabled="!isManagerUser(row) && !hasPermiUpdate"
+              >
+                修改
+              </Button>
+              <Button
+                type="link"
+                size="small"
+                class="px-1"
+                @click="handleDeploy(row)"
+                :disabled="!isManagerUser(row) && !hasPermiDeploy"
+              >
+                发布
+              </Button>
+              <Dropdown placement="bottomRight" arrow>
+                <Button type="link" size="small" class="px-1">更多</Button>
+                <template #overlay>
+                  <Menu
+                    @click="(e) => handleModelCommand(e.key as string, row)"
+                  >
+                    <Menu.Item key="handleCopy"> 复制 </Menu.Item>
+                    <Menu.Item key="handleDefinitionList"> 历史 </Menu.Item>
 
-                      <Menu.Item
-                        key="handleReport"
-                        :disabled="!isManagerUser(row)"
-                      >
-                        报表
-                      </Menu.Item>
-                      <Menu.Item
-                        key="handleChangeState"
-                        v-if="row.processDefinition"
-                        :disabled="!isManagerUser(row)"
-                      >
-                        {{
-                          row.processDefinition.suspensionState === 1
-                            ? '停用'
-                            : '启用'
-                        }}
-                      </Menu.Item>
-                      <Menu.Item
-                        danger
-                        key="handleClean"
-                        :disabled="!isManagerUser(row)"
-                      >
-                        清理
-                      </Menu.Item>
-                      <Menu.Item
-                        danger
-                        key="handleDelete"
-                        :disabled="!isManagerUser(row) && !hasPermiDelete"
-                      >
-                        删除
-                      </Menu.Item>
-                    </Menu>
-                  </template>
-                </Dropdown>
-              </div>
-            </template>
-          </Grid>
-        </Collapse.Panel>
-      </Collapse>
-    </Card>
+                    <Menu.Item
+                      key="handleReport"
+                      :disabled="!isManagerUser(row)"
+                    >
+                      报表
+                    </Menu.Item>
+                    <Menu.Item
+                      key="handleChangeState"
+                      v-if="row.processDefinition"
+                      :disabled="!isManagerUser(row)"
+                    >
+                      {{
+                        row.processDefinition.suspensionState === 1
+                          ? '停用'
+                          : '启用'
+                      }}
+                    </Menu.Item>
+                    <Menu.Item
+                      danger
+                      key="handleClean"
+                      :disabled="!isManagerUser(row)"
+                    >
+                      清理
+                    </Menu.Item>
+                    <Menu.Item
+                      danger
+                      key="handleDelete"
+                      :disabled="!isManagerUser(row) && !hasPermiDelete"
+                    >
+                      删除
+                    </Menu.Item>
+                  </Menu>
+                </template>
+              </Dropdown>
+            </div>
+          </template>
+        </Grid>
+      </div>
+    </section>
 
     <!-- 重命名分类弹窗 -->
     <CategoryRenameModal @success="handleRenameSuccess" />
@@ -739,9 +714,120 @@ function handleRenameSuccess() {
 </template>
 
 <style scoped>
-/* :deep() 实现样式穿透 */
-.collapse-no-padding :deep(.ant-collapse-header),
-.collapse-no-padding :deep(.ant-collapse-content-box) {
-  padding: 0;
+.category-draggable-model {
+  border-top: 1px solid var(--oa-shell-border);
+  background: transparent;
+}
+
+.category-draggable-model__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-height: 72px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--oa-shell-border);
+  background: transparent;
+}
+
+.category-draggable-model__content {
+  overflow: hidden;
+}
+
+.category-draggable-model__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.category-draggable-model__handle,
+.category-draggable-model__row-handle {
+  flex-shrink: 0;
+  cursor: move;
+  color: var(--oa-ink-faint);
+  font-size: 22px;
+}
+
+.category-draggable-model__heading-group {
+  min-width: 0;
+}
+
+.category-draggable-model__heading {
+  color: var(--oa-ink);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.category-draggable-model__count {
+  margin-top: 4px;
+  color: var(--oa-ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.category-draggable-model__actions {
+  display: flex;
+  flex: 1;
+  align-items: center;
+}
+
+.category-draggable-model__toggle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 4px;
+  cursor: pointer;
+  transition: transform 0.18s ease-out;
+}
+
+.category-draggable-model__toggle-icon {
+  color: var(--oa-ink-faint);
+  font-size: 24px;
+}
+
+.category-draggable-model__toolbar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.category-draggable-model__link-button {
+  color: var(--oa-ink-soft);
+}
+
+.category-draggable-model__avatar {
+  display: flex;
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  margin-right: 10px;
+  border: 1px solid color-mix(in srgb, var(--oa-accent) 24%, var(--oa-shell-border));
+  border-radius: 0;
+  background: var(--oa-accent);
+  color: var(--oa-accent-contrast);
+  font-weight: 600;
+}
+
+.category-draggable-model__row-icon {
+  width: 36px;
+  height: 36px;
+  margin-right: 10px;
+  flex-shrink: 0;
+  border-radius: 0;
+  object-fit: cover;
+}
+
+.category-draggable-model :deep(.vxe-grid) {
+  border: 0;
+  border-radius: 0;
+}
+
+.category-draggable-model :deep(.vxe-grid--toolbar-wrapper) {
+  border-bottom: 1px solid var(--oa-shell-border) !important;
 }
 </style>

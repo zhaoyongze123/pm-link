@@ -21,7 +21,7 @@ import {
 } from '@vben/icons';
 import { formatDateTime } from '@vben/utils';
 
-import { Avatar, Card, Col, message, Row, TabPane, Tabs } from 'ant-design-vue';
+import { Avatar, Col, message, Row, TabPane, Tabs } from 'ant-design-vue';
 
 import {
   getApprovalDetail as getApprovalDetailApi,
@@ -225,30 +225,23 @@ onMounted(async () => {
 
 <template>
   <Page auto-content-height v-loading="loading">
-    <Card
-      class="flex h-full flex-col"
-      :body-style="{
-        flex: 1,
-        overflowY: 'hidden',
-        paddingTop: '12px',
-      }"
-    >
-      <template #title>
-        <div class="flex items-center gap-4">
-          <span class="text-gray-500">编号：{{ id || '-' }}</span>
-          <IconifyIcon
-            icon="lucide:printer"
-            class="cursor-pointer hover:text-primary"
+    <section class="oa-process-detail-page">
+      <header class="oa-process-detail-head">
+        <div class="oa-process-detail-meta">
+          <span class="oa-process-detail-id">编号：{{ id || '-' }}</span>
+          <button
+            type="button"
+            class="oa-process-detail-print"
+            aria-label="打印流程"
             @click="handlePrint"
-          />
+          >
+            <IconifyIcon icon="lucide:printer" />
+          </button>
         </div>
-      </template>
 
-      <div class="flex h-full flex-col">
-        <!-- 流程基本信息 -->
-        <div class="flex flex-col gap-2">
-          <div class="mb-2.5 flex h-10 items-center gap-5">
-            <div class="mb-1 text-2xl font-bold">
+        <div class="oa-process-detail-summary">
+          <div class="oa-process-detail-title-row">
+            <div class="oa-process-detail-title">
               {{ processInstance?.name }}
             </div>
             <DictTag
@@ -258,10 +251,8 @@ onMounted(async () => {
             />
           </div>
 
-          <div class="mb-2.5 flex h-12 items-center gap-5 text-sm">
-            <div
-              class="flex items-center gap-2 rounded-3xl bg-gray-100 px-2.5 py-1 dark:bg-gray-600"
-            >
+          <div class="oa-process-detail-author">
+            <div class="oa-process-detail-author-user">
               <Avatar
                 :size="28"
                 v-if="processInstance?.startUser?.avatar"
@@ -277,7 +268,7 @@ onMounted(async () => {
                 {{ processInstance?.startUser?.nickname }}
               </span>
             </div>
-            <div class="text-gray-500">
+            <div class="oa-process-detail-author-time">
               {{ formatDateTime(processInstance?.startTime) }} 提交
             </div>
           </div>
@@ -285,14 +276,15 @@ onMounted(async () => {
           <component
             v-if="processInstance?.status"
             :is="auditIconsMap[processInstance?.status]"
-            class="absolute right-5 top-2.5 size-36"
+            class="oa-process-detail-status-mark"
           />
         </div>
+      </header>
 
-        <!-- 流程操作 -->
-        <div class="flex h-full flex-1 flex-col">
-          <Tabs v-model:active-key="activeTab">
-            <TabPane tab="审批详情" key="form" class="pb-20 pr-3">
+      <div class="oa-process-detail-body">
+        <Tabs v-model:active-key="activeTab">
+          <TabPane tab="审批详情" key="form" class="pb-20 pr-3">
+            <div class="oa-process-detail-pane">
               <Row :gutter="[48, 24]">
                 <Col :xs="24" :sm="24" :md="18" :lg="18" :xl="16">
                   <!-- 流程表单 -->
@@ -317,79 +309,189 @@ onMounted(async () => {
                   </div>
                 </Col>
                 <Col :xs="24" :sm="24" :md="6" :lg="6" :xl="8">
-                  <div class="mt-4">
-                    <ProcessInstanceTimeline :activity-nodes="activityNodes" />
-                  </div>
+                  <ProcessInstanceTimeline :activity-nodes="activityNodes" />
                 </Col>
               </Row>
-            </TabPane>
-            <TabPane
-              tab="流程图"
-              key="diagram"
-              class="pb-20 pr-3"
-              :force-render="true"
-            >
-              <ProcessInstanceSimpleViewer
-                v-show="
-                  processDefinition.modelType &&
-                  processDefinition.modelType === BpmModelType.SIMPLE
-                "
-                :loading="processInstanceLoading"
-                :model-view="processModelView"
-              />
-              <ProcessInstanceBpmnViewer
-                v-show="
-                  processDefinition.modelType &&
-                  processDefinition.modelType === BpmModelType.BPMN
-                "
-                :loading="processInstanceLoading"
-                :model-view="processModelView"
-              />
-            </TabPane>
-            <TabPane tab="流转记录" key="record" class="pb-20 pr-3">
-              <BpmProcessInstanceTaskList
-                ref="taskListRef"
-                :loading="processInstanceLoading"
-                :id="id"
-              />
-            </TabPane>
-            <!-- TODO 待开发 -->
-            <TabPane tab="流转评论" key="comment" v-if="false" class="pr-3">
-              <div class="h-full">待开发</div>
-            </TabPane>
-          </Tabs>
-        </div>
+            </div>
+          </TabPane>
+          <TabPane
+            tab="流程图"
+            key="diagram"
+            class="pb-20 pr-3"
+            :force-render="true"
+          >
+            <ProcessInstanceSimpleViewer
+              v-show="
+                processDefinition.modelType &&
+                processDefinition.modelType === BpmModelType.SIMPLE
+              "
+              :loading="processInstanceLoading"
+              :model-view="processModelView"
+            />
+            <ProcessInstanceBpmnViewer
+              v-show="
+                processDefinition.modelType &&
+                processDefinition.modelType === BpmModelType.BPMN
+              "
+              :loading="processInstanceLoading"
+              :model-view="processModelView"
+            />
+          </TabPane>
+          <TabPane tab="流转记录" key="record" class="pb-20 pr-3">
+            <BpmProcessInstanceTaskList
+              ref="taskListRef"
+              :loading="processInstanceLoading"
+              :id="id"
+            />
+          </TabPane>
+          <!-- TODO 待开发 -->
+          <TabPane tab="流转评论" key="comment" v-if="false" class="pr-3">
+            <div class="h-full">待开发</div>
+          </TabPane>
+        </Tabs>
       </div>
 
-      <template #actions>
-        <div class="px-4">
-          <ProcessInstanceOperationButton
-            ref="operationButtonRef"
-            :process-instance="processInstance"
-            :process-definition="processDefinition"
-            :user-options="userOptions"
-            :normal-form="detailForm"
-            :normal-form-api="fApi"
-            :writable-fields="writableFields"
-            @success="refresh"
-          />
-        </div>
-      </template>
-    </Card>
+      <footer class="oa-process-detail-actions">
+        <ProcessInstanceOperationButton
+          ref="operationButtonRef"
+          :process-instance="processInstance"
+          :process-definition="processDefinition"
+          :user-options="userOptions"
+          :normal-form="detailForm"
+          :normal-form-api="fApi"
+          :writable-fields="writableFields"
+          @success="refresh"
+        />
+      </footer>
+    </section>
     <!-- 打印对话框 -->
     <PrintModal />
   </Page>
 </template>
 
 <style lang="scss" scoped>
+.oa-process-detail-page {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.oa-process-detail-head {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 4px 0 18px;
+  border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.oa-process-detail-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.oa-process-detail-id {
+  color: var(--oa-ink-faint);
+  font-size: 12px;
+}
+
+.oa-process-detail-print {
+  display: inline-flex;
+  width: 28px;
+  height: 28px;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: var(--oa-ink-soft);
+}
+
+.oa-process-detail-summary {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.oa-process-detail-title-row {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.oa-process-detail-title {
+  color: var(--oa-ink);
+  font-size: 26px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.oa-process-detail-author {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.oa-process-detail-author-user {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding-right: 16px;
+  border-right: 1px solid var(--oa-shell-border);
+}
+
+.oa-process-detail-author-time {
+  color: var(--oa-ink-soft);
+  font-size: 13px;
+}
+
+.oa-process-detail-status-mark {
+  position: absolute;
+  top: -12px;
+  right: 0;
+  width: 112px;
+  height: 112px;
+  opacity: 0.9;
+  pointer-events: none;
+}
+
+.oa-process-detail-body {
+  min-height: 0;
+  flex: 1;
+  padding-top: 18px;
+}
+
+.oa-process-detail-pane {
+  padding-top: 4px;
+}
+
+.oa-process-detail-actions {
+  padding: 14px 0 0;
+  border-top: 1px solid var(--oa-shell-border);
+}
+
 :deep(.ant-tabs) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-height: 0;
 
   .ant-tabs-content {
     height: 100%;
+    min-height: 0;
   }
+}
+
+:deep(.ant-tabs-nav) {
+  margin-bottom: 18px;
+}
+
+:deep(.ant-tabs-tab) {
+  padding-right: 2px;
+  padding-left: 2px;
 }
 
 :deep(.ant-tabs-tabpane) {

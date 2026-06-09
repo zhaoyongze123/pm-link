@@ -5,12 +5,12 @@ import type { SystemUserApi } from '#/api/system/user';
 
 import { ref } from 'vue';
 
-import { confirm, DocAlert, Page, useVbenModal } from '@vben/common-ui';
+import { confirm, Page, useVbenModal } from '@vben/common-ui';
 import { DICT_TYPE } from '@vben/constants';
 import { getDictLabel } from '@vben/hooks';
 import { downloadFileFromBlobPart, isEmpty } from '@vben/utils';
 
-import { Card, message } from 'ant-design-vue';
+import { message } from 'ant-design-vue';
 
 import { ACTION_ICON, TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
@@ -163,6 +163,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
     columns: useGridColumns(handleStatusChange),
     height: 'auto',
     keepSource: true,
+    pagerConfig: {
+      pageSize: 10,
+    },
     proxyConfig: {
       ajax: {
         query: async ({ page }, formValues) => {
@@ -192,105 +195,304 @@ const [Grid, gridApi] = useVbenVxeGrid({
 </script>
 
 <template>
-  <Page auto-content-height>
-    <template #doc>
-      <DocAlert title="用户体系" url="https://doc.iocoder.cn/user-center/" />
-      <DocAlert title="三方登陆" url="https://doc.iocoder.cn/social-user/" />
-      <DocAlert
-        title="Excel 导入导出"
-        url="https://doc.iocoder.cn/excel-import-and-export/"
-      />
-    </template>
-
+  <Page auto-content-height title="用户与组织">
     <FormModal @success="handleRefresh" />
     <ResetPasswordModal @success="handleRefresh" />
     <AssignRoleModal @success="handleRefresh" />
     <ImportModal @success="handleRefresh" />
 
-    <div class="flex h-full w-full">
-      <!-- 左侧部门树 -->
-      <Card class="mr-4 h-full w-1/6">
-        <DeptTree @select="handleDeptSelect" />
-      </Card>
-      <!-- 右侧用户列表 -->
-      <div class="w-5/6">
-        <Grid table-title="用户列表">
-          <template #toolbar-tools>
-            <TableAction
-              :actions="[
-                {
-                  label: $t('ui.actionTitle.create', ['用户']),
-                  type: 'primary',
-                  icon: ACTION_ICON.ADD,
-                  auth: ['system:user:create'],
-                  onClick: handleCreate,
-                },
-                {
-                  label: $t('ui.actionTitle.export'),
-                  type: 'primary',
-                  icon: ACTION_ICON.DOWNLOAD,
-                  auth: ['system:user:export'],
-                  onClick: handleExport,
-                },
-                {
-                  label: $t('ui.actionTitle.import', ['用户']),
-                  type: 'primary',
-                  icon: ACTION_ICON.UPLOAD,
-                  auth: ['system:user:import'],
-                  onClick: handleImport,
-                },
-                {
-                  label: $t('ui.actionTitle.deleteBatch'),
-                  type: 'primary',
-                  danger: true,
-                  icon: ACTION_ICON.DELETE,
-                  disabled: isEmpty(checkedIds),
-                  auth: ['system:user:delete'],
-                  onClick: handleDeleteBatch,
-                },
-              ]"
-            />
-          </template>
-          <template #actions="{ row }">
-            <TableAction
-              :actions="[
-                {
-                  label: $t('common.edit'),
-                  type: 'link',
-                  icon: ACTION_ICON.EDIT,
-                  auth: ['system:user:update'],
-                  onClick: handleEdit.bind(null, row),
-                },
-                {
-                  label: $t('common.delete'),
-                  type: 'link',
-                  danger: true,
-                  icon: ACTION_ICON.DELETE,
-                  auth: ['system:user:delete'],
-                  popConfirm: {
-                    title: $t('ui.actionMessage.deleteConfirm', [row.username]),
-                    confirm: handleDelete.bind(null, row),
-                  },
-                },
-              ]"
-              :drop-down-actions="[
-                {
-                  label: '分配角色',
-                  type: 'link',
-                  auth: ['system:permission:assign-user-role'],
-                  onClick: handleAssignRole.bind(null, row),
-                },
-                {
-                  label: '重置密码',
-                  type: 'link',
-                  auth: ['system:user:update-password'],
-                  onClick: handleResetPassword.bind(null, row),
-                },
-              ]"
-            />
-          </template>
-        </Grid>
+    <div class="oa-workspace-page min-w-0">
+      <div class="oa-workspace-section-grid oa-user-workspace-grid min-w-0">
+        <section class="oa-workspace-panel oa-user-dept-panel min-h-0 min-w-0">
+          <div class="oa-workspace-panel-header">
+            <div>
+              <h3 class="oa-workspace-panel-title">部门目录</h3>
+            </div>
+          </div>
+          <div class="oa-workspace-panel-body h-full min-h-0 min-w-0">
+            <div class="oa-user-dept-shell h-full min-w-0">
+              <DeptTree @select="handleDeptSelect" />
+            </div>
+          </div>
+        </section>
+
+        <section class="oa-workspace-panel oa-user-list-panel min-h-0 min-w-0">
+          <div class="oa-workspace-panel-header">
+            <div>
+              <h3 class="oa-workspace-panel-title">用户列表</h3>
+            </div>
+          </div>
+          <div class="oa-workspace-panel-body min-h-0 min-w-0">
+            <Grid table-title="用户列表">
+              <template #toolbar-tools>
+                <TableAction
+                  :actions="[
+                    {
+                      label: $t('ui.actionTitle.create', ['用户']),
+                      type: 'primary',
+                      icon: ACTION_ICON.ADD,
+                      auth: ['system:user:create'],
+                      onClick: handleCreate,
+                    },
+                    {
+                      label: $t('ui.actionTitle.export'),
+                      type: 'primary',
+                      icon: ACTION_ICON.DOWNLOAD,
+                      auth: ['system:user:export'],
+                      onClick: handleExport,
+                    },
+                    {
+                      label: $t('ui.actionTitle.import', ['用户']),
+                      type: 'primary',
+                      icon: ACTION_ICON.UPLOAD,
+                      auth: ['system:user:import'],
+                      onClick: handleImport,
+                    },
+                    {
+                      label: $t('ui.actionTitle.deleteBatch'),
+                      type: 'primary',
+                      danger: true,
+                      icon: ACTION_ICON.DELETE,
+                      disabled: isEmpty(checkedIds),
+                      auth: ['system:user:delete'],
+                      onClick: handleDeleteBatch,
+                    },
+                  ]"
+                />
+              </template>
+              <template #actions="{ row }">
+                <TableAction
+                  :actions="[
+                    {
+                      label: $t('common.edit'),
+                      type: 'link',
+                      icon: ACTION_ICON.EDIT,
+                      auth: ['system:user:update'],
+                      onClick: handleEdit.bind(null, row),
+                    },
+                    {
+                      label: $t('common.delete'),
+                      type: 'link',
+                      danger: true,
+                      icon: ACTION_ICON.DELETE,
+                      auth: ['system:user:delete'],
+                      popConfirm: {
+                        title: $t('ui.actionMessage.deleteConfirm', [row.username]),
+                        confirm: handleDelete.bind(null, row),
+                      },
+                    },
+                  ]"
+                  :drop-down-actions="[
+                    {
+                      label: '分配角色',
+                      type: 'link',
+                      auth: ['system:permission:assign-user-role'],
+                      onClick: handleAssignRole.bind(null, row),
+                    },
+                    {
+                      label: '重置密码',
+                      type: 'link',
+                      auth: ['system:user:update-password'],
+                      onClick: handleResetPassword.bind(null, row),
+                    },
+                  ]"
+                />
+              </template>
+            </Grid>
+          </div>
+        </section>
       </div>
     </div>
   </Page>
 </template>
+
+<style scoped>
+.oa-user-workspace-grid {
+  align-items: stretch;
+  grid-template-columns: 140px minmax(0, 1fr);
+  min-height: calc(100vh - 84px);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.oa-user-dept-panel,
+.oa-user-list-panel {
+  display: flex;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  flex-direction: column;
+}
+
+.oa-user-dept-panel :deep(.oa-workspace-panel-header),
+.oa-user-list-panel :deep(.oa-workspace-panel-header) {
+  padding-bottom: 10px;
+}
+
+.oa-user-dept-panel :deep(.oa-workspace-panel-title),
+.oa-user-list-panel :deep(.oa-workspace-panel-title) {
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.oa-user-dept-panel :deep(.oa-workspace-panel-body),
+.oa-user-list-panel :deep(.oa-workspace-panel-body) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  padding-top: 8px;
+}
+
+.oa-user-list-panel :deep(.vxe-grid),
+.oa-user-list-panel :deep(.vxe-grid--wrapper),
+.oa-user-list-panel :deep(.vxe-grid--form-wrapper),
+.oa-user-list-panel :deep(.vxe-grid--toolbar-wrapper),
+.oa-user-list-panel :deep(.vxe-grid--body-wrapper) {
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.oa-user-list-panel :deep(.vben-form),
+.oa-user-list-panel :deep(.vxe-form--item),
+.oa-user-list-panel :deep(.vxe-form--item-inner),
+.oa-user-list-panel :deep(.ant-form-item-control),
+.oa-user-list-panel :deep(.ant-form-item-control-input),
+.oa-user-list-panel :deep(.ant-form-item-control-input-content) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.oa-user-list-panel :deep(.vxe-grid--form-wrapper) {
+  padding-bottom: 4px;
+}
+
+.oa-user-list-panel :deep(.vxe-grid--toolbar-wrapper) {
+  padding-bottom: 4px;
+}
+
+.oa-user-list-panel :deep(.vxe-table--header-wrapper) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  margin-bottom: 0;
+}
+
+.oa-user-list-panel :deep(.vxe-table--body-wrapper) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  min-height: calc(100vh - 472px);
+  max-height: calc(100vh - 472px);
+  overflow: auto;
+}
+
+.oa-user-list-panel :deep(.vxe-table--header-wrapper),
+.oa-user-list-panel :deep(.vxe-table--body-wrapper) {
+  font-size: 13px;
+}
+
+.oa-user-list-panel :deep(.vxe-body--column),
+.oa-user-list-panel :deep(.vxe-header--column) {
+  padding-inline: 10px;
+}
+
+.oa-user-list-panel :deep(.vxe-pager) {
+  padding-top: 4px;
+}
+
+.oa-user-dept-shell {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  border-top: 1px solid var(--oa-shell-border);
+}
+
+.oa-user-dept-shell :deep(.oa-dept-tree),
+.oa-user-dept-shell :deep(.vben-scrollbar),
+.oa-user-dept-shell :deep(.vben-scrollbar__wrap) {
+  height: 100%;
+}
+
+.oa-user-dept-shell :deep(.ant-tree) {
+  padding-top: 12px;
+}
+
+@media (max-width: 1200px) {
+  .oa-user-workspace-grid {
+    min-height: auto;
+  }
+}
+
+@media (max-width: 1440px) {
+  .oa-user-workspace-grid {
+    grid-template-columns: 140px minmax(0, 1fr);
+    gap: 14px;
+  }
+
+  .oa-user-list-panel :deep(.vxe-grid--form-wrapper) {
+    padding-right: 0;
+  }
+
+  .oa-user-list-panel :deep(.vben-form) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .oa-user-list-panel :deep(.vxe-table--body-wrapper) {
+    min-height: calc(100vh - 504px);
+    max-height: calc(100vh - 504px);
+  }
+
+  .oa-user-list-panel :deep(.vxe-toolbar) {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 0 8px;
+  }
+
+  .oa-user-list-panel :deep(.vxe-buttons--wrapper),
+  .oa-user-list-panel :deep(.vxe-tools--wrapper),
+  .oa-user-list-panel :deep(.vxe-tools--operate) {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 0;
+    padding: 0;
+  }
+
+  .oa-user-list-panel :deep(.table-action .ant-btn) {
+    padding-inline: 12px;
+  }
+
+  .oa-user-list-panel :deep(.vxe-pager--wrapper) {
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    justify-content: flex-end;
+  }
+}
+
+@media (max-width: 1320px) {
+  .oa-user-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .oa-user-dept-panel {
+    max-height: 320px;
+  }
+
+  .oa-user-list-panel :deep(.vben-form) {
+    grid-template-columns: 1fr;
+  }
+
+  .oa-user-list-panel :deep(.vxe-table--body-wrapper) {
+    min-height: calc(100vh - 560px);
+    max-height: calc(100vh - 560px);
+  }
+}
+</style>

@@ -70,6 +70,38 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'outing',
+        name: 'OAOutingIndex',
+        component: () => import('#/views/bpm/oa/outing/index.vue'),
+        meta: {
+          title: '临时外出列表',
+          activePath: '/bpm/oa/outing',
+        },
+      },
+      {
+        path: 'outing/create',
+        name: 'OAOutingCreate',
+        component: () => import('#/views/bpm/oa/shared/create-page.vue'),
+        props: { moduleKey: 'outing' },
+        meta: {
+          title: '创建临时外出',
+          activePath: '/bpm/oa/outing',
+        },
+      },
+      {
+        path: 'outing/detail',
+        name: 'OAOutingDetail',
+        component: () => import('#/views/bpm/oa/shared/detail-page.vue'),
+        props: (route) => ({
+          moduleKey: 'outing',
+          id: route.query.id,
+        }),
+        meta: {
+          title: '临时外出详情',
+          activePath: '/bpm/oa/outing',
+        },
+      },
+      {
         path: 'overtime',
         name: 'OAOvertimeIndex',
         component: () => import('#/views/bpm/oa/overtime/index.vue'),
@@ -99,6 +131,38 @@ const routes: RouteRecordRaw[] = [
         meta: {
           title: '加班详情',
           activePath: '/bpm/oa/overtime',
+        },
+      },
+      {
+        path: 'leave-cancel',
+        name: 'OALeaveCancelIndex',
+        component: () => import('#/views/bpm/oa/leave-cancel/index.vue'),
+        meta: {
+          title: '销假列表',
+          activePath: '/bpm/oa/leave-cancel',
+        },
+      },
+      {
+        path: 'leave-cancel/create',
+        name: 'OALeaveCancelCreate',
+        component: () => import('#/views/bpm/oa/shared/create-page.vue'),
+        props: { moduleKey: 'leaveCancel' },
+        meta: {
+          title: '创建销假',
+          activePath: '/bpm/oa/leave-cancel',
+        },
+      },
+      {
+        path: 'leave-cancel/detail',
+        name: 'OALeaveCancelDetail',
+        component: () => import('#/views/bpm/oa/shared/detail-page.vue'),
+        props: (route) => ({
+          moduleKey: 'leaveCancel',
+          id: route.query.id,
+        }),
+        meta: {
+          title: '销假详情',
+          activePath: '/bpm/oa/leave-cancel',
         },
       },
       {
