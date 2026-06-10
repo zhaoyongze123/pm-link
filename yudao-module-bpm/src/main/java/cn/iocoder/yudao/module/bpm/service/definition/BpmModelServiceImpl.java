@@ -5,6 +5,7 @@ import cn.hutool.core.util.ArrayUtil;
 import cn.hutool.core.util.ObjUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
+import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.framework.common.util.validation.ValidationUtils;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelMetaInfoVO;
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.BpmModelSaveReqVO;
@@ -12,6 +13,8 @@ import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.simple.B
 import cn.iocoder.yudao.module.bpm.controller.admin.definition.vo.model.simple.BpmSimpleModelUpdateReqVO;
 import cn.iocoder.yudao.module.bpm.convert.definition.BpmModelConvert;
 import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmFormDO;
+import cn.iocoder.yudao.module.bpm.dal.dataobject.definition.BpmProcessDefinitionInfoDO;
+import cn.iocoder.yudao.module.bpm.dal.mysql.definition.BpmProcessDefinitionInfoMapper;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmModelFormTypeEnum;
 import cn.iocoder.yudao.module.bpm.enums.definition.BpmModelTypeEnum;
 import cn.iocoder.yudao.module.bpm.enums.task.BpmReasonEnum;
@@ -82,6 +85,8 @@ public class BpmModelServiceImpl implements BpmModelService {
     private TaskService taskService;
     @Resource
     private BpmProcessInstanceCopyService processInstanceCopyService;
+    @Resource
+    private BpmProcessDefinitionInfoMapper processDefinitionInfoMapper;
 
     @Override
     public List<Model> getModelList(String name) {
@@ -135,6 +140,8 @@ public class BpmModelServiceImpl implements BpmModelService {
 
         // 3. 保存模型
         saveModel(model, updateReqVO);
+        // 4. 同步当前已部署流程定义的展示和发起配置，避免改完模型后必须重新发布才能生效
+        syncCurrentProcessDefinitionInfo(model, BeanUtils.toBean(updateReqVO, BpmModelMetaInfoVO.class));
     }
 
     /**
@@ -328,6 +335,19 @@ public class BpmModelServiceImpl implements BpmModelService {
     }
 
     @Override
+    public void updateModelVisible(Long userId, String id, Boolean visible) {
+        Model model = validateModelManager(id, userId);
+        BpmModelMetaInfoVO metaInfo = BpmModelConvert.INSTANCE.parseMetaInfo(model);
+        if (metaInfo == null) {
+            throw exception(MODEL_NOT_EXISTS);
+        }
+        metaInfo.setVisible(visible);
+        model.setMetaInfo(JsonUtils.toJsonString(metaInfo));
+        repositoryService.saveModel(model);
+        syncCurrentProcessDefinitionInfo(model, metaInfo);
+    }
+
+    @Override
     public BpmnModel getBpmnModelByDefinitionId(String processDefinitionId) {
         return repositoryService.getBpmnModel(processDefinitionId);
     }
@@ -424,6 +444,29 @@ public class BpmModelServiceImpl implements BpmModelService {
         }
         processDefinitionService.updateProcessDefinitionState(oldDefinition.getId(),
                 SuspensionState.SUSPENDED.getStateCode());
+    }
+
+    private void syncCurrentProcessDefinitionInfo(Model model, BpmModelMetaInfoVO metaInfo) {
+        if (model == null || metaInfo == null || StrUtil.isEmpty(model.getDeploymentId())) {
+            return;
+        }
+        ProcessDefinition definition = processDefinitionService.getProcessDefinitionByDeploymentId(model.getDeploymentId());
+        if (definition == null) {
+            return;
+        }
+        repositoryService.setProcessDefinitionCategory(definition.getId(), model.getCategory());
+        BpmProcessDefinitionInfoDO updateObj = BeanUtils.toBean(metaInfo, BpmProcessDefinitionInfoDO.class);
+        updateObj.setCategory(model.getCategory());
+        if (Objects.equals(metaInfo.getFormType(), BpmModelFormTypeEnum.NORMAL.getType())) {
+            BpmFormDO form = metaInfo.getFormId() != null ? bpmFormService.getForm(metaInfo.getFormId()) : null;
+            updateObj.setFormConf(form != null ? form.getConf() : null);
+            updateObj.setFormFields(form != null ? form.getFields() : null);
+        } else {
+            updateObj.setFormId(null);
+            updateObj.setFormConf(null);
+            updateObj.setFormFields(null);
+        }
+        processDefinitionInfoMapper.updateByProcessDefinitionId(definition.getId(), updateObj);
     }
 
     private Model getModelByKey(String key) {

@@ -1,6 +1,11 @@
 import { requestClient } from '#/api/request';
 
 export namespace BpmModelApi {
+  export interface DeptInfo {
+    id: number;
+    name: string;
+  }
+
   /** 流程模型 */
   export interface Model {
     id: number;
@@ -15,11 +20,13 @@ export namespace BpmModelApi {
     formCustomCreatePath: string;
     formCustomViewPath: string;
     processDefinition: ProcessDefinition;
+    visible: boolean;
     status: number;
     remark: string;
     createTime: string;
     bpmnXml: string;
     startUsers?: UserInfo[];
+    startDepts?: DeptInfo[];
   }
 
   /** 流程定义 */
@@ -91,6 +98,14 @@ export async function updateModelState(id: number, state: number) {
     state,
   };
   return requestClient.put('/bpm/model/update-state', data);
+}
+
+/** 更新流程模型是否展示在发起审批里 */
+export async function updateModelVisible(id: number, visible: boolean) {
+  return requestClient.put('/bpm/model/update-visible', {
+    id,
+    visible,
+  });
 }
 
 /** 创建流程模型 */

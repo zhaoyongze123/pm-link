@@ -92,21 +92,47 @@ onMounted(() => {
     <FormCreateDetailModal />
     <Grid table-title="流程定义列表">
       <template #startUsers="{ row }">
-        <template v-if="!row.startUsers || row.startUsers.length === 0">
-          全部可见
+        <template
+          v-if="
+            (!row.startUsers || row.startUsers.length === 0) &&
+            (!row.startDepts || row.startDepts.length === 0)
+          "
+        >
+          全部可发起
         </template>
-        <template v-else-if="row.startUsers.length === 1">
+        <template v-else-if="row.startUsers?.length === 1">
           {{ row.startUsers[0]!.nickname }}
         </template>
-        <template v-else>
+        <template v-else-if="row.startDepts?.length === 1">
+          {{ row.startDepts[0]!.name }}
+        </template>
+        <template v-else-if="row.startDepts && row.startDepts.length > 1">
+          <Tooltip
+            placement="top"
+            :title="row.startDepts.map((dept: any) => dept.name).join('、')"
+          >
+            {{ row.startDepts[0]!.name }}等
+            {{ row.startDepts.length }} 个部门可发起
+          </Tooltip>
+        </template>
+        <template v-else-if="row.startUsers && row.startUsers.length > 1">
           <Tooltip
             placement="top"
             :title="row.startUsers.map((user: any) => user.nickname).join(',')"
           >
             {{ row.startUsers[0]!.nickname }}等
-            {{ row.startUsers.length }} 人可见
+            {{ row.startUsers.length }} 人可发起
           </Tooltip>
         </template>
+        <template v-else>-</template>
+      </template>
+      <template #visible="{ row }">
+        <span v-if="row.visible">上架中</span>
+        <span v-else>已下架</span>
+      </template>
+      <template #suspensionState="{ row }">
+        <span v-if="row.suspensionState === 1">运行中</span>
+        <span v-else>已停用</span>
       </template>
       <template #formInfo="{ row }">
         <Button

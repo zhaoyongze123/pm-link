@@ -152,6 +152,14 @@ public class BpmModelController {
         return success(true);
     }
 
+    @PutMapping("/update-visible")
+    @Operation(summary = "修改模型是否展示在发起审批里")
+    @PreAuthorize("@ss.hasPermission('bpm:model:update')")
+    public CommonResult<Boolean> updateModelVisible(@Valid @RequestBody BpmModelUpdateVisibleReqVO reqVO) {
+        modelService.updateModelVisible(getLoginUserId(), reqVO.getId(), reqVO.getVisible());
+        return success(true);
+    }
+
     @Deprecated
     @PutMapping("/update-bpmn")
     @Operation(summary = "修改模型的 BPMN")

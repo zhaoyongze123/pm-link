@@ -114,6 +114,15 @@ public interface BpmModelService {
     void updateModelState(Long userId, String id, Integer state);
 
     /**
+     * 修改模型是否展示在发起审批里
+     *
+     * @param userId 用户编号
+     * @param id 编号
+     * @param visible 是否展示
+     */
+    void updateModelVisible(Long userId, String id, Boolean visible);
+
+    /**
      * 获得流程定义编号对应的 BPMN Model
      *
      * @param processDefinitionId 流程定义编号

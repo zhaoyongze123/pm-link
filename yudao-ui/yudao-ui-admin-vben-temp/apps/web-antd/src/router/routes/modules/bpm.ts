@@ -53,6 +53,18 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'manager/template',
+        component: () => import('#/views/bpm/approvalTemplate/index.vue'),
+        name: 'BpmApprovalTemplate',
+        meta: {
+          title: '审批模板管理',
+          activePath: '/bpm/manager/template',
+          icon: 'carbon:template',
+          hideInMenu: true,
+          keepAlive: true,
+        },
+      },
+      {
         path: '/bpm/manager/form/edit',
         name: 'BpmFormEditor',
         component: () => import('#/views/bpm/form/designer/index.vue'),

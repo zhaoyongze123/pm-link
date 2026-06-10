@@ -2,7 +2,7 @@
 import type { VxeTableGridOptions } from '#/adapter/vxe-table';
 import type { BpmModelApi, ModelCategoryInfo } from '#/api/bpm/model';
 
-import { ref, watchEffect } from 'vue';
+import { computed, ref, watchEffect } from 'vue';
 import { useRouter } from 'vue-router';
 
 import { useAccess } from '@vben/access';
@@ -31,6 +31,7 @@ import {
   deployModel,
   updateModelSortBatch,
   updateModelState,
+  updateModelVisible,
 } from '#/api/bpm/model';
 import { $t } from '#/locales';
 
@@ -292,6 +293,10 @@ function handleModelCommand(command: string, row: any) {
       handleChangeState(row);
       break;
     }
+    case 'handleChangeVisible': {
+      handleChangeVisible(row);
+      break;
+    }
     case 'handleClean': {
       handleClean(row);
       break;
@@ -322,13 +327,13 @@ function handleModelCommand(command: string, row: any) {
 async function handleChangeState(row: any) {
   const state = row.processDefinition.suspensionState;
   const newState = state === 1 ? 2 : 1;
-  const statusState = state === 1 ? '停用' : '启用';
+  const statusState = state === 1 ? '停用流程' : '启用流程';
   await confirm({
     beforeClose: async ({ isConfirm }) => {
       if (!isConfirm) return;
       // 发起更新状态
       const hideLoading = message.loading({
-        content: `正在${statusState}流程: "${row.name}"...`,
+        content: `正在${statusState}: "${row.name}"...`,
         duration: 0,
       });
       try {
@@ -338,10 +343,36 @@ async function handleChangeState(row: any) {
       }
       return true;
     },
-    content: `确认要${statusState}流程: "${row.name}" 吗？`,
+    content: `确认要${statusState} "${row.name}"吗？`,
     icon: 'question',
   });
-  message.success(`${statusState} 流程: "${row.name}" 成功`);
+  message.success(`${statusState}成功`);
+  // 刷新列表
+  emit('success');
+}
+
+/** 上下架发起审批展示 */
+async function handleChangeVisible(row: any) {
+  const nextVisible = !row.visible;
+  const actionText = nextVisible ? '上架到发起审批' : '从发起审批下架';
+  await confirm({
+    beforeClose: async ({ isConfirm }) => {
+      if (!isConfirm) return;
+      const hideLoading = message.loading({
+        content: `正在${actionText}: "${row.name}"...`,
+        duration: 0,
+      });
+      try {
+        await updateModelVisible(row.id, nextVisible);
+      } finally {
+        hideLoading();
+      }
+      return true;
+    },
+    content: `确认要${actionText} "${row.name}"吗？`,
+    icon: 'question',
+  });
+  message.success(`${actionText}成功`);
   // 刷新列表
   emit('success');
 }
@@ -575,7 +606,7 @@ function handleRenameSuccess() {
           </template>
           <template #startUserIds="{ row }">
             <span v-if="!row.startUsers?.length && !row.startDepts?.length">
-              全部可见
+              全部可发起
             </span>
             <span v-else-if="row.startUsers?.length === 1">
               {{ row.startUsers[0].nickname }}
@@ -589,7 +620,7 @@ function handleRenameSuccess() {
                 :title="row.startDepts.map((dept: any) => dept.name).join('、')"
               >
                 {{ row.startDepts[0].name }}等
-                {{ row.startDepts.length }} 个部门可见
+                {{ row.startDepts.length }} 个部门可发起
               </Tooltip>
             </span>
             <span v-else-if="row.startUsers?.length > 1">
@@ -598,9 +629,14 @@ function handleRenameSuccess() {
                 :title="row.startUsers.map((user: any) => user.nickname).join('、')"
               >
                 {{ row.startUsers[0].nickname }}等
-                {{ row.startUsers.length }} 人可见
+                {{ row.startUsers.length }} 人可发起
               </Tooltip>
             </span>
+          </template>
+          <template #visible="{ row }">
+            <Tag v-if="!row.processDefinition" color="default">未发布</Tag>
+            <Tag v-else-if="row.visible" color="success">已上架</Tag>
+            <Tag v-else color="warning">已下架</Tag>
           </template>
           <template #formInfo="{ row }">
             <Button
@@ -657,6 +693,16 @@ function handleRenameSuccess() {
               >
                 发布
               </Button>
+              <Button
+                v-if="row.processDefinition"
+                type="link"
+                size="small"
+                class="px-1"
+                @click="handleChangeVisible(row)"
+                :disabled="!isManagerUser(row)"
+              >
+                {{ row.visible ? '下架' : '上架' }}
+              </Button>
               <Dropdown placement="bottomRight" arrow>
                 <Button type="link" size="small" class="px-1">更多</Button>
                 <template #overlay>
@@ -673,14 +719,21 @@ function handleRenameSuccess() {
                       报表
                     </Menu.Item>
                     <Menu.Item
+                      key="handleChangeVisible"
+                      v-if="row.processDefinition"
+                      :disabled="!isManagerUser(row)"
+                    >
+                      {{ row.visible ? '从发起审批下架' : '上架到发起审批' }}
+                    </Menu.Item>
+                    <Menu.Item
                       key="handleChangeState"
                       v-if="row.processDefinition"
                       :disabled="!isManagerUser(row)"
                     >
                       {{
                         row.processDefinition.suspensionState === 1
-                          ? '停用'
-                          : '启用'
+                          ? '停用流程'
+                          : '启用流程'
                       }}
                     </Menu.Item>
                     <Menu.Item

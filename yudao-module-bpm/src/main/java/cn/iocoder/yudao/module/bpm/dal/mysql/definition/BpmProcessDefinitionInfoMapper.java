@@ -19,6 +19,12 @@ public interface BpmProcessDefinitionInfoMapper extends BaseMapperX<BpmProcessDe
         return selectOne(BpmProcessDefinitionInfoDO::getProcessDefinitionId, processDefinitionId);
     }
 
+    default void updateByProcessDefinitionId(String processDefinitionId, BpmProcessDefinitionInfoDO updateObj) {
+        update(updateObj,
+                new LambdaQueryWrapperX<BpmProcessDefinitionInfoDO>()
+                        .eq(BpmProcessDefinitionInfoDO::getProcessDefinitionId, processDefinitionId));
+    }
+
     default void updateByModelId(String modelId, BpmProcessDefinitionInfoDO updateObj) {
         update(updateObj,
                 new LambdaQueryWrapperX<BpmProcessDefinitionInfoDO>().eq(BpmProcessDefinitionInfoDO::getModelId, modelId));

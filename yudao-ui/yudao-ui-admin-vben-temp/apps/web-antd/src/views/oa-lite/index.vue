@@ -28,9 +28,9 @@ import {
 } from 'ant-design-vue';
 
 import { getCategorySimpleList } from '#/api/bpm/category';
+import { getApprovalTemplateList } from '#/api/bpm/approvalTemplate';
 import {
   getProcessDefinition,
-  getProcessDefinitionList,
 } from '#/api/bpm/definition';
 import {
   getProcessInstanceCopyPage,
@@ -687,38 +687,6 @@ function getItemMetaRight(item: DetailPayload) {
     : `结束时间：${formatDateTime(item.endTime || item.createTime)}`;
 }
 
-function getExtraMetaRows(item: DetailPayload) {
-  if (!item) {
-    return [] as string[];
-  }
-  if (isCopiedItem(item)) {
-    return [
-      `发起人：${item.startUser?.nickname || '-'}`,
-      `抄送人：${item.createUser?.nickname || '-'}`,
-      `抄送说明：${item.reason || '-'}`,
-    ];
-  }
-  if (isTaskItem(item)) {
-    if (activeTab.value === 'processed') {
-      return [
-        `发起人：${item.processInstance?.startUser?.nickname || '-'}`,
-        `审批意见：${item.reason || '-'}`,
-        `耗时：${formatPast2(item.durationInMillis || 0)}`,
-      ];
-    }
-    return [
-      `发起人：${item.processInstance?.startUser?.nickname || '-'}`,
-      `流程编号：${item.processInstanceId}`,
-      `任务编号：${item.id}`,
-    ];
-  }
-  return [
-    `流程分类：${item.categoryName || item.category || '-'}`,
-    `业务编号：${item.businessKey || '-'}`,
-    `流程编号：${item.id}`,
-  ];
-}
-
 function getCompactMetaText(item: DetailPayload) {
   if (!item) {
     return '';
@@ -789,9 +757,7 @@ async function loadBaseOptions() {
 }
 
 async function loadProcessDefinitions() {
-  const definitionList = await getProcessDefinitionList({
-    suspensionState: 1,
-  }).catch(() => []);
+  const definitionList = await getApprovalTemplateList().catch(() => []);
   oaTemplateDefinitions.value = (definitionList || []).filter(
     (item) => item.id && item.name,
   );

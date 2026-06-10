@@ -14,9 +14,15 @@ export function useGridColumns(): VxeTableGridOptions<BpmModelApi.Model>['column
     },
     {
       field: 'startUserIds',
-      title: '可见范围',
+      title: '发起范围',
       minWidth: 150,
       slots: { default: 'startUserIds' },
+    },
+    {
+      field: 'visible',
+      title: '发起展示',
+      width: 120,
+      slots: { default: 'visible' },
     },
     {
       field: 'type',

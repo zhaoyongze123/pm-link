@@ -18,8 +18,8 @@ import {
   Tooltip,
 } from 'ant-design-vue';
 
+import { getApprovalTemplateList } from '#/api/bpm/approvalTemplate';
 import { getCategorySimpleList } from '#/api/bpm/category';
-import { getProcessDefinitionList } from '#/api/bpm/definition';
 import { getProcessInstance } from '#/api/bpm/processInstance';
 
 import ProcessDefinitionDetail from './modules/form.vue';
@@ -99,10 +99,7 @@ async function loadCategoryList() {
 
 /** 获取所有流程定义数据 */
 async function loadProcessDefinitionList() {
-  // 流程定义
-  processDefinitionList.value = await getProcessDefinitionList({
-    suspensionState: 1,
-  });
+  processDefinitionList.value = await getApprovalTemplateList();
 
   // 空搜索，初始化相关数据
   handleQuery();

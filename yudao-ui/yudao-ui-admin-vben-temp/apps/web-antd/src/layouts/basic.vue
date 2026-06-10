@@ -61,6 +61,7 @@ interface LocalTopNavItem {
 const BPM_MANAGEMENT_MENU_PATHS = new Set([
   '/bpm/category',
   '/bpm/manager/form',
+  '/bpm/manager/template',
   '/bpm/manager/model',
   '/bpm/manager/definition',
   '/bpm/group',
@@ -76,6 +77,10 @@ const BPM_MANAGEMENT_MENU_ITEMS: MenuRecordRaw[] = [
   {
     name: '流程表单',
     path: '/bpm/manager/form',
+  },
+  {
+    name: '审批模板管理',
+    path: '/bpm/manager/template',
   },
   {
     name: '流程模型',

@@ -29,9 +29,15 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
     },
     {
       field: 'startUsers',
-      title: '可见范围',
+      title: '发起范围',
       minWidth: 100,
       slots: { default: 'startUsers' },
+    },
+    {
+      field: 'visible',
+      title: '发起展示',
+      minWidth: 110,
+      slots: { default: 'visible' },
     },
     {
       field: 'modelType',
@@ -55,6 +61,12 @@ export function useGridColumns(): VxeTableGridOptions['columns'] {
       cellRender: {
         name: 'CellTag',
       },
+    },
+    {
+      field: 'suspensionState',
+      title: '运行状态',
+      minWidth: 110,
+      slots: { default: 'suspensionState' },
     },
     {
       field: 'deploymentTime',

@@ -92,4 +92,7 @@ public interface ErrorCodeConstants {
     // ========== BPM 流程表达式 1-009-014-000 ==========
     ErrorCode PROCESS_EXPRESSION_NOT_EXISTS = new ErrorCode(1_009_014_000, "流程表达式不存在");
 
+    // ========== BPM 审批模板 1-009-015-000 ==========
+    ErrorCode APPROVAL_TEMPLATE_NOT_EXISTS = new ErrorCode(1_009_015_000, "审批模板不存在");
+
 }
