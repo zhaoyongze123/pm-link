@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS "bpm_approval_template" (
     "process_definition_id" varchar(255) NOT NULL,
     "process_definition_key" varchar(255) NOT NULL,
     "model_id" varchar(255) DEFAULT '',
+    "tenant_id" bigint NOT NULL DEFAULT 1,
     "creator" varchar(64) DEFAULT '',
     "create_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updater" varchar(64) DEFAULT '',

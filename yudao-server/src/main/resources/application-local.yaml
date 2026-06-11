@@ -16,8 +16,9 @@ yudao:
     enabled: true
     base-url: http://192.168.1.108/
     app-name: user:all
-    redirect-uri: http://192.168.1.103:5666/auth/kod-sso-login?tenantId=1
+    redirect-uri: http://192.168.1.100:5666/auth/kod-sso-login?tenantId=1
     tenant-id: 1
+    auto-create-user: false
 
 --- #################### 数据库相关配置 ####################
 spring:

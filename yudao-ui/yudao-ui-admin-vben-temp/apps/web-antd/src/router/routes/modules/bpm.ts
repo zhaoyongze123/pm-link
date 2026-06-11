@@ -122,7 +122,7 @@ const routes: RouteRecordRaw[] = [
         name: 'BpmProcessDefinition',
         meta: {
           title: '流程定义',
-          activePath: '/bpm/manager/model',
+          activePath: '/bpm/manager/definition',
           icon: 'carbon:flow-modeler',
           hideInMenu: true,
           keepAlive: true,

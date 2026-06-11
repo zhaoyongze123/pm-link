@@ -39,7 +39,7 @@ public class KodSsoProperties {
     /**
      * 是否允许自动创建本地账号
      */
-    private Boolean autoCreateUser = true;
+    private Boolean autoCreateUser = false;
     /**
      * 自动创建的用户名前缀
      */

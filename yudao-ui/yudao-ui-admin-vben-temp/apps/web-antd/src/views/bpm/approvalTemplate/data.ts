@@ -51,9 +51,11 @@ export function useFormSchema(): VbenFormSchema[] {
     {
       fieldName: 'icon',
       label: '模板图标',
-      component: 'Input',
+      component: 'ImageUpload',
       componentProps: {
-        placeholder: '请输入 Iconify 图标或图片地址',
+        helpText: '支持本地上传 PNG、JPG、SVG、WEBP，建议使用方形图标',
+        maxNumber: 1,
+        maxSize: 2,
       },
     },
     {

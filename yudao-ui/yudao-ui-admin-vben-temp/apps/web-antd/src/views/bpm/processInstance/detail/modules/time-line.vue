@@ -53,53 +53,92 @@ const statusIconMap: Record<
   '6': { color: '#448ef7', icon: 'lucide:clock-3' }, // 委派中
   '7': { color: '#00b32a', icon: 'lucide:badge-check' }, // 审批通过中
 }; // 状态图标映射
-const nodeTypeSvgMap = {
+const nodeTypeThemeMap = {
   // 结束节点
   [BpmNodeTypeEnum.END_EVENT_NODE]: {
-    color: '#909398',
     icon: 'lucide:flag',
+    ring: '#E2E8F0',
+    shadow: '0 10px 22px rgba(148, 163, 184, 0.2)',
+    surface:
+      'linear-gradient(180deg, rgba(248,250,252,0.98) 0%, rgba(226,232,240,0.95) 100%)',
   },
   // 开始节点
   [BpmNodeTypeEnum.START_USER_NODE]: {
-    color: '#909398',
     icon: 'lucide:user-round',
+    ring: '#BBD7FF',
+    shadow: '0 12px 26px rgba(37, 99, 235, 0.22)',
+    surface:
+      'linear-gradient(135deg, #5BB6FF 0%, #2F80FF 55%, #1D5DFF 100%)',
   },
   // 用户任务节点
   [BpmNodeTypeEnum.USER_TASK_NODE]: {
-    color: '#ff943e',
     icon: 'lucide:badge-check',
+    ring: '#FFD39F',
+    shadow: '0 12px 26px rgba(249, 115, 22, 0.24)',
+    surface:
+      'linear-gradient(135deg, #FFB45A 0%, #FF8A3D 52%, #FF6A3D 100%)',
   },
   // 事务节点
   [BpmNodeTypeEnum.TRANSACTOR_NODE]: {
-    color: '#ff943e',
     icon: 'lucide:file-pen-line',
+    ring: '#FFCDAA',
+    shadow: '0 12px 26px rgba(234, 88, 12, 0.22)',
+    surface:
+      'linear-gradient(135deg, #FFBA7A 0%, #FB923C 52%, #F97316 100%)',
   },
   // 复制任务节点
   [BpmNodeTypeEnum.COPY_TASK_NODE]: {
-    color: '#3296fb',
     icon: 'lucide:copy',
+    ring: '#BFE3FF',
+    shadow: '0 12px 26px rgba(14, 116, 244, 0.2)',
+    surface:
+      'linear-gradient(135deg, #53D6FF 0%, #2EA7FF 52%, #2078FF 100%)',
   },
   // 条件分支节点
   [BpmNodeTypeEnum.CONDITION_NODE]: {
-    color: '#14bb83',
     icon: 'lucide:git-branch-plus',
+    ring: '#BDEFD8',
+    shadow: '0 12px 26px rgba(5, 150, 105, 0.22)',
+    surface:
+      'linear-gradient(135deg, #61E7BC 0%, #24C38A 52%, #129C74 100%)',
   },
   // 并行分支节点
   [BpmNodeTypeEnum.PARALLEL_BRANCH_NODE]: {
-    color: '#14bb83',
     icon: 'lucide:split',
+    ring: '#C8F3DE',
+    shadow: '0 12px 26px rgba(22, 163, 74, 0.22)',
+    surface:
+      'linear-gradient(135deg, #62E4A6 0%, #34C759 52%, #16A34A 100%)',
   },
   // 子流程节点
   [BpmNodeTypeEnum.CHILD_PROCESS_NODE]: {
-    color: '#14bb83',
     icon: 'lucide:workflow',
+    ring: '#DDD6FE',
+    shadow: '0 12px 26px rgba(109, 40, 217, 0.2)',
+    surface:
+      'linear-gradient(135deg, #B49CFF 0%, #8B6CFF 52%, #6D4BFF 100%)',
   },
-} as Record<BpmNodeTypeEnum, { color: string; icon: string }>; // 节点类型图标映射
+} as Record<
+  BpmNodeTypeEnum,
+  { icon: string; ring: string; shadow: string; surface: string }
+>; // 节点类型图标映射
 const onlyStatusIconShow = [-1, 0, 1]; // 只有状态是 -1、0、1 才展示头像右小角状态小 icon
 
 /** 获取审批节点类型图标 */
 function getApprovalNodeTypeIcon(nodeType: BpmNodeTypeEnum) {
-  return nodeTypeSvgMap[nodeType]?.icon;
+  return nodeTypeThemeMap[nodeType]?.icon;
+}
+
+function getNodeTheme(nodeType: BpmNodeTypeEnum) {
+  return (
+    nodeTypeThemeMap[nodeType] || {
+      icon: 'lucide:circle',
+      ring: '#D7E3F4',
+      shadow: '0 10px 20px rgba(15, 23, 42, 0.14)',
+      surface:
+        'linear-gradient(135deg, #93C5FD 0%, #60A5FA 52%, #3B82F6 100%)',
+    }
+  );
 }
 
 /** 获取审批节点图标 */
@@ -124,6 +163,30 @@ function getApprovalNodeIcon(taskStatus: number, nodeType: BpmNodeTypeEnum) {
 /** 获取审批节点颜色 */
 function getApprovalNodeColor(taskStatus: number) {
   return statusIconMap[taskStatus]?.color;
+}
+
+function getApprovalNodeDotStyle(activity: BpmProcessInstanceApi.ApprovalNodeInfo) {
+  const theme = getNodeTheme(activity.nodeType);
+  const pending =
+    activity.status === BpmTaskStatusEnum.NOT_START ||
+    activity.status === BpmTaskStatusEnum.CANCEL;
+  return {
+    background: pending
+      ? 'linear-gradient(180deg, rgba(241,245,249,0.98) 0%, rgba(226,232,240,0.98) 100%)'
+      : theme.surface,
+    borderColor: pending ? 'rgba(148, 163, 184, 0.24)' : theme.ring,
+    boxShadow: pending
+      ? '0 8px 18px rgba(148, 163, 184, 0.14)'
+      : theme.shadow,
+    color: pending ? '#94A3B8' : '#FFFFFF',
+  };
+}
+
+function getApprovalNodeRingStyle(activity: BpmProcessInstanceApi.ApprovalNodeInfo) {
+  const theme = getNodeTheme(activity.nodeType);
+  return {
+    backgroundColor: theme.ring,
+  };
 }
 
 /** 获取审批节点时间 */
@@ -241,10 +304,12 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
         <template #dot>
           <div class="oa-process-timeline-dot-wrap">
             <div
+              class="oa-process-timeline-dot-ring"
+              :style="getApprovalNodeRingStyle(activity)"
+            ></div>
+            <div
               class="oa-process-timeline-dot"
-              :style="{
-                backgroundColor: getApprovalNodeColor(activity.status) || 'var(--oa-accent)',
-              }"
+              :style="getApprovalNodeDotStyle(activity)"
             >
               <IconifyIcon
                 :icon="getApprovalNodeTypeIcon(activity.nodeType)"
@@ -495,8 +560,8 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
 }
 
 .oa-process-timeline :deep(.ant-timeline-item-tail) {
-  inset-inline-start: 17px;
-  border-inline-start: 1px solid var(--oa-shell-border);
+  inset-inline-start: 18px;
+  border-inline-start: 2px solid rgba(207, 223, 243, 0.92);
 }
 
 .oa-process-timeline :deep(.ant-timeline-item-head) {
@@ -509,43 +574,49 @@ defineExpose({ setCustomApproveUsers, batchSetCustomApproveUsers });
 
 .oa-process-timeline-dot-wrap {
   position: relative;
+  width: 26px;
+  height: 26px;
+}
+
+.oa-process-timeline-dot-ring {
+  position: absolute;
+  inset: -3px;
+  border-radius: 11px;
+  opacity: 0.42;
+  filter: blur(0.2px);
 }
 
 .oa-process-timeline-dot {
   display: flex;
-  width: 22px;
-  height: 22px;
+  position: relative;
+  width: 26px;
+  height: 26px;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--oa-shell-border);
-  border-radius: 6px;
-  background: color-mix(
-    in srgb,
-    var(--oa-shell-surface-muted) 84%,
-    var(--oa-shell-surface) 16%
-  );
-  color: var(--oa-accent);
-  box-shadow: inset 0 0 0 1px rgb(255 255 255 / 6%);
+  border: 1px solid transparent;
+  border-radius: 10px;
+  color: #fff;
+  overflow: hidden;
 }
 
 .oa-process-timeline-dot-icon {
-  font-size: 13px;
+  font-size: 14px;
   color: inherit;
   stroke-width: 2;
 }
 
 .oa-process-timeline-status {
   position: absolute;
-  right: -2px;
-  bottom: -2px;
+  right: -4px;
+  bottom: -4px;
   display: flex;
-  width: 12px;
-  height: 12px;
+  width: 15px;
+  height: 15px;
   align-items: center;
   justify-content: center;
-  border: 1px solid var(--oa-shell-border);
+  border: 2px solid #fff;
   border-radius: 999px;
-  background: var(--oa-shell-surface);
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.16);
 }
 
 .oa-process-timeline-status-icon,

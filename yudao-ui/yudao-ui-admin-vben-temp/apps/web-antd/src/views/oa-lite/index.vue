@@ -1691,37 +1691,44 @@ onUnmounted(() => {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   overflow: hidden;
-  border: 1px solid var(--oa-shell-border);
-  border-radius: 16px;
-  background: var(--oa-shell-surface);
+  border: 1px solid color-mix(in srgb, var(--oa-shell-border) 92%, white);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 98%) 0%, rgb(248 250 252 / 98%) 100%);
+  box-shadow: 0 8px 22px rgb(15 23 42 / 4%);
 }
 
 .oa-lite-stat-item {
   border: none;
   background: transparent;
-  padding: 20px 18px;
+  padding: 22px 20px;
   display: grid;
   grid-template-columns: auto 1fr auto;
   grid-template-areas:
     'icon count arrow'
     'icon label arrow';
   align-items: center;
-  gap: 2px 12px;
-  color: var(--oa-ink-soft);
+  gap: 3px 14px;
+  color: color-mix(in srgb, var(--oa-ink-soft) 88%, var(--oa-ink));
   cursor: pointer;
   transition:
+    transform 0.18s ease,
     background-color 0.18s ease,
-    color 0.18s ease;
+    color 0.18s ease,
+    box-shadow 0.18s ease;
 }
 
 .oa-lite-stat-item + .oa-lite-stat-item {
-  padding-left: 18px;
-  border-left: 1px solid color-mix(in srgb, var(--oa-shell-border) 84%, transparent);
+  border-left: 1px solid color-mix(in srgb, var(--oa-shell-border) 88%, white);
 }
 
 .oa-lite-stat-item:hover {
-  background: color-mix(in srgb, var(--oa-shell-surface-muted) 90%, transparent);
-  color: var(--oa-ink);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oa-accent-soft) 28%, white) 0%,
+    color-mix(in srgb, var(--oa-accent-soft) 44%, white) 100%
+  );
+  color: var(--oa-accent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oa-accent) 14%, white);
 }
 
 .oa-lite-stat-count {
@@ -1743,7 +1750,7 @@ onUnmounted(() => {
 
 .oa-lite-stat-item:hover .oa-lite-stat-count {
   background: transparent;
-  color: var(--oa-ink);
+  color: var(--oa-accent);
 }
 
 .oa-lite-stat-icon,
@@ -1754,24 +1761,48 @@ onUnmounted(() => {
 
 .oa-lite-stat-icon {
   grid-area: icon;
-  width: 34px;
-  height: 34px;
+  width: 38px;
+  height: 38px;
   align-self: center;
   justify-self: start;
-  border-radius: 10px;
-  background: color-mix(in srgb, var(--oa-accent-soft) 88%, white);
-  color: var(--oa-accent);
+  border: 1px solid color-mix(in srgb, var(--oa-shell-border) 90%, white);
+  border-radius: 12px;
+  background: linear-gradient(180deg, rgb(255 255 255 / 98%) 0%, rgb(241 245 249 / 98%) 100%);
+  color: color-mix(in srgb, var(--oa-ink-soft) 82%, var(--oa-ink));
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 88%);
+}
+
+.oa-lite-stat-item:hover .oa-lite-stat-icon {
+  border-color: color-mix(in srgb, var(--oa-accent) 18%, white);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oa-accent-soft) 52%, white) 0%,
+    color-mix(in srgb, var(--oa-accent-soft) 74%, white) 100%
+  );
+  color: var(--oa-accent);
 }
 
 :global(body.oa-lite-theme-dark) .oa-lite-stat-icon {
-  background: color-mix(in srgb, var(--oa-accent-soft) 58%, var(--oa-shell-surface-muted));
+  border-color: color-mix(in srgb, var(--oa-shell-border) 72%, transparent);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oa-shell-surface) 94%, white) 0%,
+    color-mix(in srgb, var(--oa-shell-surface-muted) 94%, black) 100%
+  );
+  color: color-mix(in srgb, var(--oa-ink-soft) 82%, white);
 }
 
 .oa-lite-stat-arrow {
   grid-area: arrow;
+  justify-self: end;
+}
+
+.oa-lite-stat-item:hover .oa-lite-stat-arrow,
+.oa-lite-stat-item:hover .oa-lite-stat-label {
+  color: var(--oa-accent);
 }
 
 .oa-lite-stat-label {

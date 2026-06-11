@@ -14,6 +14,7 @@ import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginRespVO;
+import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.auth.KodSsoUserBindDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
@@ -123,9 +124,14 @@ public class KodSsoServiceImpl implements KodSsoService {
             if (user == null) {
                 throw exception(USER_NOT_EXISTS);
             }
-            syncLocalRoles(user.getId(), profile);
-            syncLocalDept(user, profile);
+            syncLocalProfile(user, profile);
             return new KodSsoResolvedUser(user.getId(), user.getUsername());
+        }
+        AdminUserDO matchedUser = matchExistingUser(profile);
+        if (matchedUser != null) {
+            createBind(matchedUser.getId(), profile);
+            syncLocalProfile(matchedUser, profile);
+            return new KodSsoResolvedUser(matchedUser.getId(), matchedUser.getUsername());
         }
         if (!Boolean.TRUE.equals(kodSsoProperties.getAutoCreateUser())) {
             throw exception(AUTH_KOD_SSO_AUTO_CREATE_DISABLED);
@@ -264,6 +270,40 @@ public class KodSsoServiceImpl implements KodSsoService {
         if (changed) {
             kodSsoUserBindMapper.updateById(bind);
         }
+    }
+
+    private AdminUserDO matchExistingUser(KodUserProfile profile) {
+        if (StrUtil.isBlank(profile.getKodUserId())) {
+            return null;
+        }
+        return adminUserService.getUserByUsername(profile.getKodUserId());
+    }
+
+    private void syncLocalProfile(AdminUserDO user, KodUserProfile profile) {
+        UserProfileUpdateReqVO updateReqVO = new UserProfileUpdateReqVO();
+        updateReqVO.setNickname(resolveProfileNickname(user, profile));
+        updateReqVO.setEmail(resolveProfileEmail(user, profile));
+        updateReqVO.setMobile(resolveProfileMobile(user, profile));
+        if (Objects.equals(updateReqVO.getNickname(), user.getNickname())
+                && Objects.equals(updateReqVO.getEmail(), user.getEmail())
+                && Objects.equals(updateReqVO.getMobile(), user.getMobile())) {
+            return;
+        }
+        adminUserService.updateUserProfile(user.getId(), updateReqVO);
+    }
+
+    private String resolveProfileNickname(AdminUserDO user, KodUserProfile profile) {
+        return StrUtil.blankToDefault(StrUtil.maxLength(profile.getKodNickname(), 30), user.getNickname());
+    }
+
+    private String resolveProfileEmail(AdminUserDO user, KodUserProfile profile) {
+        String email = sanitizeEmail(profile.getEmail());
+        return StrUtil.isNotBlank(email) ? email : user.getEmail();
+    }
+
+    private String resolveProfileMobile(AdminUserDO user, KodUserProfile profile) {
+        String mobile = sanitizeMobile(profile.getMobile());
+        return StrUtil.isNotBlank(mobile) ? mobile : user.getMobile();
     }
 
     private void syncLocalDept(AdminUserDO user, KodUserProfile profile) {

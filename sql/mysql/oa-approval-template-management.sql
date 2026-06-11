@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS `bpm_approval_template` (
   `process_definition_id` varchar(255) NOT NULL COMMENT '绑定的流程定义编号',
   `process_definition_key` varchar(255) NOT NULL COMMENT '绑定的流程定义标识',
   `model_id` varchar(255) DEFAULT '' COMMENT '绑定的流程模型编号',
+  `tenant_id` bigint NOT NULL DEFAULT 1 COMMENT '租户编号',
   `creator` varchar(64) DEFAULT '' COMMENT '创建者',
   `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `updater` varchar(64) DEFAULT '' COMMENT '更新者',

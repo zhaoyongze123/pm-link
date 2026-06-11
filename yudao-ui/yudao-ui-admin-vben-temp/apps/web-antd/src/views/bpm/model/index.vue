@@ -192,12 +192,6 @@ async function handleCategorySortSubmit() {
         </Button>
       </div>
 
-      <div class="oa-model-tips mt-4">
-        <span>已上架：会展示在“发起审批”里。</span>
-        <span>已下架：流程保留，但不展示在“发起审批”里。</span>
-        <span>已停用：流程定义保留，但不能继续发起。</span>
-      </div>
-
       <div ref="categoryGroupRef" class="oa-model-category-list mt-4">
         <CategoryDraggableModel
           v-for="(element, index) in categoryGroup"
@@ -214,18 +208,6 @@ async function handleCategorySortSubmit() {
 </template>
 
 <style scoped>
-.oa-model-tips {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
-  padding: 12px 16px;
-  border: 1px solid rgb(15 23 42 / 8%);
-  border-radius: 14px;
-  background: rgb(248 250 252);
-  color: rgb(71 85 105);
-  font-size: 13px;
-}
-
 .oa-model-category-list {
   display: flex;
   flex-direction: column;
