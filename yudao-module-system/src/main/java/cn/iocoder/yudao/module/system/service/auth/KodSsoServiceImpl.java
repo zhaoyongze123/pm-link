@@ -14,12 +14,14 @@ import cn.iocoder.yudao.framework.security.core.LoginUser;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.framework.web.core.util.WebFrameworkUtils;
 import cn.iocoder.yudao.module.system.controller.admin.auth.vo.AuthLoginRespVO;
+import cn.iocoder.yudao.module.system.controller.admin.dept.vo.dept.DeptSaveReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.profile.UserProfileUpdateReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.user.vo.user.UserSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.auth.KodSsoUserBindDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.user.AdminUserDO;
 import cn.iocoder.yudao.module.system.dal.mysql.auth.KodSsoUserBindMapper;
+import cn.iocoder.yudao.module.system.dal.mysql.dept.DeptMapper;
 import cn.iocoder.yudao.module.system.enums.logger.LoginLogTypeEnum;
 import cn.iocoder.yudao.module.system.framework.kodsso.config.KodSsoProperties;
 import cn.iocoder.yudao.module.system.service.dept.DeptService;
@@ -39,8 +41,10 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
@@ -56,11 +60,14 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 public class KodSsoServiceImpl implements KodSsoService {
 
     private static final String EXCHANGE_CODE_PARAM = "kodSsoCode";
+    private static final String AUTO_CREATED_USER_PASSWORD = "admin123";
 
     @Resource
     private KodSsoProperties kodSsoProperties;
     @Resource
     private KodSsoUserBindMapper kodSsoUserBindMapper;
+    @Resource
+    private DeptMapper deptMapper;
     @Resource
     private AdminUserService adminUserService;
     @Resource
@@ -87,8 +94,8 @@ public class KodSsoServiceImpl implements KodSsoService {
     @Transactional(rollbackFor = Exception.class)
     public AuthLoginRespVO loginByKodToken(String kodAccessToken) {
         KodSsoResolvedUser resolvedUser = resolveOrCreateUser(kodAccessToken);
-        return adminAuthService.createLoginToken(resolvedUser.getUserId(), resolvedUser.getUsername(),
-                LoginLogTypeEnum.LOGIN_KOD_SSO);
+        return runWithSystemOperatorContext(() -> adminAuthService.createLoginToken(
+                resolvedUser.getUserId(), resolvedUser.getUsername(), LoginLogTypeEnum.LOGIN_KOD_SSO));
     }
 
     @Override
@@ -100,7 +107,7 @@ public class KodSsoServiceImpl implements KodSsoService {
         exchangeCodeCache.put(exchangeCode, new ExchangeCodeCacheItem(
                 resolvedUser.getUserId(), resolvedUser.getUsername(),
                 LocalDateTime.now().plus(kodSsoProperties.getExchangeCodeExpire())));
-        return HttpUtils.append(finalRedirectUri, Collections.singletonMap(EXCHANGE_CODE_PARAM, exchangeCode), null, false);
+        return appendExchangeCode(finalRedirectUri, exchangeCode);
     }
 
     @Override
@@ -109,35 +116,24 @@ public class KodSsoServiceImpl implements KodSsoService {
         if (cacheItem == null || cacheItem.getExpireTime().isBefore(LocalDateTime.now())) {
             throw exception(AUTH_KOD_SSO_EXCHANGE_CODE_NOT_FOUND);
         }
-        return adminAuthService.createLoginToken(cacheItem.getUserId(), cacheItem.getUsername(),
-                LoginLogTypeEnum.LOGIN_KOD_SSO);
+        return runWithSystemOperatorContext(() -> adminAuthService.createLoginToken(
+                cacheItem.getUserId(), cacheItem.getUsername(), LoginLogTypeEnum.LOGIN_KOD_SSO));
     }
 
     private KodSsoResolvedUser resolveOrCreateUser(String kodAccessToken) {
         validateEnabled();
         validateBaseConfig();
         KodUserProfile profile = fetchKodUserProfile(kodAccessToken);
-        KodSsoUserBindDO bind = kodSsoUserBindMapper.selectByKodUserId(profile.getKodUserId());
-        if (bind != null) {
-            syncBind(bind, profile);
-            AdminUserDO user = adminUserService.getUser(bind.getUserId());
-            if (user == null) {
-                throw exception(USER_NOT_EXISTS);
-            }
-            syncLocalProfile(user, profile);
-            return new KodSsoResolvedUser(user.getId(), user.getUsername());
-        }
         AdminUserDO matchedUser = matchExistingUser(profile);
         if (matchedUser != null) {
-            createBind(matchedUser.getId(), profile);
+            upsertBind(matchedUser.getId(), profile);
             syncLocalProfile(matchedUser, profile);
+            syncLocalDept(matchedUser, profile);
+            syncLocalRoles(matchedUser.getId(), profile);
             return new KodSsoResolvedUser(matchedUser.getId(), matchedUser.getUsername());
         }
-        if (!Boolean.TRUE.equals(kodSsoProperties.getAutoCreateUser())) {
-            throw exception(AUTH_KOD_SSO_AUTO_CREATE_DISABLED);
-        }
         Long userId = createLocalUser(profile);
-        createBind(userId, profile);
+        upsertBind(userId, profile);
         AdminUserDO user = adminUserService.getUser(userId);
         return new KodSsoResolvedUser(userId, user.getUsername());
     }
@@ -165,7 +161,7 @@ public class KodSsoServiceImpl implements KodSsoService {
         String email = firstNonBlank(payload, "email");
         String mobile = firstNonBlank(payload, "mobile", "phone", "tel");
         Long kodRoleId = firstLong(payload, "roleID", "roleId");
-        Long deptId = extractLeafDeptId(payload);
+        List<KodDeptNode> deptPath = extractDeptPath(payload);
         boolean isRoot = firstBoolean(payload, "isRoot", "root");
         if (StrUtil.isAllBlank(kodUserId, kodUsername)) {
             throw exception(AUTH_KOD_SSO_TOKEN_INVALID, "可道云返回缺少用户唯一标识");
@@ -174,7 +170,7 @@ public class KodSsoServiceImpl implements KodSsoService {
             kodUserId = kodUsername;
         }
         return new KodUserProfile(kodUserId, kodUsername, StrUtil.blankToDefault(kodNickname, kodUsername),
-                email, mobile, kodRoleId, deptId, isRoot, response);
+                email, mobile, kodRoleId, deptPath, isRoot, response);
     }
 
     private boolean isFailureResponse(JsonNode root) {
@@ -199,21 +195,18 @@ public class KodSsoServiceImpl implements KodSsoService {
 
     private Long createLocalUser(KodUserProfile profile) {
         UserSaveReqVO createReqVO = new UserSaveReqVO();
-        createReqVO.setUsername(generateUsername(profile));
+        createReqVO.setUsername(resolveLocalUsername(profile));
         createReqVO.setNickname(StrUtil.blankToDefault(StrUtil.maxLength(profile.getKodNickname(), 30), createReqVO.getUsername()));
         createReqVO.setEmail(sanitizeEmail(profile.getEmail()));
         createReqVO.setMobile(sanitizeMobile(profile.getMobile()));
-        createReqVO.setDeptId(resolveAvailableDeptId(profile));
-        createReqVO.setPassword(UUID.fastUUID().toString(true).substring(0, 16));
+        createReqVO.setDeptId(resolveOrCreateDeptId(profile));
+        createReqVO.setPassword(AUTO_CREATED_USER_PASSWORD);
         Long userId = runWithSystemOperatorContext(() -> adminUserService.createUser(createReqVO));
         syncLocalRoles(userId, profile);
         return userId;
     }
 
     private <T> T runWithSystemOperatorContext(Supplier<T> supplier) {
-        if (SecurityFrameworkUtils.getLoginUser() != null) {
-            return supplier.get();
-        }
         HttpServletRequest request = ServletUtils.getRequest();
         Authentication oldAuthentication = SecurityFrameworkUtils.getAuthentication();
         Long oldRequestUserId = WebFrameworkUtils.getLoginUserId(request);
@@ -253,8 +246,48 @@ public class KodSsoServiceImpl implements KodSsoService {
         kodSsoUserBindMapper.insert(bind);
     }
 
+    /**
+     * hash 路由场景下，前端真实 query 位于 # 后，交换码必须追加到 fragment 内部。
+     */
+    private String appendExchangeCode(String redirectUri, String exchangeCode) {
+        if (!StrUtil.contains(redirectUri, "#")) {
+            return HttpUtils.append(redirectUri, Collections.singletonMap(EXCHANGE_CODE_PARAM, exchangeCode), null, false);
+        }
+        String[] parts = StrUtil.splitToArray(redirectUri, '#', 2);
+        String baseUrl = parts[0];
+        String fragment = parts.length > 1 ? parts[1] : StrUtil.EMPTY;
+        String fragmentWithCode = HttpUtils.append(fragment, Collections.singletonMap(EXCHANGE_CODE_PARAM, exchangeCode), null, false);
+        return baseUrl + "#" + fragmentWithCode;
+    }
+
+    private void upsertBind(Long userId, KodUserProfile profile) {
+        KodSsoUserBindDO bind = kodSsoUserBindMapper.selectByUserId(userId);
+        if (bind == null) {
+            KodSsoUserBindDO bindByKodUserId = kodSsoUserBindMapper.selectByKodUserId(profile.getKodUserId());
+            if (bindByKodUserId != null) {
+                bindByKodUserId.setUserId(userId);
+                syncBind(bindByKodUserId, profile);
+                return;
+            }
+            KodSsoUserBindDO bindByKodUsername = kodSsoUserBindMapper.selectByKodUsername(profile.getKodUsername());
+            if (bindByKodUsername != null) {
+                bindByKodUsername.setUserId(userId);
+                syncBind(bindByKodUsername, profile);
+                return;
+            }
+            createBind(userId, profile);
+            return;
+        }
+        bind.setKodUserId(profile.getKodUserId());
+        syncBind(bind, profile);
+    }
+
     private void syncBind(KodSsoUserBindDO bind, KodUserProfile profile) {
         boolean changed = false;
+        if (!StrUtil.equals(bind.getKodUserId(), profile.getKodUserId())) {
+            bind.setKodUserId(profile.getKodUserId());
+            changed = true;
+        }
         if (!StrUtil.equals(bind.getKodUsername(), profile.getKodUsername())) {
             bind.setKodUsername(profile.getKodUsername());
             changed = true;
@@ -273,10 +306,29 @@ public class KodSsoServiceImpl implements KodSsoService {
     }
 
     private AdminUserDO matchExistingUser(KodUserProfile profile) {
+        KodSsoUserBindDO bind = findBind(profile);
+        if (bind != null) {
+            AdminUserDO bindUser = adminUserService.getUser(bind.getUserId());
+            if (bindUser != null) {
+                return bindUser;
+            }
+            log.warn("可道云绑定记录已失效，kodUserId={}, kodUsername={}, userId={}",
+                    profile.getKodUserId(), profile.getKodUsername(), bind.getUserId());
+        }
+        return adminUserService.getUserByUsername(resolveLocalUsername(profile));
+    }
+
+    private KodSsoUserBindDO findBind(KodUserProfile profile) {
+        if (StrUtil.isNotBlank(profile.getKodUsername())) {
+            KodSsoUserBindDO bindByKodUsername = kodSsoUserBindMapper.selectByKodUsername(profile.getKodUsername());
+            if (bindByKodUsername != null) {
+                return bindByKodUsername;
+            }
+        }
         if (StrUtil.isBlank(profile.getKodUserId())) {
             return null;
         }
-        return adminUserService.getUserByUsername(profile.getKodUserId());
+        return kodSsoUserBindMapper.selectByKodUserId(profile.getKodUserId());
     }
 
     private void syncLocalProfile(AdminUserDO user, KodUserProfile profile) {
@@ -289,7 +341,10 @@ public class KodSsoServiceImpl implements KodSsoService {
                 && Objects.equals(updateReqVO.getMobile(), user.getMobile())) {
             return;
         }
-        adminUserService.updateUserProfile(user.getId(), updateReqVO);
+        runWithSystemOperatorContext(() -> {
+            adminUserService.updateUserProfile(user.getId(), updateReqVO);
+            return null;
+        });
     }
 
     private String resolveProfileNickname(AdminUserDO user, KodUserProfile profile) {
@@ -307,54 +362,72 @@ public class KodSsoServiceImpl implements KodSsoService {
     }
 
     private void syncLocalDept(AdminUserDO user, KodUserProfile profile) {
-        Long targetDeptId = resolveAvailableDeptId(profile);
+        Long targetDeptId = resolveOrCreateDeptId(profile);
         if (Objects.equals(user.getDeptId(), targetDeptId)) {
             return;
         }
-        adminUserService.updateUserDept(user.getId(), targetDeptId);
+        runWithSystemOperatorContext(() -> {
+            adminUserService.updateUserDept(user.getId(), targetDeptId);
+            return null;
+        });
     }
 
-    private Long resolveAvailableDeptId(KodUserProfile profile) {
-        if (profile.getDeptId() == null) {
+    private Long resolveOrCreateDeptId(KodUserProfile profile) {
+        if (CollUtil.isEmpty(profile.getDeptPath())) {
             return null;
         }
-        DeptDO dept = deptService.getDept(profile.getDeptId());
-        if (dept == null) {
-            log.warn("可道云用户 {} 对应部门 {} 不存在，本次跳过部门同步", profile.getKodUserId(), profile.getDeptId());
-            return null;
+        Long parentId = DeptDO.PARENT_ID_ROOT;
+        Long leafDeptId = null;
+        int sort = 0;
+        for (KodDeptNode deptNode : profile.getDeptPath()) {
+            String deptName = sanitizeDeptName(deptNode.getGroupName());
+            if (StrUtil.isBlank(deptName)) {
+                continue;
+            }
+            DeptDO dept = deptMapper.selectByParentIdAndName(parentId, deptName);
+            if (dept == null) {
+                DeptSaveReqVO createReqVO = new DeptSaveReqVO();
+                createReqVO.setParentId(parentId);
+                createReqVO.setName(deptName);
+                createReqVO.setSort(++sort);
+                createReqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
+                Long deptId = runWithSystemOperatorContext(() -> deptService.createDept(createReqVO));
+                dept = deptService.getDept(deptId);
+            } else if (!Objects.equals(dept.getStatus(), CommonStatusEnum.ENABLE.getStatus())) {
+                DeptSaveReqVO updateReqVO = new DeptSaveReqVO();
+                updateReqVO.setId(dept.getId());
+                updateReqVO.setParentId(dept.getParentId());
+                updateReqVO.setName(dept.getName());
+                updateReqVO.setSort(dept.getSort());
+                updateReqVO.setLeaderUserId(dept.getLeaderUserId());
+                updateReqVO.setPhone(dept.getPhone());
+                updateReqVO.setEmail(dept.getEmail());
+                updateReqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
+                runWithSystemOperatorContext(() -> {
+                    deptService.updateDept(updateReqVO);
+                    return null;
+                });
+                dept.setStatus(CommonStatusEnum.ENABLE.getStatus());
+            }
+            parentId = dept.getId();
+            leafDeptId = dept.getId();
         }
-        if (!Objects.equals(dept.getStatus(), CommonStatusEnum.ENABLE.getStatus())) {
-            log.warn("可道云用户 {} 对应部门 {} 已禁用，本次跳过部门同步", profile.getKodUserId(), profile.getDeptId());
-            return null;
-        }
-        return dept.getId();
+        return leafDeptId;
     }
 
-    private String generateUsername(KodUserProfile profile) {
-        String prefix = sanitizeUsername(StrUtil.blankToDefault(kodSsoProperties.getUsernamePrefix(), "kod"));
-        String raw = sanitizeUsername(StrUtil.blankToDefault(profile.getKodUsername(), profile.getKodUserId()));
-        if (StrUtil.isBlank(raw)) {
-            raw = Integer.toString(Math.abs(profile.getKodUserId().hashCode()));
+    private String resolveLocalUsername(KodUserProfile profile) {
+        String username = StrUtil.trimToEmpty(profile.getKodUsername());
+        if (StrUtil.isBlank(username)) {
+            username = StrUtil.trimToEmpty(profile.getKodUserId());
         }
-        String candidate = StrUtil.maxLength(prefix + raw, 30);
-        if (candidate.length() < 4) {
-            candidate = StrUtil.maxLength(prefix + "user" + raw, 30);
+        if (StrUtil.isBlank(username)) {
+            throw exception(AUTH_KOD_SSO_TOKEN_INVALID, "可道云返回缺少用户账号");
         }
-        String base = candidate;
-        int sequence = 1;
-        while (adminUserService.getUserByUsername(candidate) != null) {
-            String suffix = Integer.toString(sequence++);
-            candidate = StrUtil.maxLength(base, 30 - suffix.length()) + suffix;
-        }
-        return candidate;
+        return StrUtil.maxLength(username, 30);
     }
 
-    private String sanitizeUsername(String input) {
-        String sanitized = StrUtil.blankToDefault(input, "").replaceAll("[^A-Za-z0-9]", "");
-        if (StrUtil.isBlank(sanitized)) {
-            return "kod";
-        }
-        return sanitized.toLowerCase();
+    private String sanitizeDeptName(String name) {
+        return StrUtil.maxLength(StrUtil.trim(name), 30);
     }
 
     private String sanitizeEmail(String email) {
@@ -390,7 +463,13 @@ public class KodSsoServiceImpl implements KodSsoService {
     }
 
     private String buildCallbackUrl(HttpServletRequest request, String redirectUri) {
-        String callbackUrl = request.getRequestURL().toString().replace("/start", "/callback");
+        String callbackUrl;
+        if (StrUtil.isNotBlank(kodSsoProperties.getCallbackBaseUrl())) {
+            callbackUrl = StrUtil.removeSuffix(kodSsoProperties.getCallbackBaseUrl(), "/")
+                    + "/admin-api/system/auth/kod-sso/callback";
+        } else {
+            callbackUrl = request.getRequestURL().toString().replace("/start", "/callback");
+        }
         if (StrUtil.isBlank(redirectUri)) {
             return callbackUrl;
         }
@@ -430,7 +509,10 @@ public class KodSsoServiceImpl implements KodSsoService {
         }
 
         if (!Objects.equals(targetRoleIds, currentRoleIds)) {
-            permissionService.assignUserRole(userId, targetRoleIds);
+            runWithSystemOperatorContext(() -> {
+                permissionService.assignUserRole(userId, targetRoleIds);
+                return null;
+            });
         }
     }
 
@@ -479,13 +561,20 @@ public class KodSsoServiceImpl implements KodSsoService {
         return Long.valueOf(value);
     }
 
-    private Long extractLeafDeptId(JsonNode node) {
+    private List<KodDeptNode> extractDeptPath(JsonNode node) {
         JsonNode groupInfo = node.get("groupInfo");
         if (groupInfo == null || !groupInfo.isArray() || groupInfo.isEmpty()) {
-            return null;
+            return Collections.emptyList();
         }
-        JsonNode leafGroup = groupInfo.get(groupInfo.size() - 1);
-        return firstLong(leafGroup, "groupID", "groupId", "id");
+        List<KodDeptNode> deptPath = new ArrayList<>();
+        for (JsonNode groupNode : groupInfo) {
+            String groupName = firstNonBlank(groupNode, "groupName", "name");
+            if (StrUtil.isBlank(groupName)) {
+                continue;
+            }
+            deptPath.add(new KodDeptNode(firstNonBlank(groupNode, "groupID", "groupId", "id"), groupName));
+        }
+        return deptPath;
     }
 
     private boolean firstBoolean(JsonNode node, String... fields) {
@@ -520,9 +609,16 @@ public class KodSsoServiceImpl implements KodSsoService {
         private String email;
         private String mobile;
         private Long kodRoleId;
-        private Long deptId;
+        private List<KodDeptNode> deptPath;
         private boolean root;
         private String rawProfileJson;
+    }
+
+    @Data
+    @AllArgsConstructor
+    private static class KodDeptNode {
+        private String groupId;
+        private String groupName;
     }
 
     @Data

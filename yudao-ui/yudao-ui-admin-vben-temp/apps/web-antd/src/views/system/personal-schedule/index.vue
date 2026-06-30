@@ -19,7 +19,7 @@ import dayjs from 'dayjs';
 import { computed, ref } from 'vue';
 
 import { Page, useVbenModal } from '@vben/common-ui';
-import { Modal } from 'ant-design-vue';
+import { Modal, Spin } from 'ant-design-vue';
 
 import {
   getMyPersonalCalendar,
@@ -210,8 +210,10 @@ const calendarOptions = computed<CalendarOptions>(() => ({
   eventClick: handleEventClick,
   eventDidMount: handleEventDidMount,
   allDaySlot: false,
-  slotMinTime: '06:00:00',
-  slotMaxTime: '23:00:00',
+  // 会议室预定支持 00:00-24:00 的两小时整点时段，日/周视图需覆盖完整范围。
+  slotMinTime: '00:00:00',
+  slotMaxTime: '24:00:00',
+  scrollTime: '06:00:00',
 }));
 
 function getCalendarApi() {

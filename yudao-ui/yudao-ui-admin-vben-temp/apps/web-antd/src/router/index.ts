@@ -15,9 +15,9 @@ import { setupBaiduTongJi } from './tongji';
  */
 const router = createRouter({
   history:
-    import.meta.env.VITE_ROUTER_HISTORY === 'hash'
-      ? createWebHashHistory(import.meta.env.VITE_BASE)
-      : createWebHistory(import.meta.env.VITE_BASE),
+    import.meta.env.VITE_ROUTER_HISTORY === 'history'
+      ? createWebHistory(import.meta.env.VITE_BASE)
+      : createWebHashHistory(import.meta.env.VITE_BASE),
   // 应该添加到路由的初始路由列表。
   routes,
   scrollBehavior: (to, _from, savedPosition) => {

@@ -11,6 +11,16 @@ const routes: RouteRecordRaw[] = [
       hideInMenu: true,
     },
   },
+  {
+    path: '/system/my-party-file',
+    redirect: '/party-file/my',
+    name: 'MyPartyFile',
+    meta: {
+      title: '我的党务文件',
+      icon: 'ant-design:file-text-filled',
+      hideInMenu: true,
+    },
+  },
 ];
 
 export default routes;

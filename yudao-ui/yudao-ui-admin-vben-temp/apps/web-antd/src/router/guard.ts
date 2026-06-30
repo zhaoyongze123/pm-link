@@ -197,8 +197,12 @@ function setupAccessGuard(router: Router) {
     accessStore.setAccessRoutes(filterAccessRoutes(accessibleRoutes));
     accessStore.setIsAccessChecked(true);
     userStore.setUserRoles(userRoles);
+    const hasExplicitTargetQuery =
+      Object.keys(to.query || {}).length > 0 ||
+      typeof to.query?.entry === 'string' ||
+      typeof to.query?.redirect === 'string';
     const redirectPath = (from.query.redirect ??
-      (to.path === preferences.app.defaultHomePath
+      (to.path === preferences.app.defaultHomePath && !hasExplicitTargetQuery
         ? resolveUserHomePath(
             userInfo?.homePath,
             userRoles,

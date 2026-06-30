@@ -53,3 +53,7 @@ application-my.yaml
 /yudao-ui-app/unpackage/
 **/.DS_Store
 /文档/
+
+# Local deployment artifacts
+/ruoyi-*-local.tar
+/ruoyi-vue-pro.sql.gz

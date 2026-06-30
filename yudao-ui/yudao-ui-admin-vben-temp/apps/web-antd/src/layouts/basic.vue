@@ -38,6 +38,15 @@ import { getSimpleTenantList } from '#/api/system/tenant';
 import { $t } from '#/locales';
 import { router } from '#/router';
 import { useAuthStore } from '#/store';
+import {
+  getStandaloneCenterMenuItems,
+  getStandaloneCenterMenuPathSet,
+  getStandaloneCenterRootMenu,
+  isApprovalEntryQuery,
+  isStandaloneWorkspacePath,
+  KOD_ENTRY_APPROVAL,
+  resolveStandaloneRootMenuPath,
+} from '#/utils/kod-entry';
 import { isAdminUser } from '#/utils/oa-user';
 import LoginForm from '#/views/_core/authentication/login.vue';
 import NotifyMessageDetail from '#/views/system/notify/my/modules/detail.vue';
@@ -64,6 +73,7 @@ const BPM_MANAGEMENT_MENU_PATHS = new Set([
   '/bpm/manager/template',
   '/bpm/manager/model',
   '/bpm/manager/definition',
+  '/bpm/process-instance/manager',
   '/bpm/group',
   '/bpm/process-expression',
   '/bpm/process-listener',
@@ -91,6 +101,10 @@ const BPM_MANAGEMENT_MENU_ITEMS: MenuRecordRaw[] = [
     path: '/bpm/manager/definition',
   },
   {
+    name: '流程实例',
+    path: '/bpm/process-instance/manager',
+  },
+  {
     name: '用户组',
     path: '/bpm/group',
   },
@@ -111,6 +125,7 @@ const SYSTEM_MANAGEMENT_MENU_PATHS = new Set([
   '/system/menu',
   '/system/post',
   '/system/notice',
+  '/system/party-file',
   '/system/personal-schedule',
   '/system/meeting-room',
   '/system/meeting-booking',
@@ -143,6 +158,10 @@ const SYSTEM_MANAGEMENT_MENU_ITEMS: MenuRecordRaw[] = [
     path: '/system/notice',
   },
   {
+    name: '党务文件',
+    path: '/system/party-file',
+  },
+  {
     name: '个人日程',
     path: '/system/personal-schedule',
   },
@@ -157,33 +176,6 @@ const SYSTEM_MANAGEMENT_MENU_ITEMS: MenuRecordRaw[] = [
   {
     name: '会议室排期',
     path: '/system/meeting-booking/schedule',
-  },
-];
-
-const MEETING_CENTER_MENU_PATHS = new Set([
-  '/meeting-room/booking',
-  '/meeting-room/schedule',
-]);
-
-const MEETING_CENTER_MENU_ITEMS: MenuRecordRaw[] = [
-  {
-    name: '会议室预定',
-    path: '/meeting-room/booking',
-  },
-  {
-    name: '会议室排期',
-    path: '/meeting-room/schedule',
-  },
-];
-
-const SCHEDULE_CENTER_MENU_PATHS = new Set([
-  '/schedule/calendar',
-]);
-
-const SCHEDULE_CENTER_MENU_ITEMS: MenuRecordRaw[] = [
-  {
-    name: '个人日程',
-    path: '/schedule/calendar',
   },
 ];
 
@@ -309,6 +301,12 @@ const accessFlatMenus = computed<MenuRecordRaw[]>(() =>
 const isAdminWorkbenchUser = computed(() =>
   isAdminUser(userStore.userRoles || []),
 );
+const isApprovalEntryMode = computed(
+  () => !isAdminWorkbenchUser.value && isApprovalEntryQuery(route.query),
+);
+const isMeetingOrScheduleEntryMode = computed(
+  () => !isApprovalEntryMode.value && isStandaloneWorkspacePath(route.path),
+);
 const bpmRootMenu = computed(
   () =>
     accessFlatMenus.value.find(
@@ -325,24 +323,6 @@ const systemRootMenu = computed(
         menu.path === '/system' ||
         menu.path?.startsWith('/system/') ||
         menu.name === '系统管理',
-    ) || null,
-);
-const meetingCenterRootMenu = computed(
-  () =>
-    accessFlatMenus.value.find(
-      (menu) =>
-        menu.path === '/meeting-room' ||
-        menu.path?.startsWith('/meeting-room/') ||
-        menu.name === '会议室',
-    ) || null,
-);
-const scheduleCenterRootMenu = computed(
-  () =>
-    accessFlatMenus.value.find(
-      (menu) =>
-        menu.path === '/schedule' ||
-        menu.path?.startsWith('/schedule/') ||
-        menu.name === '日程',
     ) || null,
 );
 const managementTopNavItems = computed<LocalTopNavItem[]>(() =>
@@ -363,18 +343,7 @@ const managementTopNavItems = computed<LocalTopNavItem[]>(() =>
             }
           : null,
       ].filter((item): item is LocalTopNavItem => Boolean(item))
-    : [
-        {
-          key: '/schedule',
-          label: '日程',
-          path: '/schedule',
-        },
-        {
-          key: '/meeting-room',
-          label: '会议室',
-          path: '/meeting-room',
-        },
-      ],
+    : [],
 );
 const currentActivePath = computed(() =>
   String(route.meta.activePath || route.path),
@@ -406,13 +375,19 @@ const currentMatchedMenu = computed(() => {
     return (
       accessStore.getMenuByPath('/meeting-room/booking') ||
       accessStore.getMenuByPath('/meeting-room/schedule') ||
-      meetingCenterRootMenu.value
+      getStandaloneCenterRootMenu('/meeting-room')
     );
   }
   if (route.path.startsWith('/schedule/')) {
     return (
       accessStore.getMenuByPath('/schedule/calendar') ||
-      scheduleCenterRootMenu.value
+      getStandaloneCenterRootMenu('/schedule')
+    );
+  }
+  if (route.path.startsWith('/party-file/')) {
+    return (
+      accessStore.getMenuByPath('/party-file/my') ||
+      getStandaloneCenterRootMenu('/party-file')
     );
   }
   if (route.path.startsWith('/bpm/')) {
@@ -440,10 +415,11 @@ const currentRootMenuPath = computed(() => {
     return '/system';
   }
   if (route.path === '/meeting-room' || route.path.startsWith('/meeting-room/')) {
-    return '/meeting-room';
+    return resolveStandaloneRootMenuPath(route.path);
   }
-  if (route.path === '/schedule' || route.path.startsWith('/schedule/')) {
-    return '/schedule';
+  const standaloneRootMenuPath = resolveStandaloneRootMenuPath(route.path);
+  if (standaloneRootMenuPath) {
+    return standaloneRootMenuPath;
   }
   const matchedMenu = currentMatchedMenu.value;
   if (!matchedMenu) {
@@ -460,11 +436,11 @@ const currentRootMenu = computed(
     if (currentRootMenuPath.value === '/system') {
       return systemRootMenu.value;
     }
-    if (currentRootMenuPath.value === '/meeting-room') {
-      return meetingCenterRootMenu.value;
-    }
-    if (currentRootMenuPath.value === '/schedule') {
-      return scheduleCenterRootMenu.value;
+    const standaloneRootMenu = resolveStandaloneRootMenuPath(
+      currentRootMenuPath.value,
+    );
+    if (standaloneRootMenu) {
+      return getStandaloneCenterRootMenu(standaloneRootMenu);
     }
     return (
       accessRootMenus.value.find(
@@ -508,29 +484,24 @@ function filterSidebarMenusByRoot(
     }
     return SYSTEM_MANAGEMENT_MENU_ITEMS;
   }
-  if (rootMenuPath === '/meeting-room') {
+  const standaloneRootMenuPath = resolveStandaloneRootMenuPath(rootMenuPath);
+  if (standaloneRootMenuPath) {
     const flattenedMenus = flattenMenus(menus, []);
-    const dynamicMeetingMenus = flattenedMenus.filter((menu) =>
-      MEETING_CENTER_MENU_PATHS.has(menu.path || ''),
+    const standalonePathSet = getStandaloneCenterMenuPathSet(
+      standaloneRootMenuPath,
     );
-    if (dynamicMeetingMenus.length > 0) {
-      return MEETING_CENTER_MENU_ITEMS.map((item) => {
-        return dynamicMeetingMenus.find((menu) => menu.path === item.path) || item;
+    const standaloneMenus = getStandaloneCenterMenuItems(standaloneRootMenuPath);
+    const dynamicStandaloneMenus = flattenedMenus.filter((menu) =>
+      standalonePathSet.has(menu.path || ''),
+    );
+    if (dynamicStandaloneMenus.length > 0) {
+      return standaloneMenus.map((item) => {
+        return (
+          dynamicStandaloneMenus.find((menu) => menu.path === item.path) || item
+        );
       });
     }
-    return MEETING_CENTER_MENU_ITEMS;
-  }
-  if (rootMenuPath === '/schedule') {
-    const flattenedMenus = flattenMenus(menus, []);
-    const dynamicScheduleMenus = flattenedMenus.filter((menu) =>
-      SCHEDULE_CENTER_MENU_PATHS.has(menu.path || ''),
-    );
-    if (dynamicScheduleMenus.length > 0) {
-      return SCHEDULE_CENTER_MENU_ITEMS.map((item) => {
-        return dynamicScheduleMenus.find((menu) => menu.path === item.path) || item;
-      });
-    }
-    return SCHEDULE_CENTER_MENU_ITEMS;
+    return standaloneMenus;
   }
   return menus;
 }
@@ -576,10 +547,11 @@ const activeTopNavKey = computed(() => {
     return '/system';
   }
   if (route.path === '/meeting-room' || route.path.startsWith('/meeting-room/')) {
-    return '/meeting-room';
+    return resolveStandaloneRootMenuPath(route.path);
   }
-  if (route.path === '/schedule' || route.path.startsWith('/schedule/')) {
-    return '/schedule';
+  const standaloneRootMenuPath = resolveStandaloneRootMenuPath(route.path);
+  if (standaloneRootMenuPath) {
+    return standaloneRootMenuPath;
   }
   if (route.path === '/bpm' || route.path.startsWith('/bpm/')) {
     return '/bpm';
@@ -591,9 +563,11 @@ const isSystemRootActive = computed(
 );
 
 const contentStyle = computed<CSSProperties>(() => ({
-  '--vben-content-height': showSidebar.value
-    ? 'calc(100vh - 132px)'
-    : 'calc(100vh - 132px)',
+  '--vben-content-height': isMeetingOrScheduleEntryMode.value
+    ? '100vh'
+    : showSidebar.value
+      ? 'calc(100vh - 132px)'
+      : 'calc(100vh - 132px)',
   '--vben-content-width': showSidebar.value
     ? 'calc(100vw - 420px)'
     : 'calc(100vw - 80px)',
@@ -603,7 +577,12 @@ function handleTopNavSelect(path: string) {
   if (path === route.path) {
     return;
   }
-  router.push(path);
+  const shouldKeepApprovalEntry =
+    isApprovalEntryMode.value && path.startsWith('/oa-lite');
+  router.push({
+    path,
+    query: shouldKeepApprovalEntry ? { ...route.query, entry: KOD_ENTRY_APPROVAL } : {},
+  });
 }
 
 function buildWebSocketServer(refreshToken: string) {
@@ -930,7 +909,7 @@ watch(
   <div class="oa-lite-unified-layout">
     <div class="oa-lite-unified-bg"></div>
 
-    <header class="oa-lite-unified-topbar">
+    <header v-if="!isMeetingOrScheduleEntryMode" class="oa-lite-unified-topbar">
       <button class="oa-lite-unified-brand" @click="handleTopNavSelect('/oa-lite')">
         <span class="oa-lite-unified-brand-icon">
           <IconifyIcon icon="carbon:task-asset-view" />
@@ -1028,6 +1007,7 @@ watch(
     <main
       class="oa-lite-unified-main"
       :class="{
+        'is-standalone-entry': isMeetingOrScheduleEntryMode,
         'is-workbench': isWorkbenchRoute,
         'is-workbench-center': isWorkbenchCenterRoute,
       }"
@@ -1357,6 +1337,10 @@ watch(
   padding: 14px 24px 20px;
 }
 
+.oa-lite-unified-main.is-standalone-entry {
+  padding-top: 0;
+}
+
 .oa-lite-unified-main.is-workbench-center {
   padding-right: 0;
   padding-left: 0;
@@ -1425,6 +1409,10 @@ watch(
   overflow: hidden auto;
 }
 
+.oa-lite-unified-main.is-standalone-entry .oa-lite-unified-sidebar-card {
+  height: 100vh;
+}
+
 .oa-lite-unified-sidebar-title {
   padding: 6px 0 14px;
   color: var(--oa-ink);
@@ -1436,6 +1424,10 @@ watch(
   min-width: 0;
   flex: 1;
   min-height: calc(100vh - 132px);
+}
+
+.oa-lite-unified-main.is-standalone-entry .oa-lite-unified-content {
+  min-height: 100vh;
 }
 
 .oa-lite-unified-content-shell {
@@ -1935,6 +1927,53 @@ watch(
 
   .oa-lite-settings-split-choice {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 1200px) and (min-width: 961px) {
+  .oa-lite-unified-main {
+    gap: 10px;
+    padding-right: 16px;
+    padding-left: 16px;
+  }
+
+  .oa-lite-unified-sidebar {
+    width: 92px !important;
+    min-width: 92px;
+    max-width: 92px;
+  }
+
+  .oa-lite-unified-resizer {
+    display: none;
+  }
+
+  .oa-lite-unified-sidebar-card {
+    overflow-x: hidden;
+  }
+
+  .oa-lite-unified-sidebar-title {
+    display: none;
+  }
+
+  .oa-lite-unified-sidebar :deep(.vben-menu-item a),
+  .oa-lite-unified-sidebar :deep(.vben-sub-menu-content) {
+    display: flex;
+    min-height: 52px;
+    align-items: center;
+    justify-content: center;
+    padding-right: 10px !important;
+    padding-left: 10px !important;
+    text-align: center;
+  }
+
+  .oa-lite-unified-sidebar :deep(.vben-menu-item a span:last-child),
+  .oa-lite-unified-sidebar :deep(.vben-sub-menu-content span:last-child) {
+    overflow: hidden;
+    max-width: 100%;
+    font-size: 12px;
+    line-height: 1.2;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

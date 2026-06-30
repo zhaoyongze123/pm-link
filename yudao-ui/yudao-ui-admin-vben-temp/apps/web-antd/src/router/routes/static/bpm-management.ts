@@ -56,6 +56,17 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'process-instance/manager',
+        name: 'BpmProcessInstanceManagerStatic',
+        component: () => import('#/views/bpm/processInstance/manager/index.vue'),
+        meta: {
+          title: '流程实例',
+          activePath: '/bpm/process-instance/manager',
+          hideInMenu: true,
+          keepAlive: true,
+        },
+      },
+      {
         path: 'process-listener',
         name: 'BpmProcessListenerStatic',
         component: () => import('#/views/bpm/processListener/index.vue'),

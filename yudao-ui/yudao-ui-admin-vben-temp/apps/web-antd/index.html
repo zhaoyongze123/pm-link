@@ -26,6 +26,30 @@
         })();
       }
     </script>
+    <script>
+      (function () {
+        var pathname = window.location.pathname || '/';
+        var search = window.location.search || '';
+        var hash = window.location.hash || '';
+        if (hash) {
+          return;
+        }
+        var hashFallbackPrefixes = [
+          '/auth/kod-sso-login',
+          '/meeting-room',
+          '/schedule',
+          '/party-file',
+        ];
+        var shouldRewrite = hashFallbackPrefixes.some(function (prefix) {
+          return pathname === prefix || pathname.indexOf(prefix + '/') === 0;
+        });
+        if (!shouldRewrite) {
+          return;
+        }
+        var target = '/#' + pathname + search;
+        window.location.replace(target);
+      })();
+    </script>
   </head>
   <body>
     <div id="app"></div>

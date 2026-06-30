@@ -480,7 +480,10 @@ CREATE TABLE IF NOT EXISTS "system_kod_sso_user_bind" (
    "update_time" timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
    "deleted" bit NOT NULL DEFAULT FALSE,
    "tenant_id" bigint not null default '0',
-   PRIMARY KEY ("id")
+   PRIMARY KEY ("id"),
+   CONSTRAINT "uk_system_kod_sso_user_bind_kod_user_id" UNIQUE ("kod_user_id"),
+   CONSTRAINT "uk_system_kod_sso_user_bind_kod_username" UNIQUE ("kod_username"),
+   CONSTRAINT "uk_system_kod_sso_user_bind_user_id" UNIQUE ("user_id")
 ) COMMENT '可道云用户绑定';
 
 CREATE TABLE IF NOT EXISTS "system_tenant" (

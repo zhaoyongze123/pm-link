@@ -83,6 +83,20 @@ public interface ErrorCodeConstants {
     // ========== 通知公告 1-002-008-000 ==========
     ErrorCode NOTICE_NOT_FOUND = new ErrorCode(1_002_008_001, "当前通知公告不存在");
 
+    // ========== 党务文件 1-002-009-000 ==========
+    ErrorCode PARTY_FILE_CATEGORY_NOT_FOUND = new ErrorCode(1_002_009_001, "党务文件分类不存在");
+    ErrorCode PARTY_FILE_CATEGORY_NAME_DUPLICATE = new ErrorCode(1_002_009_002, "同级已存在同名党务文件分类");
+    ErrorCode PARTY_FILE_CATEGORY_PARENT_NOT_FOUND = new ErrorCode(1_002_009_003, "父级党务文件分类不存在");
+    ErrorCode PARTY_FILE_CATEGORY_PARENT_ERROR = new ErrorCode(1_002_009_004, "父级党务文件分类不能是自己或自己的子级");
+    ErrorCode PARTY_FILE_CATEGORY_PARENT_DISABLED = new ErrorCode(1_002_009_005, "父级党务文件分类已被禁用");
+    ErrorCode PARTY_FILE_CATEGORY_HAS_CHILDREN = new ErrorCode(1_002_009_006, "当前分类下还有子分类，无法删除");
+    ErrorCode PARTY_FILE_NOT_FOUND = new ErrorCode(1_002_009_007, "党务文件不存在");
+    ErrorCode PARTY_FILE_NOT_AUTHORIZED = new ErrorCode(1_002_009_008, "你无权查看该党务文件");
+    ErrorCode PARTY_FILE_TARGET_ID_REQUIRED = new ErrorCode(1_002_009_009, "分发对象编号不能为空");
+    ErrorCode PARTY_FILE_TARGET_TYPE_INVALID = new ErrorCode(1_002_009_010, "分发对象类型不合法");
+    ErrorCode PARTY_FILE_TARGET_ALL_CONFLICT = new ErrorCode(1_002_009_011, "选择全员分发时不能再追加其他分发对象");
+    ErrorCode PARTY_FILE_ATTACHMENT_NOT_FOUND = new ErrorCode(1_002_009_012, "党务文件附件不存在");
+
     // ========== 会议室 1-002-009-000 ==========
     ErrorCode MEETING_ROOM_NOT_EXISTS = new ErrorCode(1_002_009_000, "会议室不存在");
     ErrorCode MEETING_ROOM_NAME_DUPLICATE = new ErrorCode(1_002_009_001, "已经存在名为【{}】的会议室");

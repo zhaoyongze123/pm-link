@@ -23,6 +23,7 @@ import { createTrip, getTrip } from '#/api/bpm/oa/trip';
 import { getApprovalDetail as getApprovalDetailApi } from '#/api/bpm/processInstance';
 import { $t } from '#/locales';
 import { router } from '#/router';
+import { buildApprovalEntryBackRoute } from '#/utils/kod-entry';
 import ProcessInstanceTimeline from '#/views/bpm/processInstance/detail/modules/time-line.vue';
 
 import { getOAModuleViewConfig } from './config';
@@ -96,6 +97,10 @@ async function closeCurrentTabIfPossible() {
 function shouldReturnToOaLite() {
   const returnTo = Array.isArray(query.returnTo) ? query.returnTo[0] : query.returnTo;
   return returnTo === 'oa-lite';
+}
+
+function buildOaLiteRoute() {
+  return buildApprovalEntryBackRoute(query);
 }
 
 async function getApprovalDetail() {
@@ -192,7 +197,7 @@ async function onSubmit() {
     await closeCurrentTabIfPossible();
     await router.push(
       shouldReturnToOaLite()
-        ? { name: 'OALite' }
+        ? buildOaLiteRoute()
         : { name: config.routeNames.index },
     );
   } finally {
@@ -208,7 +213,7 @@ function onBack() {
       if (isConfirm) {
         await closeCurrentTabIfPossible();
         if (shouldReturnToOaLite()) {
-          await router.push({ name: 'OALite' });
+          await router.push(buildOaLiteRoute());
         }
       }
       return Promise.resolve(true);

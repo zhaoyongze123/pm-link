@@ -66,6 +66,17 @@ const routes: RouteRecordRaw[] = [
           keepAlive: true,
         },
       },
+      {
+        path: 'party-file',
+        name: 'SystemPartyFileStatic',
+        component: () => import('#/views/system/party-file/index.vue'),
+        meta: {
+          title: '党务文件',
+          activePath: '/system/party-file',
+          hideInMenu: true,
+          keepAlive: true,
+        },
+      },
     ],
   },
 ];

@@ -327,6 +327,10 @@ function resolveWeekDay(index: number) {
   return weekDays.value[index] ?? currentDate.value.startOf('week').add(index, 'day');
 }
 
+function isToday(day: dayjs.Dayjs) {
+  return day.isSame(dayjs(), 'day');
+}
+
 function isEndedDay(day: dayjs.Dayjs) {
   return day.endOf('day').isBefore(dayjs());
 }
@@ -458,10 +462,17 @@ onMounted(async () => {
           <thead>
             <tr>
               <th class="room-column">会议/星期</th>
-              <th v-for="day in weekDays" :key="day.format('YYYY-MM-DD')">
+              <th
+                v-for="day in weekDays"
+                :key="day.format('YYYY-MM-DD')"
+                :class="{ 'is-today-column': isToday(day) }"
+              >
                 <div class="day-head">
                   <span>{{ day.format('dd') }}</span>
-                  <span>{{ day.format('MM.DD') }}</span>
+                  <div class="day-date-line">
+                    <span>{{ day.format('MM.DD') }}</span>
+                    <span v-if="isToday(day)" class="today-badge">今日</span>
+                  </div>
                 </div>
               </th>
             </tr>
@@ -475,6 +486,7 @@ onMounted(async () => {
                 v-for="(cell, index) in row.cells"
                 :key="`${row.room.id}-${weekDays[index]?.format('YYYY-MM-DD')}`"
                 class="schedule-cell"
+                :class="{ 'is-today-column': isToday(resolveWeekDay(index)) }"
                 @click="handleCreateFromWeekCell(row.room.id, resolveWeekDay(index))"
               >
                 <div v-if="cell.length" class="booking-list">
@@ -577,12 +589,19 @@ onMounted(async () => {
             v-for="item in monthSummary"
             :key="item.day.format('YYYY-MM-DD')"
             class="month-day-card"
+            :class="{ 'is-today-card': isToday(item.day) }"
             @click="handleCreateFromMonthDay(item.day)"
           >
             <div class="month-day-head">
-              <span class="month-day-date">{{ item.day.format('DD') }}</span>
+              <span
+                class="month-day-date"
+                :class="{ 'is-today-date': isToday(item.day) }"
+              >
+                {{ item.day.format('DD') }}
+              </span>
               <span class="month-day-week">{{ item.day.format('dd') }}</span>
             </div>
+            <div v-if="isToday(item.day)" class="month-today-badge">今日</div>
             <div v-if="item.bookings.length" class="month-day-body">
               <a-popover
                 v-for="booking in item.bookings"
@@ -771,10 +790,37 @@ onMounted(async () => {
   align-items: center;
 }
 
+.day-date-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.today-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 38px;
+  height: 22px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, #1677ff 0%, #49a3ff 100%);
+  box-shadow: 0 8px 18px rgb(22 119 255 / 22%);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1;
+}
+
 .room-name-cell {
   background: #fafcff;
   color: #41526b;
   font-weight: 500;
+}
+
+.week-table th.is-today-column {
+  background: linear-gradient(180deg, #eef6ff 0%, #f8fbff 100%);
+  box-shadow: inset 0 -2px 0 #1677ff;
 }
 
 .schedule-cell {
@@ -782,8 +828,16 @@ onMounted(async () => {
   transition: background-color 0.2s ease;
 }
 
+.schedule-cell.is-today-column {
+  background: linear-gradient(180deg, #f7fbff 0%, #eef6ff 100%);
+}
+
 .schedule-cell:hover {
   background: #f8fbff;
+}
+
+.schedule-cell.is-today-column:hover {
+  background: linear-gradient(180deg, #eef6ff 0%, #e4f0ff 100%);
 }
 
 .booking-list {
@@ -833,6 +887,7 @@ onMounted(async () => {
 }
 
 .month-day-card {
+  position: relative;
   min-height: 180px;
   border: 1px solid #e6ebf5;
   border-radius: 12px;
@@ -851,6 +906,14 @@ onMounted(async () => {
   transform: translateY(-1px);
 }
 
+.month-day-card.is-today-card {
+  border-color: #91caff;
+  background: linear-gradient(180deg, #f8fbff 0%, #eef6ff 100%);
+  box-shadow:
+    0 14px 30px rgb(22 119 255 / 10%),
+    inset 0 0 0 1px rgb(22 119 255 / 10%);
+}
+
 .month-day-head {
   display: flex;
   align-items: baseline;
@@ -864,8 +927,36 @@ onMounted(async () => {
   color: #1f2a44;
 }
 
+.month-day-date.is-today-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #1677ff 0%, #49a3ff 100%);
+  box-shadow: 0 10px 24px rgb(22 119 255 / 24%);
+  color: #fff;
+  font-size: 20px;
+}
+
 .month-day-week {
   color: #7a8aa6;
+}
+
+.month-today-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 12px;
+  min-width: 42px;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: rgb(22 119 255 / 10%);
+  color: #1677ff;
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .month-day-body {

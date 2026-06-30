@@ -433,7 +433,7 @@ onUnmounted(() => {
 <style scoped>
 .oa-notify-page {
   min-height: 100%;
-  padding: 0 0 24px;
+  padding: 0 clamp(16px, 2vw, 28px) 24px;
   background: transparent;
 }
 
@@ -905,7 +905,7 @@ onUnmounted(() => {
 
 @media (max-width: 768px) {
   .oa-notify-page {
-    padding-bottom: 20px;
+    padding: 0 16px 20px;
   }
 
   .oa-notify-hero,

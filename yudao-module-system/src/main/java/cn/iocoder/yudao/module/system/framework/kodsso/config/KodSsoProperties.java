@@ -33,6 +33,10 @@ public class KodSsoProperties {
      */
     private String redirectUri;
     /**
+     * 后端对外回调根地址。配置后 callback 不再依赖当前请求 host 拼接
+     */
+    private String callbackBaseUrl;
+    /**
      * SSO 登录使用的租户编号
      */
     private Long tenantId = 1L;

@@ -10,6 +10,7 @@ import { useRoute } from 'vue-router';
 import { BpmModelFormType, BpmProcessInstanceStatus } from '@vben/constants';
 import { IconifyIcon } from '@vben/icons';
 import { useAccessStore } from '@vben/stores';
+import { useUserStore } from '@vben/stores';
 import { formatDateTime, formatPast2 } from '@vben/utils';
 import { useWebSocket } from '@vueuse/core';
 
@@ -34,12 +35,18 @@ import {
 } from '#/api/bpm/definition';
 import {
   getProcessInstanceCopyPage,
+  getProcessInstanceManagerPage,
   getProcessInstanceMyPage,
 } from '#/api/bpm/processInstance';
 import { getTaskDonePage, getTaskTodoPage } from '#/api/bpm/task';
-import { kodSsoExchange } from '#/api/core/auth';
 import { router } from '#/router';
-import { useAuthStore } from '#/store';
+import {
+  buildKodEntryQuery,
+  isApprovalEntryQuery,
+  isForceCreateEntry,
+  KOD_ENTRY_APPROVAL,
+} from '#/utils/kod-entry';
+import { isAdminUser } from '#/utils/oa-user';
 import ProcessDetail, {
   type OaLiteDetailRequest,
   type OaLiteDetailSection,
@@ -47,7 +54,13 @@ import ProcessDetail, {
 
 defineOptions({ name: 'OALiteHome' });
 
-type MainTab = 'create' | 'copied' | 'initiated' | 'pending' | 'processed';
+type MainTab =
+  | 'all-process'
+  | 'create'
+  | 'copied'
+  | 'initiated'
+  | 'pending'
+  | 'processed';
 type ListTab = Exclude<MainTab, 'create'>;
 type DateRangeValue = [string, string];
 type DetailPayload =
@@ -99,10 +112,8 @@ const OA_LITE_CREATE_PATH = '/oa-lite';
 const OA_LITE_CENTER_PATH = '/oa-lite/center';
 const OA_LITE_TASK_ASSIGNED_MESSAGE_TYPE = 'task-assigned';
 const OA_LITE_TASK_ASSIGNED_TOAST_KEY = 'oa-lite-task-assigned';
-const listTabs: ListTab[] = ['initiated', 'pending', 'processed', 'copied'];
-
-const authStore = useAuthStore();
 const accessStore = useAccessStore();
+const userStore = useUserStore();
 const route = useRoute();
 
 const initializing = ref(true);
@@ -115,22 +126,32 @@ const oaTemplateDefinitions = ref<BpmProcessDefinitionApi.ProcessDefinition[]>([
 const todoItems = ref<BpmTaskApi.Task[]>([]);
 const doneItems = ref<BpmTaskApi.Task[]>([]);
 const initiatedItems = ref<BpmProcessInstanceApi.ProcessInstance[]>([]);
+const managerProcessItems = ref<BpmProcessInstanceApi.ProcessInstance[]>([]);
 const copiedItems = ref<BpmProcessInstanceApi.ProcessInstanceCopyRespVO[]>([]);
 const createCategorySectionElements = ref<Record<string, HTMLElement | null>>({});
+const isCurrentUserAdmin = computed(() => isAdminUser(userStore.userRoles));
+const listTabs = computed<ListTab[]>(() =>
+  isCurrentUserAdmin.value
+    ? ['pending', 'processed', 'initiated', 'all-process', 'copied']
+    : ['pending', 'processed', 'initiated', 'copied'],
+);
 
 const tabLoading = reactive<Record<ListTab, boolean>>({
+  'all-process': false,
   copied: false,
   initiated: false,
   pending: false,
   processed: false,
 });
 const tabInitialized = reactive<Record<ListTab, boolean>>({
+  'all-process': false,
   copied: false,
   initiated: false,
   pending: false,
   processed: false,
 });
 const tabPages = reactive<Record<ListTab, ListPageState>>({
+  'all-process': { pageNo: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0 },
   copied: { pageNo: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0 },
   initiated: { pageNo: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0 },
   pending: { pageNo: 1, pageSize: DEFAULT_PAGE_SIZE, total: 0 },
@@ -149,6 +170,7 @@ function createDefaultFilter(): ListFilterState {
 }
 
 const listFilters = reactive<Record<ListTab, ListFilterState>>({
+  'all-process': createDefaultFilter(),
   copied: createDefaultFilter(),
   initiated: createDefaultFilter(),
   pending: createDefaultFilter(),
@@ -233,7 +255,7 @@ function resolveTenantIdFromQuery() {
     : null;
 }
 
-async function handleKodSsoAutoLogin() {
+async function handleKodSsoEntryRedirect() {
   const tenantId = resolveTenantIdFromQuery();
   if (tenantId) {
     accessStore.setTenantId(tenantId);
@@ -242,23 +264,17 @@ async function handleKodSsoAutoLogin() {
   const kodSsoCode = route.query.kodSsoCode;
   const code = Array.isArray(kodSsoCode) ? kodSsoCode[0] : kodSsoCode;
   if (!code) {
-    return;
+    return false;
   }
-  if (!tenantId && !accessStore.tenantId) {
-    throw new Error('缺少租户编号，无法完成可道云登录');
+  if (accessStore.accessToken) {
+    await clearKodSsoCodeFromQuery();
+    return false;
   }
-
-  const loginResult = await kodSsoExchange(code);
-  accessStore.setAccessToken(loginResult.accessToken);
-  accessStore.setRefreshToken(loginResult.refreshToken);
-  await authStore.fetchUserInfo();
-
-  const nextQuery = { ...route.query };
-  delete nextQuery.kodSsoCode;
   await router.replace({
-    path: route.path,
-    query: nextQuery,
+    path: '/auth/kod-sso-login',
+    query: { ...route.query },
   });
+  return true;
 }
 
 async function clearKodSsoCodeFromQuery() {
@@ -271,6 +287,16 @@ async function clearKodSsoCodeFromQuery() {
     path: route.path,
     query: nextQuery,
   });
+}
+
+function buildApprovalEntryQuery() {
+  return isApprovalEntryQuery(route.query)
+    ? buildKodEntryQuery(KOD_ENTRY_APPROVAL, route.query)
+    : route.query;
+}
+
+function shouldForceCreateMode() {
+  return isForceCreateEntry(route.query);
 }
 
 function isImageIcon(icon?: string) {
@@ -328,38 +354,55 @@ const createCategorySections = computed(() =>
 );
 
 const stats = computed(() => ({
+  allProcess: tabPages['all-process'].total,
   copied: tabPages.copied.total,
   initiated: tabPages.initiated.total,
   pending: tabPages.pending.total,
   processed: tabPages.processed.total,
 }));
 
-const dashboardNavItems = computed(() => [
-  {
-    count: stats.value.pending,
-    icon: 'solar:checklist-minimalistic-outline',
-    key: 'pending' as ListTab,
-    label: '待我审批',
-  },
-  {
-    count: stats.value.processed,
-    icon: 'solar:verified-check-outline',
-    key: 'processed' as ListTab,
-    label: '我已审批',
-  },
-  {
-    count: stats.value.initiated,
-    icon: 'solar:clipboard-text-outline',
-    key: 'initiated' as ListTab,
-    label: '我发起的',
-  },
-  {
+const dashboardNavItems = computed(() => {
+  const items: {
+    count: number;
+    icon: string;
+    key: ListTab;
+    label: string;
+  }[] = [
+    {
+      count: stats.value.pending,
+      icon: 'solar:checklist-minimalistic-outline',
+      key: 'pending',
+      label: '待我审批',
+    },
+    {
+      count: stats.value.processed,
+      icon: 'solar:verified-check-outline',
+      key: 'processed',
+      label: '我已审批',
+    },
+    {
+      count: stats.value.initiated,
+      icon: 'solar:clipboard-text-outline',
+      key: 'initiated',
+      label: '我发起的',
+    },
+  ];
+  if (isCurrentUserAdmin.value) {
+    items.push({
+      count: stats.value.allProcess,
+      icon: 'solar:documents-minimalistic-outline',
+      key: 'all-process',
+      label: '全部流程',
+    });
+  }
+  items.push({
     count: stats.value.copied,
     icon: 'solar:inbox-line-outline',
-    key: 'copied' as ListTab,
+    key: 'copied',
     label: '抄送我的',
-  },
-]);
+  });
+  return items;
+});
 
 const categoryOptions = computed<SelectOption[]>(() =>
   categories.value.map((item) => ({
@@ -425,6 +468,8 @@ const currentList = computed(() => {
 });
 const currentDetailSection = computed<OaLiteDetailSection>(() => {
   switch (activeTab.value) {
+    case 'all-process':
+      return 'initiated';
     case 'copied':
       return 'copied';
     case 'pending':
@@ -464,6 +509,8 @@ const isCenterMode = computed(() => activeTab.value !== 'create');
 
 const currentListTitle = computed(() => {
   switch (activeTab.value) {
+    case 'all-process':
+      return '全部流程';
     case 'pending':
       return '待我审批';
     case 'processed':
@@ -478,18 +525,23 @@ const currentListTitle = computed(() => {
 });
 const showProcessFilter = computed(
   () =>
+    activeTab.value === 'all-process' ||
     activeTab.value === 'initiated' ||
     activeTab.value === 'pending' ||
     activeTab.value === 'processed',
 );
 const showCategoryFilter = computed(
   () =>
+    activeTab.value === 'all-process' ||
     activeTab.value === 'initiated' ||
     activeTab.value === 'pending' ||
     activeTab.value === 'processed',
 );
 const showStatusFilter = computed(
-  () => activeTab.value === 'initiated' || activeTab.value === 'processed',
+  () =>
+    activeTab.value === 'all-process' ||
+    activeTab.value === 'initiated' ||
+    activeTab.value === 'processed',
 );
 
 function isTaskItem(item: DetailPayload): item is BpmTaskApi.Task {
@@ -504,6 +556,8 @@ function isCopiedItem(
 
 function getListSource(tab: ListTab) {
   switch (tab) {
+    case 'all-process':
+      return managerProcessItems.value;
     case 'copied':
       return copiedItems.value;
     case 'initiated':
@@ -722,6 +776,8 @@ function getListSecondaryText(item: DetailPayload) {
 
 function getKeywordPlaceholder() {
   switch (activeTab.value) {
+    case 'all-process':
+      return '请输入流程名称';
     case 'pending':
     case 'processed':
       return '请输入任务名称';
@@ -741,6 +797,8 @@ function getCreateTimePlaceholder(): [string, string] {
 
 function getTabErrorMessage(tab: ListTab) {
   switch (tab) {
+    case 'all-process':
+      return '加载全部流程失败';
     case 'copied':
       return '加载抄送列表失败';
     case 'initiated':
@@ -771,6 +829,20 @@ async function loadTabData(tab: ListTab) {
     const createTime = filter.createTime ? [...filter.createTime] : undefined;
 
     switch (tab) {
+      case 'all-process': {
+        const resp = await getProcessInstanceManagerPage({
+          pageNo: pageState.pageNo,
+          pageSize: pageState.pageSize,
+          name: filter.name.trim() || undefined,
+          category: filter.category,
+          processDefinitionKey: filter.processDefinitionKey,
+          status: filter.status,
+          createTime,
+        });
+        managerProcessItems.value = resp.list || [];
+        pageState.total = resp.total || 0;
+        break;
+      }
       case 'initiated': {
         const resp = await getProcessInstanceMyPage({
           pageNo: pageState.pageNo,
@@ -837,7 +909,7 @@ async function loadTabData(tab: ListTab) {
 }
 
 async function refreshAllTabs() {
-  await Promise.all(listTabs.map((tab) => loadTabData(tab)));
+  await Promise.all(listTabs.value.map((tab) => loadTabData(tab)));
 }
 
 async function ensureDefinitionDetail(
@@ -864,6 +936,9 @@ async function openTemplateCreate(
       query: {
         processDefinitionId: definitionDetail.id,
         returnTo: 'oa-lite',
+        ...(isApprovalEntryQuery(route.query)
+          ? { entry: KOD_ENTRY_APPROVAL }
+          : {}),
       },
     });
     return;
@@ -874,6 +949,9 @@ async function openTemplateCreate(
       query: {
         ...(businessKey ? { id: businessKey } : {}),
         returnTo: 'oa-lite',
+        ...(isApprovalEntryQuery(route.query)
+          ? { entry: KOD_ENTRY_APPROVAL }
+          : {}),
       },
     });
     return;
@@ -896,6 +974,9 @@ function handleProcessRecreate(
       query: {
         ...(businessKey ? { id: businessKey } : {}),
         returnTo: 'oa-lite',
+        ...(isApprovalEntryQuery(route.query)
+          ? { entry: KOD_ENTRY_APPROVAL }
+          : {}),
       },
     });
     return;
@@ -907,6 +988,9 @@ function handleProcessRecreate(
         processDefinitionId: targetDefinition.id,
         processInstanceId,
         returnTo: 'oa-lite',
+        ...(isApprovalEntryQuery(route.query)
+          ? { entry: KOD_ENTRY_APPROVAL }
+          : {}),
       },
     });
     return;
@@ -942,7 +1026,10 @@ async function openTab(tab: MainTab) {
   activeTab.value = tab;
   const targetPath = tab === 'create' ? OA_LITE_CREATE_PATH : OA_LITE_CENTER_PATH;
   if (route.path !== targetPath) {
-    await router.replace({ path: targetPath });
+    await router.replace({
+      path: targetPath,
+      query: buildApprovalEntryQuery(),
+    });
   }
 }
 
@@ -997,7 +1084,10 @@ async function openPendingTaskDetail(taskId: string) {
   activeTab.value = 'pending';
   lastCenterTab.value = 'pending';
   if (route.path !== OA_LITE_CENTER_PATH) {
-    await router.replace({ path: OA_LITE_CENTER_PATH });
+    await router.replace({
+      path: OA_LITE_CENTER_PATH,
+      query: buildApprovalEntryQuery(),
+    });
   }
   if (!tabInitialized.pending) {
     await loadTabData('pending');
@@ -1050,8 +1140,30 @@ watch(
 );
 
 watch(
+  () => isCurrentUserAdmin.value,
+  (isAdmin) => {
+    if (isAdmin) {
+      return;
+    }
+    tabInitialized['all-process'] = false;
+    tabPages['all-process'].pageNo = 1;
+    tabPages['all-process'].total = 0;
+    managerProcessItems.value = [];
+    if (activeTab.value === 'all-process') {
+      activeTab.value = 'pending';
+      lastCenterTab.value = 'pending';
+    }
+  },
+  { immediate: true },
+);
+
+watch(
   () => route.path,
   (path) => {
+    if (shouldForceCreateMode()) {
+      activeTab.value = 'create';
+      return;
+    }
     if (path === OA_LITE_CREATE_PATH) {
       activeTab.value = 'create';
       return;
@@ -1066,8 +1178,17 @@ watch(
 watch(
   () => activeTab.value,
   async (tab) => {
+    if (shouldForceCreateMode() && tab !== 'create') {
+      activeTab.value = 'create';
+      return;
+    }
     if (tab === 'create') {
       selectedItem.value = null;
+      return;
+    }
+    if (tab === 'all-process' && !isCurrentUserAdmin.value) {
+      activeTab.value = 'pending';
+      lastCenterTab.value = 'pending';
       return;
     }
     lastCenterTab.value = tab;
@@ -1099,15 +1220,9 @@ watch(
 
 onMounted(async () => {
   try {
-    try {
-      await handleKodSsoAutoLogin();
-    } catch (error: any) {
-      const hasLoginState = Boolean(accessStore.accessToken);
-      await clearKodSsoCodeFromQuery();
-      if (!hasLoginState) {
-        throw error;
-      }
-      message.warning(error?.message || '可道云登录校验失败，已保留当前登录态');
+    const redirectedToKodSsoLogin = await handleKodSsoEntryRedirect();
+    if (redirectedToKodSsoLogin) {
+      return;
     }
     connectTaskWebSocket();
     await Promise.all([loadBaseOptions(), loadProcessDefinitions(), refreshAllTabs()]);

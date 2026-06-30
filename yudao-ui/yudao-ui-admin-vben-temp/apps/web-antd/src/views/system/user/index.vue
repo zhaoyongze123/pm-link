@@ -357,6 +357,10 @@ const [Grid, gridApi] = useVbenVxeGrid({
   max-width: 100%;
 }
 
+.oa-user-list-panel :deep(.vxe-grid--table-wrapper) {
+  overflow-x: auto;
+}
+
 .oa-user-list-panel :deep(.vben-form),
 .oa-user-list-panel :deep(.vxe-form--item),
 .oa-user-list-panel :deep(.vxe-form--item-inner),
@@ -380,6 +384,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
   min-width: 0;
   max-width: 100%;
   margin-bottom: 0;
+  overflow-x: auto;
+  overflow-y: hidden;
 }
 
 .oa-user-list-panel :deep(.vxe-table--body-wrapper) {
@@ -389,6 +395,7 @@ const [Grid, gridApi] = useVbenVxeGrid({
   min-height: calc(100vh - 472px);
   max-height: calc(100vh - 472px);
   overflow: auto;
+  overscroll-behavior-x: contain;
 }
 
 .oa-user-list-panel :deep(.vxe-table--header-wrapper),
@@ -399,6 +406,23 @@ const [Grid, gridApi] = useVbenVxeGrid({
 .oa-user-list-panel :deep(.vxe-body--column),
 .oa-user-list-panel :deep(.vxe-header--column) {
   padding-inline: 10px;
+}
+
+.oa-user-list-panel :deep(.vxe-body--column.col--last),
+.oa-user-list-panel :deep(.vxe-header--column.col--last) {
+  overflow: visible;
+}
+
+.oa-user-list-panel :deep(.table-actions) {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.oa-user-list-panel :deep(.vxe-table--header),
+.oa-user-list-panel :deep(.vxe-table--body) {
+  min-width: max-content;
 }
 
 .oa-user-list-panel :deep(.vxe-pager) {

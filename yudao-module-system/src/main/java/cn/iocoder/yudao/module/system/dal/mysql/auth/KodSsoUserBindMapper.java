@@ -12,6 +12,15 @@ public interface KodSsoUserBindMapper extends BaseMapperX<KodSsoUserBindDO> {
         return selectOne(KodSsoUserBindDO::getKodUserId, kodUserId);
     }
 
+    default KodSsoUserBindDO selectByKodUsername(String kodUsername) {
+        return selectOne(KodSsoUserBindDO::getKodUsername, kodUsername);
+    }
+
+    default void deleteByKodUserId(String kodUserId) {
+        delete(new LambdaQueryWrapperX<KodSsoUserBindDO>()
+                .eq(KodSsoUserBindDO::getKodUserId, kodUserId));
+    }
+
     default KodSsoUserBindDO selectByUserId(Long userId) {
         return selectOne(KodSsoUserBindDO::getUserId, userId);
     }

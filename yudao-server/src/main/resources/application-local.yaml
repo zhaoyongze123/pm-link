@@ -14,9 +14,13 @@ yudao:
       - /admin-api/system/auth/kod-sso/exchange
   kod-sso:
     enabled: true
-    base-url: http://192.168.1.108/
+    # 本地联调：指向当前可访问的 kodbox 实例
+    base-url: http://192.168.1.107:8001/
     app-name: user:all
-    redirect-uri: http://192.168.1.100:5666/auth/kod-sso-login?tenantId=1
+    # 本地联调：前端开发地址
+    redirect-uri: http://192.168.1.100:5666/#/auth/kod-sso-login?tenantId=1
+    # 本地联调：后端对外地址，固定生成可道云回调地址
+    callback-base-url: http://192.168.1.100:48080
     tenant-id: 1
     auto-create-user: false
 

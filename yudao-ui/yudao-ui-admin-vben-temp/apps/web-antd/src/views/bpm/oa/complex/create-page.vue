@@ -21,6 +21,7 @@ import { getSimpleUserList } from '#/api/system/user';
 import { getUserProfile } from '#/api/system/user/profile';
 import { FileUpload } from '#/components/upload';
 import { router } from '#/router';
+import { buildApprovalEntryBackRoute } from '#/utils/kod-entry';
 import ProcessInstanceTimeline from '#/views/bpm/processInstance/detail/modules/time-line.vue';
 
 import {
@@ -65,6 +66,10 @@ function shouldReturnToOaLite() {
     ? route.query.returnTo[0]
     : route.query.returnTo;
   return returnTo === 'oa-lite';
+}
+
+function buildOaLiteRoute() {
+  return buildApprovalEntryBackRoute(route.query);
 }
 
 function getFieldOptions(field: ComplexFieldConfig) {
@@ -206,7 +211,7 @@ async function handleSubmit() {
     await closeCurrentTabIfPossible();
     await router.push(
       shouldReturnToOaLite()
-        ? { name: 'OALite' }
+        ? buildOaLiteRoute()
         : { name: config.routeNames.index },
     );
   } finally {
@@ -222,7 +227,7 @@ function handleBack() {
       if (isConfirm) {
         await closeCurrentTabIfPossible();
         if (shouldReturnToOaLite()) {
-          await router.push({ name: 'OALite' });
+          await router.push(buildOaLiteRoute());
         }
       }
       return Promise.resolve(true);

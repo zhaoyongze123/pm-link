@@ -129,6 +129,18 @@ const routes: RouteRecordRaw[] = [
         },
       },
       {
+        path: 'process-instance/manager',
+        component: () => import('#/views/bpm/processInstance/manager/index.vue'),
+        name: 'BpmProcessInstanceManager',
+        meta: {
+          title: '流程实例',
+          activePath: '/bpm/process-instance/manager',
+          icon: 'carbon:document-signed',
+          hideInMenu: true,
+          keepAlive: true,
+        },
+      },
+      {
         path: 'group',
         component: () => import('#/views/bpm/group/index.vue'),
         name: 'BpmGroup',

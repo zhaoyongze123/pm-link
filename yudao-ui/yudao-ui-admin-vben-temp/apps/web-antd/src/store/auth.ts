@@ -43,6 +43,18 @@ export const useAuthStore = defineStore('auth', () => {
 
   const loginLoading = ref(false);
 
+  function resolveLoginSuccessPath() {
+    const redirect = router.currentRoute.value.query?.redirect;
+    const redirectPath = Array.isArray(redirect) ? redirect[0] : redirect;
+    if (typeof redirectPath === 'string' && redirectPath) {
+      return decodeURIComponent(redirectPath);
+    }
+    return resolveUserHomePath(
+      userStore.userInfo?.homePath,
+      userStore.userRoles,
+    );
+  }
+
   /**
    * 异步处理登录操作
    * Asynchronously handle the login process
@@ -100,12 +112,7 @@ export const useAuthStore = defineStore('auth', () => {
           // oxlint-disable-next-line no-unused-expressions
           onSuccess
             ? await onSuccess?.()
-            : await router.push(
-                resolveUserHomePath(
-                  userInfo?.homePath,
-                  userStore.userRoles,
-                ),
-              );
+            : await router.push(resolveLoginSuccessPath());
         }
 
         if (userInfo?.nickname) {

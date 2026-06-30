@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS `system_kod_sso_user_bind` (
   `tenant_id` bigint NOT NULL DEFAULT '0' COMMENT '租户编号',
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_system_kod_sso_user_bind_kod_user_id` (`kod_user_id`),
+  UNIQUE KEY `uk_system_kod_sso_user_bind_kod_username` (`kod_username`),
   UNIQUE KEY `uk_system_kod_sso_user_bind_user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='可道云用户绑定';
 
