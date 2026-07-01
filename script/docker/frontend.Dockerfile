@@ -22,7 +22,7 @@ COPY yudao-ui/yudao-ui-admin-vben-temp/ /build/
 COPY ${FRONTEND_ENV_FILE} /build/apps/web-antd/.env.production
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy pnpm install --frozen-lockfile
-RUN env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy pnpm run build --filter=@vben/web-antd
+RUN env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy pnpm --filter @vben/web-antd run build
 
 FROM docker.m.daocloud.io/library/nginx:1.27-alpine
 
