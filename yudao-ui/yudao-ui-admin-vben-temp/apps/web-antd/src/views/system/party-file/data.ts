@@ -11,6 +11,7 @@ import { getSimpleDeptList } from '#/api/system/dept';
 import { getSimpleRoleList } from '#/api/system/role';
 import {
   getSimplePartyFileCategoryList,
+  getSimplePartyFileKodSourceList,
 } from '#/api/system/party-file';
 import { getSimpleUserList } from '#/api/system/user';
 
@@ -161,6 +162,53 @@ export function usePartyFileFormSchema(): VbenFormSchema[] {
       component: 'RichTextarea',
     },
     {
+      fieldName: 'storageType',
+      label: '存储方式',
+      component: 'RadioGroup',
+      componentProps: {
+        options: [
+          { label: '本地存储', value: 1 },
+          { label: '可道云目录', value: 2 },
+        ],
+        buttonStyle: 'solid',
+        optionType: 'button',
+      },
+      rules: z.number().default(1),
+    },
+    {
+      fieldName: 'kodSourceId',
+      label: '目录来源',
+      component: 'ApiSelect',
+      componentProps: {
+        api: async () => {
+          const data = await getSimplePartyFileKodSourceList();
+          return data.map((item) => ({ label: item.name, value: item.id }));
+        },
+        placeholder: '请选择可道云目录来源',
+        allowClear: true,
+      },
+      dependencies: {
+        triggerFields: ['storageType'],
+        show: (values) => Number(values.storageType) === 2,
+      },
+      rules: 'selectRequired',
+    },
+    {
+      fieldName: 'kodFolderPath',
+      label: '目标目录',
+      component: 'TreeSelect',
+      componentProps: {
+        placeholder: '请选择可道云目录',
+        treeDefaultExpandAll: true,
+        allowClear: true,
+      },
+      dependencies: {
+        triggerFields: ['storageType'],
+        show: (values) => Number(values.storageType) === 2,
+      },
+      rules: 'selectRequired',
+    },
+    {
       fieldName: 'attachmentFileIds',
       label: '附件',
       component: 'FileUpload',
@@ -170,6 +218,11 @@ export function usePartyFileFormSchema(): VbenFormSchema[] {
         showDescription: true,
         accept: [],
       },
+    },
+    {
+      fieldName: 'kodFolderName',
+      component: 'Input',
+      dependencies: { triggerFields: [''], show: () => false },
     },
     {
       fieldName: 'publishTime',
@@ -199,6 +252,91 @@ export function usePartyFileFormSchema(): VbenFormSchema[] {
       component: 'Input',
       formItemClass: 'col-span-2',
       renderComponentContent: () => ({}),
+    },
+  ];
+}
+
+export function useKodSourceFormSchema(): VbenFormSchema[] {
+  return [
+    {
+      fieldName: 'id',
+      component: 'Input',
+      dependencies: { triggerFields: [''], show: () => false },
+    },
+    {
+      fieldName: 'name',
+      label: '来源名称',
+      component: 'Input',
+      componentProps: {
+        placeholder: '请输入来源名称',
+      },
+      rules: 'required',
+    },
+    {
+      fieldName: 'baseUrl',
+      label: '可道云地址',
+      component: 'Input',
+      componentProps: {
+        placeholder: '例如 https://kod.example.com/',
+      },
+      rules: 'required',
+    },
+    {
+      fieldName: 'appName',
+      label: 'appName',
+      component: 'Input',
+      componentProps: {
+        placeholder: '请输入 appName',
+      },
+      rules: 'required',
+    },
+    {
+      fieldName: 'accessToken',
+      label: '访问令牌',
+      component: 'Textarea',
+      componentProps: {
+        placeholder: '请输入 accessToken',
+        rows: 3,
+      },
+      rules: 'required',
+    },
+    {
+      fieldName: 'rootFolderPath',
+      label: '根目录路径',
+      component: 'Input',
+      componentProps: {
+        placeholder: '例如 {source:1001}/党务文件',
+      },
+      rules: 'required',
+    },
+    {
+      fieldName: 'rootFolderName',
+      label: '根目录名称',
+      component: 'Input',
+      componentProps: {
+        placeholder: '请输入根目录名称',
+      },
+      rules: 'required',
+    },
+    {
+      fieldName: 'status',
+      label: '状态',
+      component: 'RadioGroup',
+      componentProps: {
+        options: getDictOptions(DICT_TYPE.COMMON_STATUS, 'number'),
+        buttonStyle: 'solid',
+        optionType: 'button',
+      },
+      rules: z.number().default(CommonStatusEnum.ENABLE),
+    },
+    {
+      fieldName: 'isDefault',
+      label: '默认来源',
+      component: 'Switch',
+      componentProps: {
+        checkedChildren: '是',
+        unCheckedChildren: '否',
+      },
     },
   ];
 }
@@ -266,6 +404,68 @@ export function usePartyFileColumns(): VxeTableGridOptions<SystemPartyFileApi.Pa
     {
       title: '操作',
       width: 260,
+      fixed: 'right',
+      slots: { default: 'actions' },
+    },
+  ];
+}
+
+export function useKodSourceSearchSchema(): VbenFormSchema[] {
+  return [
+    {
+      fieldName: 'name',
+      label: '来源名称',
+      component: 'Input',
+      componentProps: {
+        placeholder: '请输入来源名称',
+        allowClear: true,
+      },
+    },
+    {
+      fieldName: 'status',
+      label: '状态',
+      component: 'Select',
+      componentProps: {
+        options: getDictOptions(DICT_TYPE.COMMON_STATUS, 'number'),
+        allowClear: true,
+        placeholder: '请选择状态',
+      },
+    },
+  ];
+}
+
+export function useKodSourceColumns(): VxeTableGridOptions<SystemPartyFileApi.PartyFileKodSource>['columns'] {
+  return [
+    { type: 'checkbox', width: 40 },
+    { field: 'name', title: '来源名称', minWidth: 160 },
+    { field: 'baseUrl', title: '可道云地址', minWidth: 220 },
+    { field: 'appName', title: 'appName', minWidth: 140 },
+    { field: 'rootFolderName', title: '根目录名称', minWidth: 140 },
+    { field: 'rootFolderPath', title: '根目录路径', minWidth: 220 },
+    {
+      field: 'isDefault',
+      title: '默认',
+      minWidth: 80,
+      formatter: ({ cellValue }) => (cellValue ? '是' : '否'),
+    },
+    {
+      field: 'status',
+      title: '状态',
+      minWidth: 100,
+      cellRender: {
+        name: 'CellDict',
+        props: { type: DICT_TYPE.COMMON_STATUS },
+      },
+    },
+    {
+      field: 'createTime',
+      title: '创建时间',
+      minWidth: 180,
+      formatter: 'formatDateTime',
+    },
+    {
+      title: '操作',
+      width: 180,
       fixed: 'right',
       slots: { default: 'actions' },
     },

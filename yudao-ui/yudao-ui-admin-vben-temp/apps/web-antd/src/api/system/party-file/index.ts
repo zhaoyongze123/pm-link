@@ -19,10 +19,39 @@ export namespace SystemPartyFileApi {
     targetName?: string;
   }
 
+  export interface PartyFileKodSource {
+    id?: number;
+    name: string;
+    baseUrl: string;
+    appName: string;
+    accessToken: string;
+    rootFolderPath: string;
+    rootFolderName: string;
+    status: number;
+    isDefault?: boolean;
+    createTime?: Date | string;
+  }
+
+  export interface PartyFileKodFolder {
+    key: string;
+    title: string;
+    value: string;
+    path: string;
+    children?: PartyFileKodFolder[];
+  }
+
   export interface PartyFileAttachment {
     id: number;
     name: string;
     url?: string;
+    size?: number;
+    type?: string;
+  }
+
+  export interface PartyFileKodFile {
+    name: string;
+    path: string;
+    pathDisplay?: string;
     size?: number;
     type?: string;
   }
@@ -51,6 +80,10 @@ export namespace SystemPartyFileApi {
     summary?: string;
     content?: string;
     attachmentFileIds?: string;
+    storageType: number;
+    kodSourceId?: number;
+    kodFolderPath?: string;
+    kodFolderName?: string;
     status: number;
     publishTime: Date | string;
     creator?: string;
@@ -145,6 +178,76 @@ export function getMyPartyFileAttachment(
 ) {
   return requestClient.get<SystemPartyFileApi.PartyFile>(
     `/system/party-file/my-attachment?id=${id}&fileId=${fileId}&action=${action}`,
+  );
+}
+
+export function uploadPartyFileAttachment(data: {
+  file: File;
+  storageType: number;
+  kodSourceId?: number;
+  kodFolderPath?: string;
+}) {
+  return requestClient.upload<SystemPartyFileApi.PartyFileAttachment>(
+    '/system/party-file/attachment/upload',
+    data,
+  );
+}
+
+export function getPartyFileKodFiles(params: {
+  kodSourceId: number;
+  kodFolderPath: string;
+}) {
+  return requestClient.post<SystemPartyFileApi.PartyFileKodFile[]>(
+    '/system/party-file/attachment/kod-files',
+    params,
+  );
+}
+
+export function selectPartyFileKodFiles(data: {
+  kodSourceId: number;
+  kodFolderPath: string;
+  files: SystemPartyFileApi.PartyFileKodFile[];
+}) {
+  return requestClient.post<SystemPartyFileApi.PartyFileAttachment[]>(
+    '/system/party-file/attachment/kod-select',
+    data,
+  );
+}
+
+export function getPartyFileKodSourcePage(params: PageParam & { name?: string; status?: number }) {
+  return requestClient.get<PageResult<SystemPartyFileApi.PartyFileKodSource>>(
+    '/system/party-file-kod-source/page',
+    { params },
+  );
+}
+
+export function getPartyFileKodSource(id: number) {
+  return requestClient.get<SystemPartyFileApi.PartyFileKodSource>(
+    `/system/party-file-kod-source/get?id=${id}`,
+  );
+}
+
+export function createPartyFileKodSource(data: SystemPartyFileApi.PartyFileKodSource) {
+  return requestClient.post('/system/party-file-kod-source/create', data);
+}
+
+export function updatePartyFileKodSource(data: SystemPartyFileApi.PartyFileKodSource) {
+  return requestClient.put('/system/party-file-kod-source/update', data);
+}
+
+export function deletePartyFileKodSource(id: number) {
+  return requestClient.delete(`/system/party-file-kod-source/delete?id=${id}`);
+}
+
+export function getSimplePartyFileKodSourceList() {
+  return requestClient.get<SystemPartyFileApi.PartyFileKodSource[]>(
+    '/system/party-file-kod-source/simple-list',
+  );
+}
+
+export function getPartyFileKodFolderTree(id: number) {
+  return requestClient.get<SystemPartyFileApi.PartyFileKodFolder[]>(
+    `/system/party-file-kod-source/folder-tree?id=${id}`,
   );
 }
 

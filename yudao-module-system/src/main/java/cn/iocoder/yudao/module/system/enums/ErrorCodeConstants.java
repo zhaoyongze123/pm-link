@@ -96,6 +96,12 @@ public interface ErrorCodeConstants {
     ErrorCode PARTY_FILE_TARGET_TYPE_INVALID = new ErrorCode(1_002_009_010, "分发对象类型不合法");
     ErrorCode PARTY_FILE_TARGET_ALL_CONFLICT = new ErrorCode(1_002_009_011, "选择全员分发时不能再追加其他分发对象");
     ErrorCode PARTY_FILE_ATTACHMENT_NOT_FOUND = new ErrorCode(1_002_009_012, "党务文件附件不存在");
+    ErrorCode PARTY_FILE_KOD_SOURCE_NOT_FOUND = new ErrorCode(1_002_009_013, "党务文件可道云目录来源不存在");
+    ErrorCode PARTY_FILE_KOD_SOURCE_NAME_DUPLICATE = new ErrorCode(1_002_009_014, "已存在同名的可道云目录来源");
+    ErrorCode PARTY_FILE_KOD_SOURCE_IN_USE = new ErrorCode(1_002_009_015, "当前可道云目录来源已被党务文件使用，无法删除");
+    ErrorCode PARTY_FILE_STORAGE_CONFIG_INVALID = new ErrorCode(1_002_009_016, "党务文件存储配置不完整");
+    ErrorCode PARTY_FILE_KOD_REQUEST_FAILED = new ErrorCode(1_002_009_017, "可道云请求失败，原因：{}");
+    ErrorCode PARTY_FILE_KOD_FOLDER_PATH_INVALID = new ErrorCode(1_002_009_018, "可道云目录路径不合法");
 
     // ========== 会议室 1-002-009-000 ==========
     ErrorCode MEETING_ROOM_NOT_EXISTS = new ErrorCode(1_002_009_000, "会议室不存在");

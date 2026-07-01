@@ -6,7 +6,6 @@ import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileDO;
-import cn.iocoder.yudao.module.infra.service.file.FileService;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.*;
 import cn.iocoder.yudao.module.system.dal.dataobject.dept.DeptDO;
 import cn.iocoder.yudao.module.system.dal.dataobject.partyfile.*;
@@ -16,6 +15,7 @@ import cn.iocoder.yudao.module.system.dal.mysql.partyfile.PartyFileMapper;
 import cn.iocoder.yudao.module.system.dal.mysql.partyfile.PartyFileReadMapper;
 import cn.iocoder.yudao.module.system.dal.mysql.partyfile.PartyFileTargetMapper;
 import cn.iocoder.yudao.module.system.enums.partyfile.PartyFileReadSourceEnum;
+import cn.iocoder.yudao.module.system.enums.partyfile.PartyFileStorageTypeEnum;
 import cn.iocoder.yudao.module.system.enums.partyfile.PartyFileTargetTypeEnum;
 import cn.iocoder.yudao.module.system.service.dept.DeptService;
 import cn.iocoder.yudao.module.system.service.permission.PermissionService;
@@ -46,7 +46,9 @@ public class PartyFileServiceImpl implements PartyFileService {
     @Resource
     private PartyFileCategoryService partyFileCategoryService;
     @Resource
-    private FileService fileService;
+    private PartyFileAttachmentService partyFileAttachmentService;
+    @Resource
+    private PartyFileKodSourceServiceImpl partyFileKodSourceService;
     @Resource
     private AdminUserService adminUserService;
     @Resource
@@ -60,6 +62,7 @@ public class PartyFileServiceImpl implements PartyFileService {
     public Long createPartyFile(PartyFileSaveReqVO reqVO) {
         validateCategoryExists(reqVO.getCategoryId());
         validateTargets(reqVO.getTargets());
+        validateStorageConfig(reqVO);
         PartyFileDO partyFile = BeanUtils.toBean(reqVO, PartyFileDO.class);
         partyFileMapper.insert(partyFile);
         saveTargets(partyFile.getId(), reqVO.getTargets());
@@ -71,6 +74,7 @@ public class PartyFileServiceImpl implements PartyFileService {
         validatePartyFileExists(reqVO.getId());
         validateCategoryExists(reqVO.getCategoryId());
         validateTargets(reqVO.getTargets());
+        validateStorageConfig(reqVO);
         PartyFileDO updateObj = BeanUtils.toBean(reqVO, PartyFileDO.class);
         partyFileMapper.updateById(updateObj);
         partyFileTargetMapper.deleteByPartyFileId(reqVO.getId());
@@ -124,12 +128,14 @@ public class PartyFileServiceImpl implements PartyFileService {
     @Override
     public PartyFileRespVO getMyPartyFileAttachment(Long id, Long fileId, Long userId, String userNickname, Integer readSource) {
         PartyFileDO partyFile = validateReadable(id, userId);
-        List<Long> attachmentIds = parseFileIds(partyFile.getAttachmentFileIds());
-        if (!attachmentIds.contains(fileId)) {
-            throw exception(PARTY_FILE_ATTACHMENT_NOT_FOUND);
-        }
+        validateAttachmentAccessible(partyFile, fileId);
         markRead(id, userId, userNickname, readSource);
         return buildDetailResp(partyFile, userId, true, userNickname, readSource);
+    }
+
+    @Override
+    public void validateAttachmentAccessible(Long id, Long fileId) {
+        validateAttachmentAccessible(validatePartyFileExists(id), fileId);
     }
 
     private PageResult<PartyFileRespVO> buildPageResult(PageResult<PartyFileDO> pageResult, Long userId) {
@@ -254,6 +260,20 @@ public class PartyFileServiceImpl implements PartyFileService {
         if (partyFileCategoryService.getCategory(categoryId) == null) {
             throw exception(PARTY_FILE_CATEGORY_NOT_FOUND);
         }
+    }
+
+    private void validateStorageConfig(PartyFileSaveReqVO reqVO) {
+        if (PartyFileStorageTypeEnum.isKod(reqVO.getStorageType())) {
+            if (reqVO.getKodSourceId() == null || StrUtil.isBlank(reqVO.getKodFolderPath())) {
+                throw exception(PARTY_FILE_STORAGE_CONFIG_INVALID);
+            }
+            PartyFileKodSourceDO source = partyFileKodSourceService.getEnabledSource(reqVO.getKodSourceId());
+            reqVO.setKodFolderName(StrUtil.blankToDefault(reqVO.getKodFolderName(), source.getRootFolderName()));
+            return;
+        }
+        reqVO.setKodSourceId(null);
+        reqVO.setKodFolderPath(null);
+        reqVO.setKodFolderName(null);
     }
 
     private PartyFileDO validatePartyFileExists(Long id) {
@@ -398,7 +418,7 @@ public class PartyFileServiceImpl implements PartyFileService {
         }
         List<PartyFileAttachmentRespVO> result = new ArrayList<>();
         for (Long fileId : fileIds) {
-            FileDO file = fileService.getFile(fileId);
+            FileDO file = partyFileAttachmentService.getFile(fileId);
             if (file == null) {
                 continue;
             }
@@ -411,6 +431,13 @@ public class PartyFileServiceImpl implements PartyFileService {
             result.add(respVO);
         }
         return result;
+    }
+
+    private void validateAttachmentAccessible(PartyFileDO partyFile, Long fileId) {
+        List<Long> attachmentIds = parseFileIds(partyFile.getAttachmentFileIds());
+        if (!attachmentIds.contains(fileId)) {
+            throw exception(PARTY_FILE_ATTACHMENT_NOT_FOUND);
+        }
     }
 
     private List<Long> parseFileIds(String attachmentFileIds) {

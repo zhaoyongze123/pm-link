@@ -79,6 +79,20 @@ function formatReadSource(source?: number) {
   }
 }
 
+function getReadSourceTagColor(source?: number) {
+  switch (source) {
+    case 2: {
+      return 'blue';
+    }
+    case 3: {
+      return 'purple';
+    }
+    default: {
+      return 'green';
+    }
+  }
+}
+
 function formatFileSize(size?: number) {
   if (!size || size <= 0) {
     return '';
@@ -249,7 +263,13 @@ async function handlePreview(fileId: number, type?: string) {
                   <span v-if="item.deptName">（{{ item.deptName }}）</span>
                 </div>
                 <div class="party-file-detail__read-time">
-                  {{ formatReadTime(item.readTime) }} · {{ formatReadSource(item.readSource) }}
+                  <span>{{ formatReadTime(item.readTime) }}</span>
+                  <Tag
+                    :color="getReadSourceTagColor(item.readSource)"
+                    class="party-file-detail__read-tag"
+                  >
+                    {{ formatReadSource(item.readSource) }}
+                  </Tag>
                 </div>
               </div>
             </div>
@@ -485,6 +505,17 @@ async function handlePreview(fileId: number, type?: string) {
   margin-top: 4px;
   color: rgb(100 116 139);
   font-size: 12px;
+}
+
+.party-file-detail__read-time {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.party-file-detail__read-tag {
+  margin-inline-end: 0;
 }
 
 .party-file-detail__avatar {

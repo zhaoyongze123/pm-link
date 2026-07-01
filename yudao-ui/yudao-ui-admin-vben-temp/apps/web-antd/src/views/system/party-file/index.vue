@@ -10,21 +10,26 @@ import { message, Tabs } from 'ant-design-vue';
 
 import { ACTION_ICON, TableAction, useVbenVxeGrid } from '#/adapter/vxe-table';
 import {
+  deletePartyFileKodSource,
   deletePartyFile,
   deletePartyFileCategory,
   getPartyFileCategoryList,
+  getPartyFileKodSourcePage,
   getPartyFilePage,
 } from '#/api/system/party-file';
 import { $t } from '#/locales';
 
 import {
   useCategoryColumns,
+  useKodSourceColumns,
+  useKodSourceSearchSchema,
   usePartyFileColumns,
   usePartyFileSearchSchema,
 } from './data';
 import CategoryForm from './modules/category-form.vue';
 import FileDetail from './modules/file-detail.vue';
 import FileForm from './modules/file-form.vue';
+import KodSourceForm from './modules/kod-source-form.vue';
 
 const activeTab = ref('file');
 const checkedIds = ref<number[]>([]);
@@ -38,6 +43,10 @@ const [FileFormModal, fileFormModalApi] = useVbenModal({
   connectedComponent: FileForm,
   destroyOnClose: true,
 });
+const [KodSourceFormModal, kodSourceFormModalApi] = useVbenModal({
+  connectedComponent: KodSourceForm,
+  destroyOnClose: true,
+});
 const [DetailModal, detailModalApi] = useVbenModal({
   connectedComponent: FileDetail,
   destroyOnClose: true,
@@ -46,6 +55,7 @@ const [DetailModal, detailModalApi] = useVbenModal({
 function handleRefresh() {
   fileGridApi.query();
   categoryGridApi.query();
+  kodSourceGridApi.query();
 }
 
 function handleCreateCategory() {
@@ -73,6 +83,25 @@ async function handleDeleteCategory(row: SystemPartyFileApi.PartyFileCategory) {
 
 function handleCreateFile() {
   fileFormModalApi.setData(null).open();
+}
+
+function handleCreateKodSource() {
+  kodSourceFormModalApi.setData(null).open();
+}
+
+function handleEditKodSource(row: SystemPartyFileApi.PartyFileKodSource) {
+  kodSourceFormModalApi.setData(row).open();
+}
+
+async function handleDeleteKodSource(row: SystemPartyFileApi.PartyFileKodSource) {
+  const hideLoading = message.loading({ content: `正在删除 ${row.name}...`, duration: 0 });
+  try {
+    await deletePartyFileKodSource(row.id!);
+    message.success(`已删除 ${row.name}`);
+    handleRefresh();
+  } finally {
+    hideLoading();
+  }
 }
 
 function handleEditFile(row: SystemPartyFileApi.PartyFile) {
@@ -177,12 +206,45 @@ const [FileGrid, fileGridApi] = useVbenVxeGrid({
     },
   },
 });
+
+const [KodSourceGrid, kodSourceGridApi] = useVbenVxeGrid({
+  formOptions: {
+    schema: useKodSourceSearchSchema(),
+  },
+  gridOptions: {
+    columns: useKodSourceColumns(),
+    height: 'auto',
+    proxyConfig: {
+      ajax: {
+        query: async ({ page }, formValues) =>
+          await getPartyFileKodSourcePage({
+            pageNo: page.currentPage,
+            pageSize: page.pageSize,
+            ...formValues,
+          }),
+      },
+    },
+    rowConfig: {
+      keyField: 'id',
+      isHover: true,
+    },
+    toolbarConfig: {
+      refresh: true,
+      search: true,
+    },
+  } as VxeTableGridOptions<SystemPartyFileApi.PartyFileKodSource>,
+  gridEvents: {
+    checkboxAll: () => {},
+    checkboxChange: () => {},
+  },
+});
 </script>
 
 <template>
   <Page title="党务文件">
     <CategoryFormModal @success="handleRefresh" />
     <FileFormModal @success="handleRefresh" />
+    <KodSourceFormModal @success="handleRefresh" />
     <DetailModal />
     <div class="party-file-page">
       <Tabs v-model:active-key="activeTab" class="party-file-tabs">
@@ -292,6 +354,49 @@ const [FileGrid, fileGridApi] = useVbenVxeGrid({
             />
           </template>
             </CategoryGrid>
+          </div>
+        </Tabs.TabPane>
+        <Tabs.TabPane key="kod-source" tab="目录来源">
+          <div class="party-file-tabpane">
+            <KodSourceGrid table-title="可道云目录来源">
+              <template #toolbar-tools>
+                <TableAction
+                  :actions="[
+                    {
+                      label: $t('ui.actionTitle.create', ['目录来源']),
+                      type: 'primary',
+                      icon: ACTION_ICON.ADD,
+                      auth: ['system:party-file:update'],
+                      onClick: handleCreateKodSource,
+                    },
+                  ]"
+                />
+              </template>
+              <template #actions="{ row }">
+                <TableAction
+                  :actions="[
+                    {
+                      label: $t('common.edit'),
+                      type: 'link',
+                      icon: ACTION_ICON.EDIT,
+                      auth: ['system:party-file:update'],
+                      onClick: handleEditKodSource.bind(null, row),
+                    },
+                    {
+                      label: $t('common.delete'),
+                      type: 'link',
+                      danger: true,
+                      icon: ACTION_ICON.DELETE,
+                      auth: ['system:party-file:update'],
+                      popConfirm: {
+                        title: $t('ui.actionMessage.deleteConfirm', [row.name]),
+                        confirm: handleDeleteKodSource.bind(null, row),
+                      },
+                    },
+                  ]"
+                />
+              </template>
+            </KodSourceGrid>
           </div>
         </Tabs.TabPane>
       </Tabs>

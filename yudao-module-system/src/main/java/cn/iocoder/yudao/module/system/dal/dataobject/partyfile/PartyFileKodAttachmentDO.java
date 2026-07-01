@@ -8,37 +8,21 @@ import com.baomidou.mybatisplus.annotation.TableName;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
-
-@TableName("party_file")
-@KeySequence("party_file_seq")
+@TableName("party_file_kod_attachment")
+@KeySequence("party_file_kod_attachment_seq")
 @Data
 @EqualsAndHashCode(callSuper = true)
 @TenantIgnore
-public class PartyFileDO extends BaseDO {
+public class PartyFileKodAttachmentDO extends BaseDO {
 
     @TableId
     private Long id;
 
-    private String title;
-
-    private Long categoryId;
-
-    private String summary;
-
-    private String content;
-
-    private String attachmentFileIds;
-
-    private Integer storageType;
+    private Long fileId;
 
     private Long kodSourceId;
 
-    private String kodFolderPath;
+    private String kodFilePath;
 
-    private String kodFolderName;
-
-    private Integer status;
-
-    private LocalDateTime publishTime;
+    private String kodParentPath;
 }

@@ -46,7 +46,7 @@ const emit = defineEmits([
   'update:modelValue',
   'delete',
 ]);
-const { accept, helpText, maxNumber, maxSize } = toRefs(props);
+const { accept, disabled, helpText, maxNumber, maxSize } = toRefs(props);
 const isInnerOperate = ref<boolean>(false);
 const { getStringAccept } = useUploadType({
   acceptRef: accept,
@@ -75,6 +75,13 @@ const isFirstRender = ref<boolean>(true); // 是否第一次渲染
 const uploadNumber = ref<number>(0); // 上传文件计数器
 const uploadList = ref<any[]>([]); // 临时上传列表
 
+function normalizeInputValue(value: unknown): Array<Record<string, any> | string> {
+  if (value === undefined || value === null || value === '') {
+    return [];
+  }
+  return Array.isArray(value) ? (value as Array<Record<string, any> | string>) : [value as Record<string, any> | string];
+}
+
 watch(
   currentValue,
   async (v) => {
@@ -82,13 +89,8 @@ watch(
       isInnerOperate.value = false;
       return;
     }
-    let value: string | string[] = [];
-    if (v) {
-      if (Array.isArray(v)) {
-        value = v;
-      } else {
-        value.push(v);
-      }
+    const value = normalizeInputValue(v);
+    if (value.length > 0) {
       fileList.value = value
         .map((item, i) => {
           if (item && isString(item)) {
@@ -161,6 +163,10 @@ async function handleRemove(file: UploadFile) {
 function handleCancel() {
   previewOpen.value = false;
   previewTitle.value = '';
+}
+
+function resolveBoolean(value?: boolean | (() => boolean)) {
+  return typeof value === 'function' ? value() : Boolean(value);
 }
 
 /**
@@ -312,7 +318,7 @@ function getValue() {
       :accept="getStringAccept"
       :before-upload="beforeUpload"
       :custom-request="customRequest"
-      :disabled="disabled"
+      :disabled="resolveBoolean(disabled)"
       :list-type="listType"
       :max-count="maxNumber"
       :multiple="multiple"

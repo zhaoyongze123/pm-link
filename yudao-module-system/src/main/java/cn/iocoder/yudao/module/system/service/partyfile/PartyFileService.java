@@ -23,4 +23,6 @@ public interface PartyFileService {
     PartyFileRespVO getMyPartyFileDetail(Long id, Long userId, String userNickname);
 
     PartyFileRespVO getMyPartyFileAttachment(Long id, Long fileId, Long userId, String userNickname, Integer readSource);
+
+    void validateAttachmentAccessible(Long id, Long fileId);
 }

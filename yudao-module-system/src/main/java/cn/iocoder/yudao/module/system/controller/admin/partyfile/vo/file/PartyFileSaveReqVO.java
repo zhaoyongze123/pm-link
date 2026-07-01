@@ -37,6 +37,19 @@ public class PartyFileSaveReqVO {
     @Schema(description = "附件编号列表，逗号分隔", example = "1,2,3")
     private String attachmentFileIds;
 
+    @Schema(description = "存储类型 1本地 2可道云", requiredMode = Schema.RequiredMode.REQUIRED, example = "1")
+    @NotNull(message = "存储类型不能为空")
+    private Integer storageType;
+
+    @Schema(description = "可道云来源编号", example = "1")
+    private Long kodSourceId;
+
+    @Schema(description = "可道云目录路径", example = "{source:1001}/党务通知")
+    private String kodFolderPath;
+
+    @Schema(description = "可道云目录名称", example = "党务通知")
+    private String kodFolderName;
+
     @Schema(description = "状态", requiredMode = Schema.RequiredMode.REQUIRED, example = "0")
     @NotNull(message = "状态不能为空")
     private Integer status;

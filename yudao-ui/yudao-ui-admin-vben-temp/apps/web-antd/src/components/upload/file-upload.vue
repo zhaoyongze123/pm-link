@@ -2,7 +2,7 @@
 import type { UploadFile, UploadProps } from 'ant-design-vue';
 import type { UploadRequestOption } from 'ant-design-vue/lib/vc-upload/interface';
 
-import type { FileUploadProps } from './typing';
+import type { FileUploadExtraAction, FileUploadProps } from './typing';
 
 import type { AxiosProgressEvent } from '#/api/infra/file';
 
@@ -42,7 +42,7 @@ const emit = defineEmits([
   'returnText',
   'preview',
 ]);
-const { accept, helpText, maxNumber, maxSize } = toRefs(props);
+const { accept, disabled, helpText, maxNumber, maxSize } = toRefs(props);
 const isInnerOperate = ref<boolean>(false);
 const { getStringAccept } = useUploadType({
   acceptRef: accept,
@@ -68,6 +68,13 @@ const isFirstRender = ref<boolean>(true); // 是否第一次渲染
 const uploadNumber = ref<number>(0); // 上传文件计数器
 const uploadList = ref<any[]>([]); // 临时上传列表
 
+function normalizeInputValue(value: unknown): Array<Record<string, any> | string> {
+  if (value === undefined || value === null || value === '') {
+    return [];
+  }
+  return Array.isArray(value) ? (value as Array<Record<string, any> | string>) : [value as Record<string, any> | string];
+}
+
 watch(
   currentValue,
   (v) => {
@@ -75,13 +82,8 @@ watch(
       isInnerOperate.value = false;
       return;
     }
-    let value: string[] = [];
-    if (v) {
-      if (Array.isArray(v)) {
-        value = v;
-      } else {
-        value.push(v);
-      }
+    const value = normalizeInputValue(v);
+    if (value.length > 0) {
       fileList.value = value
         .map((item, i) => {
           if (item && isString(item)) {
@@ -108,6 +110,22 @@ watch(
     deep: true,
   },
 );
+
+function resolveBoolean(value?: boolean | (() => boolean)) {
+  return typeof value === 'function' ? value() : Boolean(value);
+}
+
+function isActionVisible(action: FileUploadExtraAction) {
+  return action.show === undefined ? true : resolveBoolean(action.show);
+}
+
+function isActionDisabled(action: FileUploadExtraAction) {
+  return resolveBoolean(disabled.value) || resolveBoolean(action.disabled);
+}
+
+function handleExtraActionClick(action: FileUploadExtraAction) {
+  action.onClick();
+}
 
 /** 处理文件删除 */
 async function handleRemove(file: UploadFile) {
@@ -220,10 +238,11 @@ function handleUploadSuccess(res: any, file: File) {
   // 添加到临时上传列表
   const fileUrl = res?.url || res?.data || res;
   uploadList.value.push({
-    name: file.name,
+    name: res?.name || file.name,
     url: fileUrl,
+    response: res,
     status: UploadResultStatus.DONE,
-    uid: file.name + Date.now(),
+    uid: String(res?.id || file.name + Date.now()),
   });
 
   // 检查是否所有文件都上传完成
@@ -279,13 +298,53 @@ function getValue() {
 
 <template>
   <div>
+    <div
+      v-if="!drag && fileList && fileList.length < maxNumber"
+      class="mb-2 flex flex-wrap items-center gap-2"
+    >
+      <Upload
+        v-bind="$attrs"
+        v-model:file-list="fileList"
+        :accept="getStringAccept"
+        :before-upload="beforeUpload"
+        :custom-request="customRequest"
+        :disabled="resolveBoolean(disabled)"
+        :max-count="maxNumber"
+        :multiple="multiple"
+        list-type="text"
+        :progress="{ showInfo: true }"
+        :show-upload-list="{
+          showPreviewIcon: true,
+          showRemoveIcon: true,
+          showDownloadIcon: true,
+        }"
+        @remove="handleRemove"
+        @preview="handlePreview"
+        @reject="handleExceed"
+      >
+        <Button :disabled="resolveBoolean(disabled)">
+          <IconifyIcon icon="lucide:cloud-upload" />
+          {{ uploadText || $t('ui.upload.upload') }}
+        </Button>
+      </Upload>
+      <Button
+        v-for="action in extraActions || []"
+        v-show="isActionVisible(action)"
+        :key="action.key"
+        :disabled="isActionDisabled(action)"
+        @click.stop.prevent="handleExtraActionClick(action)"
+      >
+        {{ action.label }}
+      </Button>
+    </div>
     <Upload
+      v-else
       v-bind="$attrs"
       v-model:file-list="fileList"
       :accept="getStringAccept"
       :before-upload="beforeUpload"
       :custom-request="customRequest"
-      :disabled="disabled"
+      :disabled="resolveBoolean(disabled)"
       :max-count="maxNumber"
       :multiple="multiple"
       list-type="text"
@@ -308,23 +367,17 @@ function getValue() {
           支持{{ accept.join('/') }}格式文件，不超过{{ maxSize }}MB
         </p>
       </div>
-      <div v-else-if="fileList && fileList.length < maxNumber">
-        <Button>
-          <IconifyIcon icon="lucide:cloud-upload" />
-          {{ $t('ui.upload.upload') }}
-        </Button>
-      </div>
-      <div
-        v-if="showDescription && !drag"
-        class="mt-2 flex flex-wrap items-center"
-      >
-        请上传不超过
-        <div class="mx-1 font-bold text-primary">{{ maxSize }}MB</div>
-        的
-        <div class="mx-1 font-bold text-primary">{{ accept.join('/') }}</div>
-        格式文件
-      </div>
     </Upload>
+    <div
+      v-if="showDescription && !drag"
+      class="mt-2 flex flex-wrap items-center"
+    >
+      请上传不超过
+      <div class="mx-1 font-bold text-primary">{{ maxSize }}MB</div>
+      的
+      <div class="mx-1 font-bold text-primary">{{ accept.join('/') }}</div>
+      格式文件
+    </div>
   </div>
 </template>
 

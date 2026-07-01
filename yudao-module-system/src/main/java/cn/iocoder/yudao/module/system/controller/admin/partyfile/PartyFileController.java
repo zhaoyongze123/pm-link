@@ -6,13 +6,17 @@ import cn.iocoder.yudao.framework.common.util.http.HttpUtils;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.security.core.util.SecurityFrameworkUtils;
 import cn.iocoder.yudao.module.infra.dal.dataobject.file.FileDO;
-import cn.iocoder.yudao.module.infra.service.file.FileService;
+import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.PartyFileAttachmentUploadRespVO;
+import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.PartyFileKodFileRespVO;
+import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.PartyFileKodFilesReqVO;
+import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.PartyFileKodSelectReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.PartyFileMyPageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.PartyFileAttachmentRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.PartyFilePageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.PartyFileRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.file.PartyFileSaveReqVO;
 import cn.iocoder.yudao.module.system.enums.partyfile.PartyFileReadSourceEnum;
+import cn.iocoder.yudao.module.system.service.partyfile.PartyFileAttachmentService;
 import cn.iocoder.yudao.module.system.service.partyfile.PartyFileService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -25,7 +29,9 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletResponse;
 import javax.validation.Valid;
 import java.io.IOException;
+import java.util.List;
 import java.util.Objects;
+import org.springframework.web.multipart.MultipartFile;
 
 import static cn.iocoder.yudao.framework.common.pojo.CommonResult.success;
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
@@ -40,7 +46,7 @@ public class PartyFileController {
     @Resource
     private PartyFileService partyFileService;
     @Resource
-    private FileService fileService;
+    private PartyFileAttachmentService partyFileAttachmentService;
 
     @PostMapping("/create")
     @Operation(summary = "创建党务文件")
@@ -103,6 +109,30 @@ public class PartyFileController {
                 PartyFileReadSourceEnum.fromAction(action).getSource()));
     }
 
+    @PostMapping("/attachment/upload")
+    @Operation(summary = "上传党务文件附件")
+    @PreAuthorize("@ss.hasPermission('system:party-file:update')")
+    public CommonResult<PartyFileAttachmentUploadRespVO> uploadAttachment(@RequestParam("file") MultipartFile file,
+                                                                          @RequestParam("storageType") Integer storageType,
+                                                                          @RequestParam(value = "kodSourceId", required = false) Long kodSourceId,
+                                                                          @RequestParam(value = "kodFolderPath", required = false) String kodFolderPath) throws Exception {
+        return success(partyFileAttachmentService.uploadAttachment(file, storageType, kodSourceId, kodFolderPath));
+    }
+
+    @PostMapping("/attachment/kod-files")
+    @Operation(summary = "获取可道云目录文件列表")
+    @PreAuthorize("@ss.hasPermission('system:party-file:update')")
+    public CommonResult<List<PartyFileKodFileRespVO>> getKodFiles(@Valid @RequestBody PartyFileKodFilesReqVO reqVO) {
+        return success(partyFileAttachmentService.getKodFiles(reqVO.getKodSourceId(), reqVO.getKodFolderPath()));
+    }
+
+    @PostMapping("/attachment/kod-select")
+    @Operation(summary = "选择可道云已有文件作为党务附件")
+    @PreAuthorize("@ss.hasPermission('system:party-file:update')")
+    public CommonResult<List<PartyFileAttachmentUploadRespVO>> selectKodFiles(@Valid @RequestBody PartyFileKodSelectReqVO reqVO) {
+        return success(partyFileAttachmentService.selectKodFiles(reqVO));
+    }
+
     @GetMapping("/attachment/download")
     @Operation(summary = "下载党务文件附件")
     @PreAuthorize("@ss.hasPermission('system:party-file:query')")
@@ -150,8 +180,7 @@ public class PartyFileController {
                 .filter(item -> Objects.equals(item.getId(), fileId))
                 .findFirst()
                 .orElseThrow(() -> exception(PARTY_FILE_ATTACHMENT_NOT_FOUND));
-        FileDO file = fileService.getFile(fileId);
-        byte[] content = fileService.getFileContent(file.getConfigId(), file.getPath());
+        byte[] content = partyFileAttachmentService.getAttachmentContent(fileId);
         ServletUtils.writeAttachment(response, attachment.getName(), content);
     }
 
@@ -160,8 +189,7 @@ public class PartyFileController {
                 .filter(item -> Objects.equals(item.getId(), fileId))
                 .findFirst()
                 .orElseThrow(() -> exception(PARTY_FILE_ATTACHMENT_NOT_FOUND));
-        FileDO file = fileService.getFile(fileId);
-        byte[] content = fileService.getFileContent(file.getConfigId(), file.getPath());
+        byte[] content = partyFileAttachmentService.getAttachmentContent(fileId);
         writeInline(response, attachment.getName(), attachment.getType(), content);
     }
 

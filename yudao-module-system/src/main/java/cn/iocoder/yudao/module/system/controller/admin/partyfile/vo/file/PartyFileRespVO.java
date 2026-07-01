@@ -24,6 +24,14 @@ public class PartyFileRespVO {
 
     private String attachmentFileIds;
 
+    private Integer storageType;
+
+    private Long kodSourceId;
+
+    private String kodFolderPath;
+
+    private String kodFolderName;
+
     private Integer status;
 
     private LocalDateTime publishTime;

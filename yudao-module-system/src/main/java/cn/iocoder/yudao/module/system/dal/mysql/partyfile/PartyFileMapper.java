@@ -29,4 +29,9 @@ public interface PartyFileMapper extends BaseMapperX<PartyFileDO> {
                 .eq(PartyFileDO::getStatus, 0)
                 .orderByDesc(PartyFileDO::getPublishTime, PartyFileDO::getId));
     }
+
+    default java.util.List<PartyFileDO> selectListByKodSourceId(Long kodSourceId) {
+        return selectList(new LambdaQueryWrapperX<PartyFileDO>()
+                .eq(PartyFileDO::getKodSourceId, kodSourceId));
+    }
 }
