@@ -21,6 +21,7 @@ import lombok.SneakyThrows;
 import org.springframework.stereotype.Service;
 
 import javax.annotation.Resource;
+import java.util.Collections;
 import java.util.List;
 
 import static cn.hutool.core.date.DatePattern.PURE_DATE_PATTERN;
@@ -162,7 +163,11 @@ public class FileServiceImpl implements FileService {
         createReqVO.setUrl(HttpUtils.removeUrlQuery(createReqVO.getUrl())); // 目的：移除私有桶情况下，URL 的签名参数
         FileDO file = BeanUtils.toBean(createReqVO, FileDO.class);
         fileMapper.insert(file);
-        return file.getId();
+        if (file.getId() != null) {
+            return file.getId();
+        }
+        List<FileDO> files = fileMapper.selectListByUrls(Collections.singletonList(createReqVO.getUrl()));
+        return files.isEmpty() ? null : files.get(0).getId();
     }
 
     @Override
