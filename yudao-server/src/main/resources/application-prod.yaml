@@ -1,0 +1,38 @@
+server:
+  port: 48080
+
+yudao:
+  security:
+    permit-all-urls:
+      - /admin-api/system/auth/kod-sso/start
+      - /admin-api/system/auth/kod-sso/callback
+      - /admin-api/system/auth/kod-sso/exchange
+  tenant:
+    ignore-urls:
+      - /admin-api/system/auth/kod-sso/start
+      - /admin-api/system/auth/kod-sso/callback
+      - /admin-api/system/auth/kod-sso/exchange
+  kod-sso:
+    enabled: ${KOD_SSO_ENABLED:true}
+    base-url: ${KOD_SSO_BASE_URL:http://replace-with-kodbox-host}
+    app-name: ${KOD_SSO_APP_NAME:user:all}
+    redirect-uri: ${KOD_SSO_REDIRECT_URI:http://replace-with-frontend-host/#/auth/kod-sso-login?tenantId=1}
+    callback-base-url: ${KOD_SSO_CALLBACK_BASE_URL:http://replace-with-backend-host}
+    tenant-id: ${KOD_SSO_TENANT_ID:1}
+    auto-create-user: ${KOD_SSO_AUTO_CREATE_USER:false}
+
+wx:
+  mp:
+    app-id: ${WX_MP_APP_ID:}
+    secret: ${WX_MP_SECRET:}
+    config-storage:
+      type: RedisTemplate
+      key-prefix: wx
+      http-client-type: HttpClient
+  miniapp:
+    appid: ${WX_MINIAPP_APP_ID:}
+    secret: ${WX_MINIAPP_SECRET:}
+    config-storage:
+      type: RedisTemplate
+      key-prefix: wa
+      http-client-type: HttpClient

@@ -57,3 +57,6 @@ application-my.yaml
 # Local deployment artifacts
 /ruoyi-*-local.tar
 /ruoyi-vue-pro.sql.gz
+/script/docker/env/stage.env
+/script/docker/env/prod.env
+/script/docker/env/.stage.ci.env

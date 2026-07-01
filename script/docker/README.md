@@ -2,13 +2,35 @@
 
 ## 目标
 
-这套脚本用于当前仓库的 OA/BPM 版本在本地构建镜像，并上传到 `192.168.1.107` 进行预览部署。
+这套脚本用于当前仓库的 OA/BPM 版本进行三套环境管理：
+
+- `dev`：本地开发 / 本机联调
+- `stage`：`192.168.1.107` 生产测试环境
+- `prod`：未来正式生产环境
+
+环境变量入口统一放在：
+
+- `script/docker/env/dev.env`
+- `script/docker/env/stage.env`（本机真实 stage 配置，不入库）
+- `script/docker/env/prod.env`（本机真实 prod 配置，不入库）
+- `script/docker/env/stage.env.example`（stage 模板，入库）
+- `script/docker/env/prod.env.example`（prod 模板，入库）
+
+前端构建环境变量统一放在：
+
+- `script/docker/env/frontend.dev.env`
+- `script/docker/env/frontend.stage.env`
+- `script/docker/env/frontend.prod.env`
+
+当前已验证的 stage 远端目录：
+
+- `/home/daiwei/deployments/ruoyi-release`
 
 ## 本地直接运行
 
 ```bash
-cd /Users/mac/项目/若伊部署/script/docker
-docker compose up -d --build
+cd /Users/mac/项目/若伊部署
+docker compose --env-file script/docker/env/dev.env -f script/docker/docker-compose.yml up -d --build
 ```
 
 默认端口：
@@ -18,11 +40,13 @@ docker compose up -d --build
 - MySQL：`127.0.0.1:13306`
 - Redis：`127.0.0.1:16379`
 
-## 部署到 192.168.1.107
+## 手工部署 stage
 
 ```bash
 cd /Users/mac/项目/若伊部署
-bash script/docker/deploy-to-107.sh
+cp script/docker/env/stage.env.example script/docker/env/stage.env
+# 按实际情况填写密码、微信、小程序等机密项
+DEPLOY_ENV=stage bash script/docker/deploy.sh
 ```
 
 脚本流程：
@@ -30,14 +54,77 @@ bash script/docker/deploy-to-107.sh
 1. 本地执行 `mvn -pl yudao-server -am clean package -DskipTests`
 2. 构建 `ruoyi-server:local` 和 `ruoyi-admin:local`
 3. `docker save` 导出镜像 tar
-4. 上传到 `192.168.1.107`
-5. 在远端 `/home/daiwei/deployments/ruoyi-release` 执行 `docker compose up -d --no-build --force-recreate server admin`
+4. 上传到目标环境机器
+5. 在远端 `/home/daiwei/deployments/ruoyi-release` 重载应用
 6. 校验 `http://127.0.0.1:48080/actuator/health`
+
+说明：
+
+- `bash script/docker/deploy.sh` 默认读取 `script/docker/env/stage.env`
+- 如果 `script/docker/env/stage.env` 不存在，会回退读取 `script/docker/env/stage.env.example`
+- 默认是“只更新应用，不覆盖数据库”
+- 如果要做一次全量数据库覆盖，显式执行：
+
+```bash
+cd /Users/mac/项目/若伊部署
+IMPORT_DATABASE=true bash script/docker/deploy.sh
+```
+
+- `bash script/docker/deploy-to-107.sh` 是兼容入口，固定走 `stage`，并默认 `IMPORT_DATABASE=true`
+
+## 切换环境
+
+切 `stage`：
+
+```bash
+cp script/docker/env/stage.env.example script/docker/env/stage.env
+DEPLOY_ENV=stage bash script/docker/deploy.sh
+```
+
+切 `prod`：
+
+```bash
+cp script/docker/env/prod.env.example script/docker/env/prod.env
+DEPLOY_ENV=prod bash script/docker/deploy.sh
+```
+
+本地起 `dev`：
+
+```bash
+docker compose --env-file script/docker/env/dev.env -f script/docker/docker-compose.yml up -d --build
+```
+
+## GitHub Actions 自动部署
+
+仓库新增了 `.github/workflows/deploy-stage.yml`，用途是“自动部署 stage 应用镜像，不覆盖数据库”。
+
+注意：
+
+- stage 目标地址是内网 `192.168.1.107`，GitHub 官方托管 Runner 无法直接访问。
+- workflow 必须跑在能访问该内网地址的 `self-hosted runner` 上，并打上 `ruoyi-deploy` 标签。
+- workflow 会用 `script/docker/env/stage.env.example` 作为模板，再把 GitHub Secrets 注入成临时 `.stage.ci.env`。
+- workflow 最终直接调用 `script/docker/deploy.sh`，和手工部署走同一套逻辑，避免两边漂移。
+
+需要配置的 Secret：
+
+- `DEPLOY_SSH_PRIVATE_KEY`：用于登录 stage 机器的私钥
+- `STAGE_MYSQL_ROOT_PASSWORD`
+- `STAGE_WX_MP_APP_ID`
+- `STAGE_WX_MP_SECRET`
+- `STAGE_WX_MINIAPP_APP_ID`
+- `STAGE_WX_MINIAPP_SECRET`
 
 ## 环境变量覆盖
 
 可通过环境变量覆盖默认值，例如：
 
 ```bash
-REMOTE_HOST=192.168.1.107 REMOTE_PASSWORD=000000 bash script/docker/deploy-to-107.sh
+DEPLOY_ENV=stage REMOTE_PASSWORD=000000 bash script/docker/deploy.sh
 ```
+
+## 维护约定
+
+- `dev` 直接使用已入库的 `dev.env`
+- `stage / prod` 只提交 `.env.example` 模板，真实机密保留在部署机或 CI Secret
+- 手工部署和 CI 部署统一走 `script/docker/deploy.sh`
+- `192.168.1.107` 明确归类为 `stage`，不要再把它当正式生产环境

@@ -1,5 +1,7 @@
 FROM docker.m.daocloud.io/library/node:22-alpine AS builder
 
+ARG FRONTEND_ENV_FILE=script/docker/frontend.env.production
+
 ENV PNPM_HOME="/pnpm"
 ENV PATH="${PNPM_HOME}:${PATH}"
 ENV NODE_OPTIONS=--max-old-space-size=8192
@@ -17,7 +19,7 @@ RUN corepack enable
 WORKDIR /build
 
 COPY yudao-ui/yudao-ui-admin-vben-temp/ /build/
-COPY script/docker/frontend.env.production /build/apps/web-antd/.env.production
+COPY ${FRONTEND_ENV_FILE} /build/apps/web-antd/.env.production
 
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy pnpm install --frozen-lockfile
 RUN env -u HTTP_PROXY -u HTTPS_PROXY -u ALL_PROXY -u http_proxy -u https_proxy -u all_proxy pnpm run build --filter=@vben/web-antd
