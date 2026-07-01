@@ -11,6 +11,9 @@ CREATE TABLE IF NOT EXISTS `party_file_kod_source`  (
   `base_url` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '可道云地址',
   `app_name` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT 'appName',
   `access_token` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '访问令牌',
+  `service_username` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '服务账号',
+  `service_password` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '服务密码(加密)',
+  `token_expire_time` datetime NULL DEFAULT NULL COMMENT '令牌过期时间',
   `root_folder_path` varchar(512) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '根目录路径',
   `root_folder_name` varchar(255) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL COMMENT '根目录名称',
   `status` tinyint NOT NULL DEFAULT 0 COMMENT '状态',
@@ -23,6 +26,11 @@ CREATE TABLE IF NOT EXISTS `party_file_kod_source`  (
   PRIMARY KEY (`id`) USING BTREE,
   UNIQUE KEY `uk_party_file_kod_source_name` (`name`) USING BTREE
 ) ENGINE = InnoDB CHARACTER SET = utf8mb4 COLLATE = utf8mb4_unicode_ci COMMENT = '党务文件可道云目录来源表';
+
+ALTER TABLE `party_file_kod_source`
+  ADD COLUMN IF NOT EXISTS `service_username` varchar(100) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '服务账号' AFTER `access_token`,
+  ADD COLUMN IF NOT EXISTS `service_password` varchar(1024) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NULL DEFAULT NULL COMMENT '服务密码(加密)' AFTER `service_username`,
+  ADD COLUMN IF NOT EXISTS `token_expire_time` datetime NULL DEFAULT NULL COMMENT '令牌过期时间' AFTER `service_password`;
 
 CREATE TABLE IF NOT EXISTS `party_file_kod_attachment`  (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',

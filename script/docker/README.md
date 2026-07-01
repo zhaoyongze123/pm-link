@@ -56,13 +56,16 @@ DEPLOY_ENV=stage bash script/docker/deploy.sh
 3. `docker save` 导出镜像 tar
 4. 上传到目标环境机器
 5. 在远端 `/home/daiwei/deployments/ruoyi-release` 重载应用
-6. 校验 `http://127.0.0.1:48080/actuator/health`
+6. 自动清理本地导出包、未使用 Docker 镜像 / 构建缓存，以及服务器上的旧 dangling 镜像
+7. 校验 `http://127.0.0.1:48080/actuator/health`
 
 说明：
 
 - `bash script/docker/deploy.sh` 默认读取 `script/docker/env/stage.env`
 - 如果 `script/docker/env/stage.env` 不存在，会回退读取 `script/docker/env/stage.env.example`
 - 默认是“只更新应用，不覆盖数据库”
+- 默认会自动删除本地导出的 tar / SQL 包，并清理本地未使用的 Docker 镜像与 build cache
+- 服务器在新镜像启动成功后，也会自动清理旧的 dangling 镜像和上传残留文件
 - 如果要做一次全量数据库覆盖，显式执行：
 
 ```bash
@@ -120,6 +123,12 @@ docker compose --env-file script/docker/env/dev.env -f script/docker/docker-comp
 
 ```bash
 DEPLOY_ENV=stage REMOTE_PASSWORD=000000 bash script/docker/deploy.sh
+```
+
+如果临时不想自动清理本地构建产物，可以显式关闭：
+
+```bash
+CLEAN_LOCAL_ARTIFACTS=false CLEAN_LOCAL_DOCKER_CACHE=false DEPLOY_ENV=stage bash script/docker/deploy.sh
 ```
 
 ## 维护约定

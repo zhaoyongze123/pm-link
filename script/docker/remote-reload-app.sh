@@ -37,6 +37,7 @@ for i in $(seq 1 60); do
 done
 
 rm -f "/tmp/${SERVER_TAR}" "/tmp/${ADMIN_TAR}" "${REMOTE_ENV_FILE}"
+docker image prune -f >/dev/null 2>&1 || true
 
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}' | grep 'ruoyi-'
 curl -fsS "${HEALTH_URL}"

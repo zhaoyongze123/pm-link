@@ -24,7 +24,11 @@ export namespace SystemPartyFileApi {
     name: string;
     baseUrl: string;
     appName: string;
-    accessToken: string;
+    accessToken?: string;
+    serviceUsername?: string;
+    servicePassword?: string;
+    hasServicePassword?: boolean;
+    tokenExpireTime?: Date | string;
     rootFolderPath: string;
     rootFolderName: string;
     status: number;

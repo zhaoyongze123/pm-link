@@ -5,6 +5,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
+import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.util.http.HttpUtils;
 import cn.iocoder.yudao.framework.common.util.json.JsonUtils;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
@@ -31,6 +32,7 @@ import org.springframework.web.multipart.MultipartFile;
 import javax.annotation.Resource;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 import static cn.iocoder.yudao.framework.common.exception.util.ServiceExceptionUtil.exception;
 import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.PARTY_FILE_ATTACHMENT_NOT_FOUND;
@@ -120,15 +122,8 @@ public class PartyFileAttachmentServiceImpl implements PartyFileAttachmentServic
             return fileService.getFileContent(file.getConfigId(), file.getPath());
         }
         PartyFileKodSourceDO source = partyFileKodSourceService.getEnabledSource(kodAttachment.getKodSourceId());
-        String url = source.getBaseUrl()
-                + "?explorer/index/fileOut&accessToken=" + HttpUtils.encodeUtf8(source.getAccessToken())
-                + "&path=" + HttpUtils.encodeUtf8(kodAttachment.getKodFilePath());
-        try (HttpResponse response = HttpRequest.get(url).execute()) {
-            if (response.getStatus() >= 400) {
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "读取文件失败，HTTP " + response.getStatus());
-            }
-            return response.bodyBytes();
-        }
+        return partyFileKodSourceService.executeWithValidAccessToken(source, accessToken -> readKodFile(source,
+                accessToken, kodAttachment.getKodFilePath()));
     }
 
     private PartyFileAttachmentUploadRespVO uploadLocalAttachment(MultipartFile file) throws Exception {
@@ -154,33 +149,8 @@ public class PartyFileAttachmentServiceImpl implements PartyFileAttachmentServic
         PartyFileKodSourceDO source = partyFileKodSourceService.getEnabledSource(kodSourceId);
         String folderPath = StrUtil.trim(kodFolderPath);
         String targetPath = StrUtil.addSuffixIfNot(folderPath, "/") + buildKodFileName(file.getOriginalFilename());
-        String url = source.getBaseUrl() + "?explorer/upload/fileUpload"
-                + "&accessToken=" + HttpUtils.encodeUtf8(source.getAccessToken())
-                + "&path=" + HttpUtils.encodeUtf8(folderPath)
-                + "&fileInfo=1";
-        JsonNode fileInfo;
-        try (HttpResponse response = HttpRequest.post(url)
-                .form("file", file.getBytes(), file.getOriginalFilename())
-                .execute()) {
-            if (response.getStatus() >= 400) {
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "上传失败，HTTP " + response.getStatus());
-            }
-            JsonNode root = JsonUtils.parseTree(response.body());
-            if (root == null || root.isMissingNode()) {
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "上传返回为空");
-            }
-            if (root.has("code") && !root.get("code").asBoolean(false)) {
-                String message = root.has("data") ? root.get("data").asText() : root.asText();
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, message);
-            }
-            if (root.has("info") && root.get("info").isObject()) {
-                fileInfo = root.get("info");
-            } else if (root.has("data") && root.get("data").isObject()) {
-                fileInfo = root.get("data");
-            } else {
-                fileInfo = root;
-            }
-        }
+        JsonNode fileInfo = partyFileKodSourceService.executeWithValidAccessToken(source,
+                accessToken -> uploadKodFile(source, accessToken, folderPath, file));
         String actualFilePath = firstNonBlank(fileInfo, targetPath, "path", "pathDisplay", "downloadPath");
         if (StrUtil.isBlank(actualFilePath)) {
             actualFilePath = targetPath;
@@ -251,5 +221,88 @@ public class PartyFileAttachmentServiceImpl implements PartyFileAttachmentServic
             }
         }
         return defaultValue;
+    }
+
+    private byte[] readKodFile(PartyFileKodSourceDO source, String accessToken, String filePath) {
+        String url = source.getBaseUrl()
+                + "?explorer/index/fileOut&accessToken=" + HttpUtils.encodeUtf8(accessToken)
+                + "&path=" + HttpUtils.encodeUtf8(filePath);
+        try (HttpResponse response = HttpRequest.get(url).execute()) {
+            if (response.getStatus() >= 400) {
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "读取文件失败，HTTP " + response.getStatus());
+            }
+            String contentType = StrUtil.blankToDefault(response.header("Content-Type"), "");
+            if (StrUtil.containsIgnoreCase(contentType, "application/json")) {
+                JsonNode root = JsonUtils.parseTree(response.body());
+                String message = extractKodMessage(root);
+                if (partyFileKodSourceService.isKodAuthFailure(message)) {
+                    throw exception(PARTY_FILE_KOD_REQUEST_FAILED, message);
+                }
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, StrUtil.blankToDefault(message, "读取文件失败"));
+            }
+            return response.bodyBytes();
+        } catch (ServiceException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, ex.getMessage());
+        }
+    }
+
+    private JsonNode uploadKodFile(PartyFileKodSourceDO source, String accessToken, String folderPath,
+                                   MultipartFile file) throws Exception {
+        String url = source.getBaseUrl() + "?explorer/upload/fileUpload"
+                + "&accessToken=" + HttpUtils.encodeUtf8(accessToken)
+                + "&path=" + HttpUtils.encodeUtf8(folderPath)
+                + "&fileInfo=1";
+        try (HttpResponse response = HttpRequest.post(url)
+                .form("file", file.getBytes(), file.getOriginalFilename())
+                .execute()) {
+            if (response.getStatus() >= 400) {
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "上传失败，HTTP " + response.getStatus());
+            }
+            JsonNode root = JsonUtils.parseTree(response.body());
+            if (root == null || root.isMissingNode()) {
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "上传返回为空");
+            }
+            String message = extractKodMessage(root);
+            if (isKodFailure(root)) {
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, message);
+            }
+            if (root.has("info") && root.get("info").isObject()) {
+                return root.get("info");
+            }
+            if (root.has("data") && root.get("data").isObject()) {
+                return root.get("data");
+            }
+            return root;
+        }
+    }
+
+    private boolean isKodFailure(JsonNode root) {
+        if (root == null || root.isMissingNode()) {
+            return true;
+        }
+        if (!root.has("code")) {
+            return false;
+        }
+        JsonNode code = root.get("code");
+        if (code.isBoolean()) {
+            return !code.booleanValue();
+        }
+        String value = code.asText();
+        return Objects.equals("10001", value) || "false".equalsIgnoreCase(value);
+    }
+
+    private String extractKodMessage(JsonNode root) {
+        if (root == null || root.isMissingNode()) {
+            return null;
+        }
+        for (String key : new String[]{"data", "msg", "message", "info"}) {
+            JsonNode value = root.get(key);
+            if (value != null && !value.isNull() && value.isValueNode() && StrUtil.isNotBlank(value.asText())) {
+                return value.asText();
+            }
+        }
+        return null;
     }
 }

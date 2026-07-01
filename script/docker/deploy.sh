@@ -19,12 +19,32 @@ REMOTE_DB_CONTAINER="${REMOTE_DB_CONTAINER:-ruoyi-mysql}"
 DB_DUMP_GZ="${DB_DUMP_GZ:-ruoyi-vue-pro.sql.gz}"
 IMPORT_DATABASE="${IMPORT_DATABASE:-false}"
 REMOTE_ENV_BASENAME="${REMOTE_ENV_BASENAME:-ruoyi-deploy.env}"
+CLEAN_LOCAL_ARTIFACTS="${CLEAN_LOCAL_ARTIFACTS:-true}"
+CLEAN_LOCAL_DOCKER_CACHE="${CLEAN_LOCAL_DOCKER_CACHE:-true}"
 
 require_cmd() {
   if ! command -v "$1" >/dev/null 2>&1; then
     echo "[错误] 缺少命令: $1" >&2
     exit 1
   fi
+}
+
+cleanup_local_artifacts() {
+  if [ "${CLEAN_LOCAL_ARTIFACTS}" = "true" ]; then
+    rm -f "${ROOT_DIR}/${SERVER_TAR}" "${ROOT_DIR}/${ADMIN_TAR}" "${ROOT_DIR}/${DB_DUMP_GZ}"
+  fi
+}
+
+cleanup_local_docker_artifacts() {
+  if [ "${CLEAN_LOCAL_DOCKER_CACHE}" = "true" ]; then
+    docker image prune -f >/dev/null 2>&1 || true
+    docker builder prune -f >/dev/null 2>&1 || true
+  fi
+}
+
+cleanup_local() {
+  cleanup_local_artifacts
+  cleanup_local_docker_artifacts
 }
 
 load_env_file() {
@@ -113,6 +133,7 @@ dump_database() {
 
 save_images() {
   echo "[步骤] 导出镜像 tar"
+  rm -f "${ROOT_DIR}/${SERVER_TAR}" "${ROOT_DIR}/${ADMIN_TAR}"
   (cd "${ROOT_DIR}" && docker save -o "${SERVER_TAR}" "${SERVER_IMAGE}")
   (cd "${ROOT_DIR}" && docker save -o "${ADMIN_TAR}" "${ADMIN_IMAGE}")
 }
@@ -165,6 +186,7 @@ docker load -i "/tmp/${SERVER_TAR}"
 docker load -i "/tmp/${ADMIN_TAR}"
 docker compose up -d --no-build server admin
 rm -f "/tmp/${SERVER_TAR}" "/tmp/${ADMIN_TAR}" "/tmp/${DB_DUMP_GZ}" "/tmp/${REMOTE_ENV_BASENAME}" /tmp/remote-reload-app.sh
+docker image prune -f >/dev/null 2>&1 || true
 EOF
   remote_sh "curl -fsS http://127.0.0.1:48080/actuator/health"
 }
@@ -173,9 +195,17 @@ print_summary() {
   echo "[完成] 环境 ${DEPLOY_ENV} 已部署到 ${REMOTE_HOST:-local}"
   echo "[提示] 前端预览地址: http://${REMOTE_HOST:-127.0.0.1}:${ADMIN_PORT:-18080}"
   echo "[提示] 后端健康检查: http://${REMOTE_HOST:-127.0.0.1}:${SERVER_PORT:-48080}/actuator/health"
+  if [ "${CLEAN_LOCAL_ARTIFACTS}" = "true" ]; then
+    echo "[提示] 本地导出镜像和临时数据库包已自动清理"
+  fi
+  if [ "${CLEAN_LOCAL_DOCKER_CACHE}" = "true" ]; then
+    echo "[提示] 本地未使用的 Docker 镜像和构建缓存已自动清理"
+  fi
 }
 
 main() {
+  trap cleanup_local EXIT
+
   require_cmd mvn
   require_cmd docker
   require_cmd gzip

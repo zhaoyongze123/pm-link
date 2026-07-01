@@ -19,6 +19,14 @@ public class PartyFileKodSourceRespVO {
 
     private String accessToken;
 
+    private String serviceUsername;
+
+    private String servicePassword;
+
+    private Boolean hasServicePassword;
+
+    private LocalDateTime tokenExpireTime;
+
     private String rootFolderPath;
 
     private String rootFolderName;

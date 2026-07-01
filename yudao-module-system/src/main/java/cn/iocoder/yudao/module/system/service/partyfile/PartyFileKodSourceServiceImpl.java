@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.HttpRequest;
 import cn.hutool.http.HttpResponse;
+import cn.iocoder.yudao.framework.common.exception.ServiceException;
 import cn.iocoder.yudao.framework.common.enums.CommonStatusEnum;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.validation.annotation.Validated;
 
 import javax.annotation.Resource;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -33,6 +35,8 @@ import static cn.iocoder.yudao.module.system.enums.ErrorCodeConstants.*;
 @Validated
 public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService {
 
+    private static final int TOKEN_EXPIRE_MINUTES = 240;
+
     @Resource
     private PartyFileKodSourceMapper partyFileKodSourceMapper;
     @Resource
@@ -41,10 +45,7 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
     @Override
     public Long create(PartyFileKodSourceSaveReqVO reqVO) {
         validateNameUnique(reqVO.getName(), null);
-        PartyFileKodSourceDO source = BeanUtils.toBean(reqVO, PartyFileKodSourceDO.class);
-        source.setBaseUrl(normalizeBaseUrl(reqVO.getBaseUrl()));
-        source.setRootFolderPath(normalizeFolderPath(reqVO.getRootFolderPath()));
-        source.setIsDefault(Boolean.TRUE.equals(reqVO.getIsDefault()));
+        PartyFileKodSourceDO source = buildSource(reqVO, null);
         if (Boolean.TRUE.equals(source.getIsDefault())) {
             clearDefaultFlag();
         }
@@ -56,10 +57,7 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
     public void update(PartyFileKodSourceSaveReqVO reqVO) {
         PartyFileKodSourceDO exists = validateExists(reqVO.getId());
         validateNameUnique(reqVO.getName(), reqVO.getId());
-        PartyFileKodSourceDO updateObj = BeanUtils.toBean(reqVO, PartyFileKodSourceDO.class);
-        updateObj.setBaseUrl(normalizeBaseUrl(reqVO.getBaseUrl()));
-        updateObj.setRootFolderPath(normalizeFolderPath(reqVO.getRootFolderPath()));
-        updateObj.setIsDefault(Boolean.TRUE.equals(reqVO.getIsDefault()));
+        PartyFileKodSourceDO updateObj = buildSource(reqVO, exists);
         if (Boolean.TRUE.equals(updateObj.getIsDefault())) {
             clearDefaultFlag();
         } else if (Boolean.TRUE.equals(exists.getIsDefault())) {
@@ -100,6 +98,10 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
                 loadChildren(source, source.getRootFolderPath())));
     }
 
+    public interface KodAccessTokenCallback<T> {
+        T execute(String accessToken) throws Exception;
+    }
+
     public PartyFileKodSourceDO getEnabledSource(Long id) {
         PartyFileKodSourceDO source = validateExists(id);
         if (!Objects.equals(source.getStatus(), CommonStatusEnum.ENABLE.getStatus())) {
@@ -137,26 +139,37 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
     }
 
     public JsonNode requestKodFolderList(PartyFileKodSourceDO source, String path) {
-        String url = source.getBaseUrl()
-                + "?explorer/list/path&accessToken=" + HttpUtils.encodeUtf8(source.getAccessToken())
-                + "&path=" + HttpUtils.encodeUtf8(normalizeFolderPath(path));
-        try (HttpResponse response = HttpRequest.get(url).execute()) {
-            String body = response.body();
-            JsonNode root = JsonUtils.parseTree(body);
-            if (root == null || root.isMissingNode()) {
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "目录返回为空");
-            }
-            JsonNode data = root.path("data");
-            if (isKodFailure(root, data)) {
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, extractKodMessage(root, data));
-            }
-            return data.isObject() ? data : root;
+        try {
+            return executeWithValidAccessToken(source, accessToken -> {
+                String url = source.getBaseUrl()
+                        + "?explorer/list/path&accessToken=" + HttpUtils.encodeUtf8(accessToken)
+                        + "&path=" + HttpUtils.encodeUtf8(normalizeFolderPath(path));
+                return requestKodJson(url, "目录返回为空");
+            });
         } catch (Exception ex) {
-            if (ex instanceof cn.iocoder.yudao.framework.common.exception.ServiceException) {
-                throw ex;
+            if (ex instanceof RuntimeException) {
+                throw (RuntimeException) ex;
             }
             throw exception(PARTY_FILE_KOD_REQUEST_FAILED, ex.getMessage());
         }
+    }
+
+    public <T> T executeWithValidAccessToken(PartyFileKodSourceDO source, KodAccessTokenCallback<T> callback) throws Exception {
+        PartyFileKodSourceDO current = source;
+        String accessToken = getValidAccessToken(current);
+        try {
+            return callback.execute(accessToken);
+        } catch (ServiceException ex) {
+            if (!shouldRetryByRefreshing(current, ex)) {
+                throw ex;
+            }
+            PartyFileKodSourceDO refreshed = refreshAccessToken(validateExists(current.getId()));
+            return callback.execute(refreshed.getAccessToken());
+        }
+    }
+
+    public boolean isKodAuthFailure(String message) {
+        return StrUtil.containsAny(StrUtil.blankToDefault(message, ""), "您尚未登录", "登录已失效", "请先登录");
     }
 
     private boolean isKodFailure(JsonNode root, JsonNode data) {
@@ -228,5 +241,143 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
             throw exception(PARTY_FILE_KOD_FOLDER_PATH_INVALID);
         }
         return normalized;
+    }
+
+    private PartyFileKodSourceDO buildSource(PartyFileKodSourceSaveReqVO reqVO, PartyFileKodSourceDO exists) {
+        PartyFileKodSourceDO source = BeanUtils.toBean(reqVO, PartyFileKodSourceDO.class);
+        source.setBaseUrl(normalizeBaseUrl(reqVO.getBaseUrl()));
+        source.setRootFolderPath(normalizeFolderPath(reqVO.getRootFolderPath()));
+        source.setIsDefault(Boolean.TRUE.equals(reqVO.getIsDefault()));
+        source.setServiceUsername(StrUtil.trimToNull(reqVO.getServiceUsername()));
+        source.setServicePassword(resolveServicePassword(reqVO, exists));
+        source.setAccessToken(StrUtil.trimToEmpty(reqVO.getAccessToken()));
+        if (StrUtil.isBlank(source.getServiceUsername())) {
+            source.setServicePassword(null);
+            source.setTokenExpireTime(null);
+        }
+        validateAuthConfig(source);
+        if (hasServiceCredential(source)) {
+            source = refreshAccessToken(source);
+        } else {
+            source.setTokenExpireTime(null);
+        }
+        return source;
+    }
+
+    private String resolveServicePassword(PartyFileKodSourceSaveReqVO reqVO, PartyFileKodSourceDO exists) {
+        String password = StrUtil.trimToNull(reqVO.getServicePassword());
+        if (password != null) {
+            return password;
+        }
+        if (exists == null) {
+            return null;
+        }
+        if (StrUtil.equals(StrUtil.trimToNull(reqVO.getServiceUsername()), exists.getServiceUsername())) {
+            return exists.getServicePassword();
+        }
+        return null;
+    }
+
+    private void validateAuthConfig(PartyFileKodSourceDO source) {
+        boolean hasServiceUsername = StrUtil.isNotBlank(source.getServiceUsername());
+        boolean hasServicePassword = StrUtil.isNotBlank(source.getServicePassword());
+        boolean hasAccessToken = StrUtil.isNotBlank(source.getAccessToken());
+        if (hasServiceUsername ^ hasServicePassword) {
+            throw exception(PARTY_FILE_STORAGE_CONFIG_INVALID);
+        }
+        if (!hasAccessToken && !hasServiceUsername) {
+            throw exception(PARTY_FILE_STORAGE_CONFIG_INVALID);
+        }
+    }
+
+    private String getValidAccessToken(PartyFileKodSourceDO source) {
+        if (hasServiceCredential(source) && isTokenExpired(source)) {
+            source = refreshAccessToken(source);
+        }
+        if (StrUtil.isBlank(source.getAccessToken())) {
+            throw exception(PARTY_FILE_STORAGE_CONFIG_INVALID);
+        }
+        return source.getAccessToken();
+    }
+
+    private boolean isTokenExpired(PartyFileKodSourceDO source) {
+        if (StrUtil.isBlank(source.getAccessToken())) {
+            return true;
+        }
+        LocalDateTime expireTime = source.getTokenExpireTime();
+        return expireTime == null || expireTime.minusMinutes(5).isBefore(LocalDateTime.now());
+    }
+
+    private boolean hasServiceCredential(PartyFileKodSourceDO source) {
+        return StrUtil.isNotBlank(source.getServiceUsername()) && StrUtil.isNotBlank(source.getServicePassword());
+    }
+
+    private boolean shouldRetryByRefreshing(PartyFileKodSourceDO source, ServiceException ex) {
+        return hasServiceCredential(source)
+                && Objects.equals(ex.getCode(), PARTY_FILE_KOD_REQUEST_FAILED.getCode())
+                && isKodAuthFailure(ex.getMessage());
+    }
+
+    private PartyFileKodSourceDO refreshAccessToken(PartyFileKodSourceDO source) {
+        if (!hasServiceCredential(source)) {
+            return source;
+        }
+        String loginUrl = source.getBaseUrl() + "index.php?user/index/loginSubmit";
+        JsonNode loginResp;
+        try (HttpResponse response = HttpRequest.post(loginUrl)
+                .form("name", source.getServiceUsername())
+                .form("password", source.getServicePassword())
+                .execute()) {
+            loginResp = parseJsonResponse(response, "可道云登录返回为空");
+        } catch (Exception ex) {
+            throw wrapKodException(ex);
+        }
+        String loginToken = firstNonBlank(loginResp, "info", "accessToken", "data");
+        if (StrUtil.isBlank(loginToken) || isKodFailure(loginResp, loginResp.path("data"))) {
+            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, extractKodMessage(loginResp, loginResp.path("data")));
+        }
+
+        String checkUrl = source.getBaseUrl() + "?user/sso/apiCheckToken"
+                + "&accessToken=" + HttpUtils.encodeUtf8(loginToken)
+                + "&appName=" + HttpUtils.encodeUtf8(source.getAppName());
+        JsonNode checkResp = requestKodJson(checkUrl, "可道云换取 accessToken 返回为空");
+        String finalAccessToken = firstNonBlank(checkResp, "accessToken");
+        if (StrUtil.isBlank(finalAccessToken)) {
+            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "可道云未返回最终 accessToken");
+        }
+        source.setAccessToken(finalAccessToken);
+        source.setTokenExpireTime(LocalDateTime.now().plusMinutes(TOKEN_EXPIRE_MINUTES));
+        if (source.getId() != null) {
+            partyFileKodSourceMapper.updateById(source);
+        }
+        return source;
+    }
+
+    private JsonNode requestKodJson(String url, String emptyMessage) {
+        try (HttpResponse response = HttpRequest.get(url).execute()) {
+            return parseJsonResponse(response, emptyMessage);
+        } catch (Exception ex) {
+            throw wrapKodException(ex);
+        }
+    }
+
+    private JsonNode parseJsonResponse(HttpResponse response, String emptyMessage) {
+        String body = response.body();
+        JsonNode root = JsonUtils.parseTree(body);
+        if (root == null || root.isMissingNode()) {
+            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, emptyMessage);
+        }
+        JsonNode data = root.path("data");
+        if (isKodFailure(root, data)) {
+            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, extractKodMessage(root, data));
+        }
+        return data.isObject() ? data : root;
+    }
+
+    private ServiceException wrapKodException(Exception ex) {
+        if (ex instanceof ServiceException) {
+            return (ServiceException) ex;
+        }
+        return exception(PARTY_FILE_KOD_REQUEST_FAILED, ex.getMessage());
     }
 }

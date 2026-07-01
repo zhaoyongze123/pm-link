@@ -25,10 +25,17 @@ public class PartyFileKodSourceBaseVO {
     @Size(max = 100, message = "appName 不能超过 100 个字符")
     private String appName;
 
-    @Schema(description = "访问令牌", requiredMode = Schema.RequiredMode.REQUIRED)
-    @NotBlank(message = "访问令牌不能为空")
+    @Schema(description = "访问令牌")
     @Size(max = 1024, message = "访问令牌不能超过 1024 个字符")
     private String accessToken;
+
+    @Schema(description = "服务账号")
+    @Size(max = 100, message = "服务账号不能超过 100 个字符")
+    private String serviceUsername;
+
+    @Schema(description = "服务密码")
+    @Size(max = 255, message = "服务密码不能超过 255 个字符")
+    private String servicePassword;
 
     @Schema(description = "根目录路径", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "根目录路径不能为空")

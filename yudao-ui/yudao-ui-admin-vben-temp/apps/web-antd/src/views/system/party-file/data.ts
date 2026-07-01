@@ -295,10 +295,25 @@ export function useKodSourceFormSchema(): VbenFormSchema[] {
       label: '访问令牌',
       component: 'Textarea',
       componentProps: {
-        placeholder: '请输入 accessToken',
+        placeholder: '未配置服务账号时，可手工填写 accessToken 作为兼容兜底',
         rows: 3,
       },
-      rules: 'required',
+    },
+    {
+      fieldName: 'serviceUsername',
+      label: '服务账号',
+      component: 'Input',
+      componentProps: {
+        placeholder: '推荐填写可道云管理员或专用服务账号',
+      },
+    },
+    {
+      fieldName: 'servicePassword',
+      label: '服务密码',
+      component: 'InputPassword',
+      componentProps: {
+        placeholder: '留空则保留原密码；新建时与服务账号一起填写',
+      },
     },
     {
       fieldName: 'rootFolderPath',
@@ -317,6 +332,15 @@ export function useKodSourceFormSchema(): VbenFormSchema[] {
         placeholder: '请输入根目录名称',
       },
       rules: 'required',
+    },
+    {
+      fieldName: 'tokenExpireTime',
+      label: '令牌过期时间',
+      component: 'Input',
+      componentProps: {
+        disabled: true,
+        placeholder: '保存后由系统自动刷新维护',
+      },
     },
     {
       fieldName: 'status',

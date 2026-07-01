@@ -3,12 +3,14 @@ package cn.iocoder.yudao.module.system.controller.admin.partyfile;
 import cn.iocoder.yudao.framework.common.pojo.CommonResult;
 import cn.iocoder.yudao.framework.common.pojo.PageResult;
 import cn.iocoder.yudao.framework.common.util.object.BeanUtils;
+import cn.iocoder.yudao.framework.common.util.collection.CollectionUtils;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.kodsource.PartyFileKodFolderRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.kodsource.PartyFileKodSourcePageReqVO;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.kodsource.PartyFileKodSourceRespVO;
 import cn.iocoder.yudao.module.system.controller.admin.partyfile.vo.kodsource.PartyFileKodSourceSaveReqVO;
 import cn.iocoder.yudao.module.system.dal.dataobject.partyfile.PartyFileKodSourceDO;
 import cn.iocoder.yudao.module.system.service.partyfile.PartyFileKodSourceService;
+import cn.hutool.core.util.StrUtil;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -58,7 +60,7 @@ public class PartyFileKodSourceController {
     @Operation(summary = "获取可道云目录来源详情")
     @PreAuthorize("@ss.hasPermission('system:party-file:query')")
     public CommonResult<PartyFileKodSourceRespVO> get(@RequestParam("id") Long id) {
-        return success(BeanUtils.toBean(partyFileKodSourceService.get(id), PartyFileKodSourceRespVO.class));
+        return success(buildRespVO(partyFileKodSourceService.get(id)));
     }
 
     @GetMapping("/page")
@@ -66,14 +68,16 @@ public class PartyFileKodSourceController {
     @PreAuthorize("@ss.hasPermission('system:party-file:query')")
     public CommonResult<PageResult<PartyFileKodSourceRespVO>> page(@Valid PartyFileKodSourcePageReqVO reqVO) {
         PageResult<PartyFileKodSourceDO> pageResult = partyFileKodSourceService.getPage(reqVO);
-        return success(BeanUtils.toBean(pageResult, PartyFileKodSourceRespVO.class));
+        return success(new PageResult<>(
+                CollectionUtils.convertList(pageResult.getList(), this::buildRespVO),
+                pageResult.getTotal()));
     }
 
     @GetMapping("/simple-list")
     @Operation(summary = "获取启用的可道云目录来源")
     @PreAuthorize("@ss.hasPermission('system:party-file:query')")
     public CommonResult<List<PartyFileKodSourceRespVO>> simpleList() {
-        return success(BeanUtils.toBean(partyFileKodSourceService.getSimpleList(), PartyFileKodSourceRespVO.class));
+        return success(CollectionUtils.convertList(partyFileKodSourceService.getSimpleList(), this::buildRespVO));
     }
 
     @GetMapping("/folder-tree")
@@ -82,5 +86,12 @@ public class PartyFileKodSourceController {
     @PreAuthorize("@ss.hasPermission('system:party-file:query')")
     public CommonResult<List<PartyFileKodFolderRespVO>> folderTree(@RequestParam("id") Long id) {
         return success(partyFileKodSourceService.getFolderTree(id));
+    }
+
+    private PartyFileKodSourceRespVO buildRespVO(PartyFileKodSourceDO bean) {
+        PartyFileKodSourceRespVO respVO = BeanUtils.toBean(bean, PartyFileKodSourceRespVO.class);
+        respVO.setHasServicePassword(StrUtil.isNotBlank(bean.getServicePassword()));
+        respVO.setServicePassword("");
+        return respVO;
     }
 }
