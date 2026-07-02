@@ -51,6 +51,10 @@ interface Props {
     icon?: Component | Function | string;
     text: string;
   }>;
+  /**
+   * 是否显示退出登录
+   */
+  showLogout?: boolean;
 
   /**
    * 标签文本
@@ -75,6 +79,7 @@ const props = withDefaults(defineProps<Props>(), {
   description: '',
   enableShortcutKey: true,
   menus: () => [],
+  showLogout: true,
   showShortcutKey: true,
   tagText: '',
   text: '',
@@ -240,7 +245,7 @@ if (enableShortcutKey.value) {
           <VbenIcon :icon="menu.icon" class="mr-2 size-4" />
           {{ menu.text }}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
+        <DropdownMenuSeparator v-if="showLogout || preferences.widget.lockScreen" />
         <DropdownMenuItem
           v-if="preferences.widget.lockScreen"
           class="mx-1 flex cursor-pointer items-center rounded-sm py-1 leading-8"
@@ -252,8 +257,11 @@ if (enableShortcutKey.value) {
             {{ altView }} L
           </DropdownMenuShortcut>
         </DropdownMenuItem>
-        <DropdownMenuSeparator v-if="preferences.widget.lockScreen" />
+        <DropdownMenuSeparator
+          v-if="preferences.widget.lockScreen && showLogout"
+        />
         <DropdownMenuItem
+          v-if="showLogout"
           class="mx-1 flex cursor-pointer items-center rounded-sm py-1 leading-8"
           @click="handleLogout"
         >

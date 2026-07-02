@@ -122,7 +122,6 @@ const SYSTEM_MANAGEMENT_MENU_PATHS = new Set([
   '/system/user',
   '/system/role',
   '/system/dept',
-  '/system/menu',
   '/system/post',
   '/system/notice',
   '/system/party-file',
@@ -144,10 +143,6 @@ const SYSTEM_MANAGEMENT_MENU_ITEMS: MenuRecordRaw[] = [
   {
     name: '部门管理',
     path: '/system/dept',
-  },
-  {
-    name: '菜单管理',
-    path: '/system/menu',
   },
   {
     name: '岗位管理',
@@ -996,6 +991,7 @@ watch(
             :avatar="avatar"
             :description="userStore.userInfo?.email"
             :menus="userMenus"
+            :show-logout="false"
             :tag-text="userStore.userInfo?.username"
             :text="userStore.userInfo?.nickname"
             @logout="handleLogout"

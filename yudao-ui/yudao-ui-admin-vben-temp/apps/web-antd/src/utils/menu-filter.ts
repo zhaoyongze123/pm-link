@@ -3,8 +3,8 @@ import type { RouteRecordRaw } from 'vue-router';
 
 import { isAdminUser } from '#/utils/oa-user';
 
-const REMOVED_MENU_PATH_PREFIXES = ['/system/dict'];
-const REMOVED_MENU_NAMES = new Set(['字典管理']);
+const REMOVED_MENU_PATH_PREFIXES = ['/system/dict', '/system/menu'];
+const REMOVED_MENU_NAMES = new Set(['字典管理', '菜单管理']);
 const NON_ADMIN_HIDDEN_ROOT_PATHS = new Set(['/bpm', '/system']);
 
 function isRemovedMenuPath(path?: string) {
