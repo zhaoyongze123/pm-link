@@ -105,7 +105,8 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
     public PartyFileKodSourceDO getEnabledSource(Long id) {
         PartyFileKodSourceDO source = validateExists(id);
         if (!Objects.equals(source.getStatus(), CommonStatusEnum.ENABLE.getStatus())) {
-            throw exception(PARTY_FILE_STORAGE_CONFIG_INVALID);
+            throw exception(PARTY_FILE_STORAGE_CONFIG_INVALID,
+                    "可道云目录来源【" + buildSourceLabel(source) + "】已停用");
         }
         return source;
     }
@@ -150,7 +151,7 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
             if (ex instanceof RuntimeException) {
                 throw (RuntimeException) ex;
             }
-            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, ex.getMessage());
+            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, buildSourceErrorMessage(source, ex.getMessage()));
         }
     }
 
@@ -295,7 +296,8 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
             source = refreshAccessToken(source);
         }
         if (StrUtil.isBlank(source.getAccessToken())) {
-            throw exception(PARTY_FILE_STORAGE_CONFIG_INVALID);
+            throw exception(PARTY_FILE_STORAGE_CONFIG_INVALID,
+                    "可道云目录来源【" + buildSourceLabel(source) + "】缺少 accessToken");
         }
         return source.getAccessToken();
     }
@@ -330,11 +332,12 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
                 .execute()) {
             loginResp = parseJsonResponse(response, "可道云登录返回为空");
         } catch (Exception ex) {
-            throw wrapKodException(ex);
+            throw wrapKodException(source, ex);
         }
         String loginToken = firstNonBlank(loginResp, "info", "accessToken", "data");
         if (StrUtil.isBlank(loginToken) || isKodFailure(loginResp, loginResp.path("data"))) {
-            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, extractKodMessage(loginResp, loginResp.path("data")));
+            throw exception(PARTY_FILE_KOD_REQUEST_FAILED,
+                    buildSourceErrorMessage(source, extractKodMessage(loginResp, loginResp.path("data"))));
         }
 
         String checkUrl = source.getBaseUrl() + "?user/sso/apiCheckToken"
@@ -343,7 +346,8 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
         JsonNode checkResp = requestKodJson(checkUrl, "可道云换取 accessToken 返回为空");
         String finalAccessToken = firstNonBlank(checkResp, "accessToken");
         if (StrUtil.isBlank(finalAccessToken)) {
-            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "可道云未返回最终 accessToken");
+            throw exception(PARTY_FILE_KOD_REQUEST_FAILED,
+                    buildSourceErrorMessage(source, "可道云未返回最终 accessToken"));
         }
         source.setAccessToken(finalAccessToken);
         source.setTokenExpireTime(LocalDateTime.now().plusMinutes(TOKEN_EXPIRE_MINUTES));
@@ -357,7 +361,7 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
         try (HttpResponse response = HttpRequest.get(url).execute()) {
             return parseJsonResponse(response, emptyMessage);
         } catch (Exception ex) {
-            throw wrapKodException(ex);
+            throw wrapKodException(null, ex);
         }
     }
 
@@ -374,10 +378,26 @@ public class PartyFileKodSourceServiceImpl implements PartyFileKodSourceService 
         return data.isObject() ? data : root;
     }
 
-    private ServiceException wrapKodException(Exception ex) {
+    public String buildSourceLabel(PartyFileKodSourceDO source) {
+        if (source == null) {
+            return "未知来源";
+        }
+        String sourceName = StrUtil.blankToDefault(source.getName(), "未命名来源");
+        return sourceName + "(ID=" + source.getId() + ")";
+    }
+
+    public String buildSourceErrorMessage(PartyFileKodSourceDO source, String detail) {
+        String message = StrUtil.blankToDefault(StrUtil.trim(detail), "未知错误");
+        if (isKodAuthFailure(message)) {
+            message = "鉴权已失效或未登录，请检查服务账号/密码，系统会在请求时自动刷新 token。原始信息：" + message;
+        }
+        return "目录来源【" + buildSourceLabel(source) + "】" + message;
+    }
+
+    private ServiceException wrapKodException(PartyFileKodSourceDO source, Exception ex) {
         if (ex instanceof ServiceException) {
             return (ServiceException) ex;
         }
-        return exception(PARTY_FILE_KOD_REQUEST_FAILED, ex.getMessage());
+        return exception(PARTY_FILE_KOD_REQUEST_FAILED, buildSourceErrorMessage(source, ex.getMessage()));
     }
 }

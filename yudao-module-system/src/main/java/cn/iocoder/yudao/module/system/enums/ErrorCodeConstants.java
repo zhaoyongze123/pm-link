@@ -99,7 +99,7 @@ public interface ErrorCodeConstants {
     ErrorCode PARTY_FILE_KOD_SOURCE_NOT_FOUND = new ErrorCode(1_002_009_013, "党务文件可道云目录来源不存在");
     ErrorCode PARTY_FILE_KOD_SOURCE_NAME_DUPLICATE = new ErrorCode(1_002_009_014, "已存在同名的可道云目录来源");
     ErrorCode PARTY_FILE_KOD_SOURCE_IN_USE = new ErrorCode(1_002_009_015, "当前可道云目录来源已被党务文件使用，无法删除");
-    ErrorCode PARTY_FILE_STORAGE_CONFIG_INVALID = new ErrorCode(1_002_009_016, "党务文件存储配置不完整");
+    ErrorCode PARTY_FILE_STORAGE_CONFIG_INVALID = new ErrorCode(1_002_009_016, "党务文件存储配置不完整，请检查存储方式、可道云目录来源、服务账号和目标目录");
     ErrorCode PARTY_FILE_KOD_REQUEST_FAILED = new ErrorCode(1_002_009_017, "可道云请求失败，原因：{}");
     ErrorCode PARTY_FILE_KOD_FOLDER_PATH_INVALID = new ErrorCode(1_002_009_018, "可道云目录路径不合法");
 

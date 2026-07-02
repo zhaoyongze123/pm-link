@@ -11,6 +11,7 @@ import { LoaderCircle } from '@vben/icons';
 import { cloneDeep, get, isEqual, isFunction } from '@vben-core/shared/utils';
 
 import { objectOmit } from '@vueuse/core';
+import { message } from 'ant-design-vue';
 
 defineOptions({ name: 'ApiComponent', inheritAttrs: false });
 
@@ -148,6 +149,12 @@ async function fetchApi() {
     emitChange();
   } catch (error) {
     console.warn(error);
+    const errorMessage =
+      (error as any)?.response?.data?.msg ||
+      (error as any)?.data?.msg ||
+      (error as any)?.message ||
+      '远程数据加载失败，请稍后再试';
+    message.error(errorMessage);
     // reset status
     isFirstLoaded.value = false;
   } finally {

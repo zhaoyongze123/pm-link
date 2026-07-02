@@ -229,22 +229,28 @@ public class PartyFileAttachmentServiceImpl implements PartyFileAttachmentServic
                 + "&path=" + HttpUtils.encodeUtf8(filePath);
         try (HttpResponse response = HttpRequest.get(url).execute()) {
             if (response.getStatus() >= 400) {
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "读取文件失败，HTTP " + response.getStatus());
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED,
+                        partyFileKodSourceService.buildSourceErrorMessage(source,
+                                "读取文件失败，HTTP " + response.getStatus()));
             }
             String contentType = StrUtil.blankToDefault(response.header("Content-Type"), "");
             if (StrUtil.containsIgnoreCase(contentType, "application/json")) {
                 JsonNode root = JsonUtils.parseTree(response.body());
                 String message = extractKodMessage(root);
                 if (partyFileKodSourceService.isKodAuthFailure(message)) {
-                    throw exception(PARTY_FILE_KOD_REQUEST_FAILED, message);
+                    throw exception(PARTY_FILE_KOD_REQUEST_FAILED,
+                            partyFileKodSourceService.buildSourceErrorMessage(source, message));
                 }
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, StrUtil.blankToDefault(message, "读取文件失败"));
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED,
+                        partyFileKodSourceService.buildSourceErrorMessage(source,
+                                StrUtil.blankToDefault(message, "读取文件失败")));
             }
             return response.bodyBytes();
         } catch (ServiceException ex) {
             throw ex;
         } catch (Exception ex) {
-            throw exception(PARTY_FILE_KOD_REQUEST_FAILED, ex.getMessage());
+            throw exception(PARTY_FILE_KOD_REQUEST_FAILED,
+                    partyFileKodSourceService.buildSourceErrorMessage(source, ex.getMessage()));
         }
     }
 
@@ -258,15 +264,19 @@ public class PartyFileAttachmentServiceImpl implements PartyFileAttachmentServic
                 .form("file", file.getBytes(), file.getOriginalFilename())
                 .execute()) {
             if (response.getStatus() >= 400) {
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "上传失败，HTTP " + response.getStatus());
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED,
+                        partyFileKodSourceService.buildSourceErrorMessage(source,
+                                "上传失败，HTTP " + response.getStatus()));
             }
             JsonNode root = JsonUtils.parseTree(response.body());
             if (root == null || root.isMissingNode()) {
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, "上传返回为空");
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED,
+                        partyFileKodSourceService.buildSourceErrorMessage(source, "上传返回为空"));
             }
             String message = extractKodMessage(root);
             if (isKodFailure(root)) {
-                throw exception(PARTY_FILE_KOD_REQUEST_FAILED, message);
+                throw exception(PARTY_FILE_KOD_REQUEST_FAILED,
+                        partyFileKodSourceService.buildSourceErrorMessage(source, message));
             }
             if (root.has("info") && root.get("info").isObject()) {
                 return root.get("info");
