@@ -29,7 +29,6 @@ const routes: RouteRecordRaw[] = [
       title: 'OA 通知中心',
       hideInMenu: true,
       hideInTab: true,
-      activePath: '/oa-lite/center',
     },
   },
 ];

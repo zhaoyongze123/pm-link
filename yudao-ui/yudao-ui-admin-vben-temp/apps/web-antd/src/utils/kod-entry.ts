@@ -63,9 +63,6 @@ const STANDALONE_FULLSCREEN_PATH_PREFIXES = [
   '/meeting-room',
   '/schedule',
   '/party-file',
-  '/system/meeting-room',
-  '/system/meeting-booking',
-  '/system/personal-schedule',
 ];
 
 function readQueryString(query: LocationQuery | LocationQueryRaw, name: string) {

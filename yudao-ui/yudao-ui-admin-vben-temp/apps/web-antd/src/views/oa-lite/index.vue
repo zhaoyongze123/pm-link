@@ -1808,6 +1808,16 @@ onUnmounted(() => {
   box-shadow: 0 8px 22px rgb(15 23 42 / 4%);
 }
 
+:global(body.oa-lite-theme-dark) .oa-lite-stat-pillar {
+  border-color: var(--oa-shell-border);
+  background: linear-gradient(
+    180deg,
+    var(--oa-shell-surface) 0%,
+    var(--oa-shell-surface-muted) 100%
+  );
+  box-shadow: none;
+}
+
 .oa-lite-stat-item {
   border: none;
   background: transparent;
@@ -1832,6 +1842,10 @@ onUnmounted(() => {
   border-left: 1px solid color-mix(in srgb, var(--oa-shell-border) 88%, white);
 }
 
+:global(body.oa-lite-theme-dark) .oa-lite-stat-item + .oa-lite-stat-item {
+  border-left-color: color-mix(in srgb, var(--oa-shell-border) 76%, transparent);
+}
+
 .oa-lite-stat-item:hover {
   background: linear-gradient(
     180deg,
@@ -1840,6 +1854,15 @@ onUnmounted(() => {
   );
   color: var(--oa-accent);
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oa-accent) 14%, white);
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-stat-item:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oa-accent-soft) 14%, var(--oa-shell-surface)) 0%,
+    color-mix(in srgb, var(--oa-accent-soft) 22%, var(--oa-shell-surface-muted)) 100%
+  );
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oa-accent) 18%, transparent);
 }
 
 .oa-lite-stat-count {
@@ -1897,13 +1920,13 @@ onUnmounted(() => {
 }
 
 :global(body.oa-lite-theme-dark) .oa-lite-stat-icon {
-  border-color: color-mix(in srgb, var(--oa-shell-border) 72%, transparent);
+  border-color: color-mix(in srgb, var(--oa-shell-border) 78%, transparent);
   background: linear-gradient(
     180deg,
-    color-mix(in srgb, var(--oa-shell-surface) 94%, white) 0%,
-    color-mix(in srgb, var(--oa-shell-surface-muted) 94%, black) 100%
+    color-mix(in srgb, var(--oa-shell-surface-muted) 92%, black) 0%,
+    color-mix(in srgb, var(--oa-shell-surface) 92%, black) 100%
   );
-  color: color-mix(in srgb, var(--oa-ink-soft) 82%, white);
+  color: var(--oa-ink-soft);
 }
 
 .oa-lite-stat-arrow {
@@ -2132,7 +2155,7 @@ onUnmounted(() => {
 }
 
 .oa-lite-center-nav {
-  padding: 0 16px 0 0;
+  padding: 0 16px 0 20px;
   border-right: 1px solid var(--oa-shell-border);
   border-radius: 0;
   background: transparent;

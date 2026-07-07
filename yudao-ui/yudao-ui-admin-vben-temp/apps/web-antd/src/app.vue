@@ -491,6 +491,122 @@ body.oa-lite-theme .ant-modal-body {
   color: var(--oa-ink) !important;
 }
 
+body.oa-lite-theme-dark .oa-lite-stat-pillar {
+  border-color: var(--oa-shell-border) !important;
+  background: linear-gradient(
+    180deg,
+    var(--oa-shell-surface) 0%,
+    var(--oa-shell-surface-muted) 100%
+  ) !important;
+  box-shadow: none !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-stat-item + .oa-lite-stat-item {
+  border-left-color: color-mix(in srgb, var(--oa-shell-border) 76%, transparent) !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-stat-item:hover {
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oa-accent-soft) 14%, var(--oa-shell-surface)) 0%,
+    color-mix(in srgb, var(--oa-accent-soft) 22%, var(--oa-shell-surface-muted)) 100%
+  ) !important;
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--oa-accent) 18%, transparent)
+    !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-stat-icon {
+  border-color: color-mix(in srgb, var(--oa-shell-border) 78%, transparent) !important;
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oa-shell-surface-muted) 92%, black) 0%,
+    color-mix(in srgb, var(--oa-shell-surface) 92%, black) 100%
+  ) !important;
+  color: var(--oa-ink-soft) !important;
+  box-shadow: none !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-settings-modal .ant-modal-content,
+body.oa-lite-theme-dark .oa-lite-settings-modal .ant-modal-header,
+body.oa-lite-theme-dark .oa-lite-settings-modal .ant-modal-body {
+  background: var(--oa-shell-surface) !important;
+  color: var(--oa-ink) !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-settings-modal .ant-modal-content {
+  border-color: var(--oa-shell-border) !important;
+  box-shadow: none !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-sidebar,
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-content-head {
+  border-color: var(--oa-shell-border) !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-section {
+  border-color: var(--oa-shell-border) !important;
+  background: linear-gradient(
+    180deg,
+    var(--oa-shell-surface) 0%,
+    var(--oa-shell-surface-muted) 100%
+  ) !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-row,
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-choice {
+  border-color: color-mix(in srgb, var(--oa-shell-border) 88%, transparent) !important;
+  background: color-mix(in srgb, var(--oa-shell-surface-muted) 72%, var(--oa-shell-surface))
+    !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-row:hover,
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-choice:hover,
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-choice.active {
+  border-color: color-mix(in srgb, var(--oa-accent) 26%, var(--oa-shell-border)) !important;
+  background: color-mix(in srgb, var(--oa-accent-soft) 18%, var(--oa-shell-surface-muted))
+    !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-sidebar-tag,
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-row-meta,
+body.oa-lite-theme-dark .oa-lite-settings-modal .oa-lite-settings-choice-state {
+  background: color-mix(in srgb, var(--oa-accent-soft) 24%, var(--oa-shell-surface))
+    !important;
+  border-color: color-mix(in srgb, var(--oa-accent) 20%, var(--oa-shell-border)) !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-menu-item,
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-menu-item a,
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-sub-menu-content {
+  background: color-mix(in srgb, var(--oa-shell-surface) 94%, black) !important;
+  border-bottom: 1px solid color-mix(in srgb, var(--oa-shell-border) 70%, transparent)
+    !important;
+  color: var(--oa-ink) !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-menu-item > *,
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-sub-menu-content > * {
+  background: transparent !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-menu-item.is-active a,
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-menu-item.is-active,
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-sub-menu-content.is-active {
+  background: color-mix(in srgb, var(--oa-accent-soft) 28%, var(--oa-shell-surface))
+    !important;
+  color: var(--oa-accent) !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-menu-item.is-active > * {
+  background: transparent !important;
+}
+
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-menu-item:hover,
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-menu-item a:hover,
+body.oa-lite-theme-dark .oa-lite-unified-sidebar .vben-sub-menu-content:hover {
+  background: color-mix(in srgb, var(--oa-shell-surface-muted) 88%, black) !important;
+}
+
 body.oa-lite-theme .ant-dropdown,
 body.oa-lite-theme .ant-select-dropdown {
   border: 1px solid var(--oa-shell-border) !important;

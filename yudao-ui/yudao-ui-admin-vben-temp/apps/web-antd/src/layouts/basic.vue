@@ -332,17 +332,30 @@ const managementTopNavItems = computed<LocalTopNavItem[]>(() =>
 const currentActivePath = computed(() =>
   String(route.meta.activePath || route.path),
 );
+const isOaLiteReturnRoute = computed(() => {
+  const returnTo = Array.isArray(route.query.returnTo)
+    ? route.query.returnTo[0]
+    : route.query.returnTo;
+  return returnTo === 'oa-lite';
+});
 const isOARequestRoute = computed(() => route.path.startsWith('/bpm/oa/'));
 const isWorkbenchCreateRoute = computed(
-  () => route.path === '/oa-lite' || isOARequestRoute.value,
+  () =>
+    route.path === '/oa-lite' ||
+    isOARequestRoute.value ||
+    (route.path === '/bpm/process-instance/create' && isOaLiteReturnRoute.value),
+);
+const isWorkbenchNotificationRoute = computed(
+  () => route.path.startsWith('/oa-lite/notifications'),
 );
 const isWorkbenchCenterRoute = computed(
-  () =>
-    route.path === '/oa-lite/center' ||
-    route.path.startsWith('/oa-lite/notifications'),
+  () => route.path === '/oa-lite/center',
 );
 const isWorkbenchRoute = computed(
-  () => isWorkbenchCreateRoute.value || isWorkbenchCenterRoute.value,
+  () =>
+    isWorkbenchCreateRoute.value ||
+    isWorkbenchCenterRoute.value ||
+    isWorkbenchNotificationRoute.value,
 );
 
 const currentMatchedMenu = computed(() => {
@@ -390,6 +403,9 @@ const currentMatchedMenu = computed(() => {
 
 const currentRootMenuPath = computed(() => {
   if (isOARequestRoute.value) {
+    return '';
+  }
+  if (route.path === '/bpm/process-instance/create' && isOaLiteReturnRoute.value) {
     return '';
   }
   if (route.path === '/bpm' || route.path.startsWith('/bpm/')) {
@@ -523,6 +539,9 @@ const sidebarStyle = computed<CSSProperties>(() => ({
 const activeTopNavKey = computed(() => {
   if (isWorkbenchCreateRoute.value) {
     return 'oa-create';
+  }
+  if (isWorkbenchNotificationRoute.value) {
+    return '';
   }
   if (isWorkbenchCenterRoute.value) {
     return 'oa-center';
@@ -1063,26 +1082,19 @@ watch(
       <div class="oa-lite-settings-sheet">
         <aside class="oa-lite-settings-sidebar">
           <div class="oa-lite-settings-sidebar-head">
-            <p class="oa-lite-settings-eyebrow">Workspace Console</p>
             <h3>工作台设置</h3>
-            <p>这里只保留界面控制项，模块导航已经回到顶部主导航。</p>
+            <span class="oa-lite-settings-sidebar-tag">界面</span>
           </div>
         </aside>
 
         <section class="oa-lite-settings-content">
           <header class="oa-lite-settings-content-head">
-            <div>
-              <div class="oa-lite-settings-content-title">界面控制台</div>
-              <p>集中处理主题和当前界面刷新，主导航负责系统管理与流程管理切换。</p>
-            </div>
+            <div class="oa-lite-settings-content-title">界面控制台</div>
           </header>
 
           <section class="oa-lite-settings-section">
             <div class="oa-lite-settings-section-head">
-              <div>
-                <h4>主题模式</h4>
-                <p>统一锁定这套工作台的明暗风格，不再分散到页面里单独处理。</p>
-              </div>
+              <h4>主题模式</h4>
             </div>
             <div class="oa-lite-settings-split-choice">
               <button
@@ -1091,9 +1103,12 @@ watch(
                 type="button"
                 @click="themeMode !== 'light' && handleThemeToggle()"
               >
-                <span class="oa-lite-settings-choice-title">浅色</span>
-                <span class="oa-lite-settings-choice-desc">
-                  适合白天办公和分屏使用，保持 oa-lite 的轻量工作台观感。
+                <span class="oa-lite-settings-choice-top">
+                  <IconifyIcon icon="solar:sun-2-outline" />
+                  <span class="oa-lite-settings-choice-title">浅色</span>
+                </span>
+                <span v-if="themeMode === 'light'" class="oa-lite-settings-choice-state">
+                  当前
                 </span>
               </button>
               <button
@@ -1102,9 +1117,12 @@ watch(
                 type="button"
                 @click="themeMode !== 'dark' && handleThemeToggle()"
               >
-                <span class="oa-lite-settings-choice-title">暗色</span>
-                <span class="oa-lite-settings-choice-desc">
-                  适合夜间场景，延续统一的深色信息层级和低干扰对比。
+                <span class="oa-lite-settings-choice-top">
+                  <IconifyIcon icon="solar:moon-stars-outline" />
+                  <span class="oa-lite-settings-choice-title">暗色</span>
+                </span>
+                <span v-if="themeMode === 'dark'" class="oa-lite-settings-choice-state">
+                  当前
                 </span>
               </button>
             </div>
@@ -1112,10 +1130,7 @@ watch(
 
           <section class="oa-lite-settings-section">
             <div class="oa-lite-settings-section-head">
-              <div>
-                <h4>工作区操作</h4>
-                <p>当前页面的快捷控制集中在这里，避免把操作按钮散落到多个区域。</p>
-              </div>
+              <h4>工作区操作</h4>
             </div>
             <div class="oa-lite-settings-list">
               <button class="oa-lite-settings-row" type="button" @click="handleRefresh">
@@ -1123,12 +1138,9 @@ watch(
                   <IconifyIcon icon="solar:refresh-outline" />
                   <span class="oa-lite-settings-row-copy">
                     <span class="oa-lite-settings-row-title">刷新当前界面</span>
-                    <span class="oa-lite-settings-row-desc">
-                      重新拉取当前路由数据和界面状态，不改变顶部导航结构。
-                    </span>
                   </span>
                 </span>
-                <span class="oa-lite-settings-row-meta">立即执行</span>
+                <span class="oa-lite-settings-row-meta">执行</span>
               </button>
             </div>
           </section>
@@ -1454,6 +1466,14 @@ watch(
   margin: 0;
 }
 
+:global(body.oa-lite-theme-dark) .oa-lite-unified-sidebar :deep(.vben-menu-item a),
+:global(body.oa-lite-theme-dark)
+  .oa-lite-unified-sidebar :deep(.vben-sub-menu-content) {
+  background: color-mix(in srgb, var(--oa-shell-surface) 94%, black);
+  border-bottom: 1px solid color-mix(in srgb, var(--oa-shell-border) 70%, transparent);
+  color: var(--oa-ink);
+}
+
 .oa-lite-unified-sidebar :deep(.vben-menu-item.is-active a),
 .oa-lite-unified-sidebar :deep(.vben-sub-menu-content.is-active) {
   background: color-mix(in srgb, var(--oa-accent-soft) 40%, transparent);
@@ -1461,9 +1481,23 @@ watch(
   box-shadow: inset 2px 0 0 var(--oa-accent);
 }
 
+:global(body.oa-lite-theme-dark)
+  .oa-lite-unified-sidebar :deep(.vben-menu-item.is-active a),
+:global(body.oa-lite-theme-dark)
+  .oa-lite-unified-sidebar :deep(.vben-sub-menu-content.is-active) {
+  background: color-mix(in srgb, var(--oa-accent-soft) 28%, var(--oa-shell-surface));
+  color: var(--oa-accent);
+}
+
 .oa-lite-unified-sidebar :deep(.vben-menu-item a:hover),
 .oa-lite-unified-sidebar :deep(.vben-sub-menu-content:hover) {
   background: color-mix(in srgb, var(--oa-shell-surface-muted) 55%, transparent);
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-unified-sidebar :deep(.vben-menu-item a:hover),
+:global(body.oa-lite-theme-dark)
+  .oa-lite-unified-sidebar :deep(.vben-sub-menu-content:hover) {
+  background: color-mix(in srgb, var(--oa-shell-surface-muted) 88%, black);
 }
 
 .oa-lite-unified-content-shell :deep(.bg-card),
@@ -1525,56 +1559,80 @@ watch(
   box-shadow: 0 10px 28px rgb(15 23 42 / 4%);
 }
 
+:global(body.oa-lite-theme-dark) :deep(.oa-lite-settings-modal .ant-modal-content) {
+  background: var(--oa-shell-surface);
+  border-color: var(--oa-shell-border);
+  box-shadow: none;
+}
+
 :deep(.oa-lite-settings-modal .ant-modal-body) {
-  padding-top: 12px;
+  padding-top: 8px;
+}
+
+:global(body.oa-lite-theme-dark) :deep(.oa-lite-settings-modal .ant-modal-body) {
+  background: var(--oa-shell-surface);
 }
 
 :deep(.oa-lite-settings-modal .ant-modal-header) {
-  border-bottom: 1px solid var(--oa-shell-border);
+  border-bottom: 1px solid color-mix(in srgb, var(--oa-shell-border) 82%, white);
   background: transparent;
+}
+
+:global(body.oa-lite-theme-dark) :deep(.oa-lite-settings-modal .ant-modal-header) {
+  border-bottom-color: var(--oa-shell-border);
+  background: var(--oa-shell-surface);
 }
 
 .oa-lite-settings-sheet {
   display: grid;
-  grid-template-columns: 280px minmax(0, 1fr);
-  min-height: 620px;
+  grid-template-columns: 220px minmax(0, 1fr);
+  min-height: 540px;
 }
 
 .oa-lite-settings-sidebar {
   display: flex;
   min-width: 0;
   flex-direction: column;
-  padding: 4px 20px 0 0;
-  border-right: 1px solid var(--oa-shell-border);
+  padding: 8px 28px 0 0;
+  border-right: 1px solid color-mix(in srgb, var(--oa-shell-border) 82%, white);
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-settings-sidebar {
+  border-right-color: var(--oa-shell-border);
 }
 
 .oa-lite-settings-sidebar-head {
-  padding: 0 0 18px;
-  border-bottom: 1px solid var(--oa-shell-border);
-}
-
-.oa-lite-settings-eyebrow {
-  margin: 0 0 4px;
-  color: var(--oa-ink-soft);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0 0;
 }
 
 .oa-lite-settings-sidebar-head h3 {
   margin: 0;
   color: var(--oa-ink);
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 600;
-  letter-spacing: normal;
+  letter-spacing: -0.02em;
 }
 
-.oa-lite-settings-sidebar-head p {
-  margin: 8px 0 0;
-  color: var(--oa-ink-soft);
-  font-size: 13px;
-  line-height: 1.6;
+.oa-lite-settings-sidebar-tag {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  border: 1px solid color-mix(in srgb, var(--oa-accent) 14%, var(--oa-shell-border));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--oa-accent) 8%, white);
+  color: var(--oa-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-settings-sidebar-tag {
+  border-color: color-mix(in srgb, var(--oa-accent) 20%, var(--oa-shell-border));
+  background: color-mix(in srgb, var(--oa-accent-soft) 24%, var(--oa-shell-surface));
 }
 
 .oa-lite-settings-sidebar-nav {
@@ -1604,6 +1662,10 @@ watch(
 .oa-lite-settings-pane-trigger.active {
   color: var(--oa-accent);
   border-bottom-color: color-mix(in srgb, var(--oa-accent) 26%, var(--oa-shell-border));
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-settings-pane-trigger {
+  border-bottom-color: color-mix(in srgb, var(--oa-shell-border) 72%, transparent);
 }
 
 .oa-lite-settings-pane-trigger.active {
@@ -1654,27 +1716,24 @@ watch(
 
 .oa-lite-settings-content {
   min-width: 0;
-  padding: 4px 0 0 24px;
+  padding: 8px 0 0 32px;
 }
 
 .oa-lite-settings-content-head {
-  padding: 0 0 18px;
-  border-bottom: 1px solid var(--oa-shell-border);
-  margin-bottom: 18px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid color-mix(in srgb, var(--oa-shell-border) 82%, white);
+  margin-bottom: 22px;
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-settings-content-head {
+  border-bottom-color: var(--oa-shell-border);
 }
 
 .oa-lite-settings-content-title {
   color: var(--oa-ink);
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 600;
   letter-spacing: -0.02em;
-}
-
-.oa-lite-settings-content-head p {
-  margin: 8px 0 0;
-  color: var(--oa-ink-soft);
-  font-size: 13px;
-  line-height: 1.6;
 }
 
 .oa-lite-settings-inline-stats {
@@ -1709,26 +1768,36 @@ watch(
 .oa-lite-settings-section {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
+  padding: 18px 20px 20px;
+  border: 1px solid color-mix(in srgb, var(--oa-shell-border) 88%, white);
+  border-radius: 18px;
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, white 92%, var(--oa-accent) 2%) 0%,
+      white 100%
+    );
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-settings-section {
+  border-color: var(--oa-shell-border);
+  background: linear-gradient(
+    180deg,
+    color-mix(in srgb, var(--oa-shell-surface) 98%, black) 0%,
+    color-mix(in srgb, var(--oa-shell-surface-muted) 96%, black) 100%
+  );
 }
 
 .oa-lite-settings-section + .oa-lite-settings-section {
-  margin-top: 24px;
-  padding-top: 20px;
-  border-top: 1px solid var(--oa-shell-border);
+  margin-top: 18px;
 }
 
 .oa-lite-settings-section-head h4 {
   margin: 0;
   color: var(--oa-ink);
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 600;
-}
-
-.oa-lite-settings-section-head p {
-  margin: 4px 0 0;
-  color: var(--oa-ink-soft);
-  font-size: 13px;
 }
 
 .oa-lite-settings-list {
@@ -1743,32 +1812,33 @@ watch(
   justify-content: space-between;
   gap: 16px;
   width: 100%;
-  padding: 14px 0;
-  border: 0;
-  border-bottom: 1px solid color-mix(in srgb, var(--oa-shell-border) 72%, transparent);
-  background: transparent;
+  padding: 14px 16px;
+  border: 1px solid color-mix(in srgb, var(--oa-shell-border) 88%, white);
+  border-radius: 14px;
+  background: color-mix(in srgb, white 94%, var(--oa-accent) 2%);
   text-align: left;
   transition:
     color 0.18s ease,
     border-color 0.18s ease,
-    padding-left 0.18s ease;
-  position: relative;
+    background 0.18s ease,
+  transform 0.18s ease;
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-settings-row {
+  border-color: color-mix(in srgb, var(--oa-shell-border) 88%, transparent);
+  background: color-mix(in srgb, var(--oa-shell-surface-muted) 72%, var(--oa-shell-surface));
 }
 
 .oa-lite-settings-row:hover {
   color: var(--oa-accent);
-  border-bottom-color: color-mix(in srgb, var(--oa-accent) 26%, var(--oa-shell-border));
-  padding-left: 12px;
+  border-color: color-mix(in srgb, var(--oa-accent) 22%, var(--oa-shell-border));
+  background: color-mix(in srgb, white 90%, var(--oa-accent) 4%);
+  transform: translateY(-1px);
 }
 
-.oa-lite-settings-row:hover::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 14px;
-  bottom: 14px;
-  width: 2px;
-  background: color-mix(in srgb, var(--oa-accent) 62%, transparent);
+:global(body.oa-lite-theme-dark) .oa-lite-settings-row:hover {
+  border-color: color-mix(in srgb, var(--oa-accent) 26%, var(--oa-shell-border));
+  background: color-mix(in srgb, var(--oa-accent-soft) 18%, var(--oa-shell-surface-muted));
 }
 
 .oa-lite-settings-row-main {
@@ -1789,7 +1859,6 @@ watch(
   min-width: 0;
   flex: 1;
   flex-direction: column;
-  gap: 3px;
 }
 
 .oa-lite-settings-row-title {
@@ -1798,20 +1867,23 @@ watch(
   font-weight: 600;
 }
 
-.oa-lite-settings-row-desc {
-  color: var(--oa-ink-soft);
-  font-size: 12px;
-  line-height: 1.6;
-}
-
 .oa-lite-settings-row-meta {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: var(--oa-ink-faint);
+  min-width: 56px;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--oa-accent) 10%, white);
+  color: var(--oa-accent);
   font-size: 12px;
+  font-weight: 600;
   text-align: right;
   word-break: break-all;
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-settings-row-meta {
+  background: color-mix(in srgb, var(--oa-accent-soft) 24%, var(--oa-shell-surface));
 }
 
 .oa-lite-settings-split-choice {
@@ -1822,53 +1894,71 @@ watch(
 
 .oa-lite-settings-choice {
   display: flex;
-  min-height: 132px;
+  min-height: 108px;
   flex-direction: column;
   justify-content: space-between;
-  padding: 18px 0 16px;
-  border: 0;
-  border-top: 1px solid var(--oa-shell-border);
-  border-bottom: 1px solid var(--oa-shell-border);
-  background: transparent;
+  padding: 18px;
+  border: 1px solid color-mix(in srgb, var(--oa-shell-border) 88%, white);
+  border-radius: 16px;
+  background: color-mix(in srgb, white 95%, var(--oa-accent) 1%);
   text-align: left;
   transition:
     color 0.18s ease,
     border-color 0.18s ease,
-    padding-left 0.18s ease;
-  position: relative;
+    background 0.18s ease,
+  transform 0.18s ease;
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-settings-choice {
+  border-color: color-mix(in srgb, var(--oa-shell-border) 88%, transparent);
+  background: color-mix(in srgb, var(--oa-shell-surface-muted) 68%, var(--oa-shell-surface));
 }
 
 .oa-lite-settings-choice:hover,
 .oa-lite-settings-choice.active {
   color: var(--oa-accent);
-  border-top-color: color-mix(in srgb, var(--oa-accent) 26%, var(--oa-shell-border));
-  border-bottom-color: color-mix(in srgb, var(--oa-accent) 26%, var(--oa-shell-border));
+  border-color: color-mix(in srgb, var(--oa-accent) 24%, var(--oa-shell-border));
+  background: color-mix(in srgb, white 90%, var(--oa-accent) 4%);
+  transform: translateY(-1px);
 }
 
-.oa-lite-settings-choice.active {
-  padding-left: 12px;
+:global(body.oa-lite-theme-dark) .oa-lite-settings-choice:hover,
+:global(body.oa-lite-theme-dark) .oa-lite-settings-choice.active {
+  border-color: color-mix(in srgb, var(--oa-accent) 28%, var(--oa-shell-border));
+  background: color-mix(in srgb, var(--oa-accent-soft) 18%, var(--oa-shell-surface-muted));
 }
 
-.oa-lite-settings-choice.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 18px;
-  bottom: 18px;
-  width: 2px;
-  background: var(--oa-accent);
+.oa-lite-settings-choice-top {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.oa-lite-settings-choice-top :deep(svg) {
+  font-size: 18px;
 }
 
 .oa-lite-settings-choice-title {
   color: var(--oa-ink);
-  font-size: 18px;
+  font-size: 17px;
   font-weight: 600;
 }
 
-.oa-lite-settings-choice-desc {
-  color: var(--oa-ink-soft);
-  font-size: 13px;
-  line-height: 1.6;
+.oa-lite-settings-choice-state {
+  display: inline-flex;
+  width: fit-content;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--oa-accent) 12%, white);
+  color: var(--oa-accent);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+:global(body.oa-lite-theme-dark) .oa-lite-settings-choice-state {
+  background: color-mix(in srgb, var(--oa-accent-soft) 24%, var(--oa-shell-surface));
 }
 
 @media (max-width: 960px) {

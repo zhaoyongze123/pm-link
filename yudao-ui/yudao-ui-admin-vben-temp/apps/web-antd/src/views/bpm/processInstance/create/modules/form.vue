@@ -54,6 +54,8 @@ const { closeCurrentTab, getTabDisableState } = useTabs();
 const getTitle = computed(() => {
   return `流程表单 - ${props.selectProcessDefinition.name}`;
 });
+const isOaLiteMode = computed(() => shouldReturnToOaLite());
+const submitButtonText = computed(() => (isOaLiteMode.value ? '提交' : '发起'));
 
 const detailForm = ref<ProcessFormData>({
   rule: [],
@@ -297,10 +299,10 @@ defineExpose({ initProcessInfo });
 </script>
 
 <template>
-  <section class="bpm-create-form-shell">
+  <section class="bpm-create-form-shell" :class="{ 'is-oa-lite': isOaLiteMode }">
     <header class="bpm-create-form-header">
       <div>
-        <div class="bpm-create-form-eyebrow">Process Launch</div>
+        <div v-if="!isOaLiteMode" class="bpm-create-form-eyebrow">Process Launch</div>
         <h2 class="bpm-create-form-title">{{ getTitle }}</h2>
       </div>
       <Space wrap>
@@ -311,7 +313,7 @@ defineExpose({ initProcessInfo });
     </header>
 
     <section class="bpm-create-form-tabs">
-      <div class="bpm-create-form-tab-active">表单填写</div>
+      <div v-if="!isOaLiteMode" class="bpm-create-form-tab-active">表单填写</div>
       <Row :gutter="[40, 16]" class="bpm-create-form-panel">
         <Col
           :xs="24"
@@ -341,7 +343,11 @@ defineExpose({ initProcessInfo });
     </section>
 
     <footer class="bpm-create-form-actions">
-      <Space wrap class="flex w-full justify-center">
+      <Space
+        wrap
+        class="flex w-full"
+        :class="isOaLiteMode ? 'justify-start' : 'justify-center'"
+      >
         <Button
           plain
           type="primary"
@@ -349,9 +355,9 @@ defineExpose({ initProcessInfo });
           :loading="processInstanceStartLoading"
         >
           <IconifyIcon icon="lucide:check" />
-          发起
+          {{ submitButtonText }}
         </Button>
-        <Button plain type="default" @click="handleCancel">
+        <Button v-if="!isOaLiteMode" plain type="default" @click="handleCancel">
           <IconifyIcon icon="lucide:x" />
           取消
         </Button>
@@ -369,6 +375,10 @@ defineExpose({ initProcessInfo });
   background: transparent;
 }
 
+.bpm-create-form-shell.is-oa-lite {
+  gap: 8px;
+}
+
 .bpm-create-form-header {
   display: flex;
   align-items: flex-end;
@@ -376,6 +386,10 @@ defineExpose({ initProcessInfo });
   gap: 16px;
   padding: 0 0 16px;
   border-bottom: 1px solid var(--oa-shell-border);
+}
+
+.bpm-create-form-shell.is-oa-lite .bpm-create-form-header {
+  align-items: flex-start;
 }
 
 .bpm-create-form-eyebrow {
@@ -392,12 +406,21 @@ defineExpose({ initProcessInfo });
   letter-spacing: -0.02em;
 }
 
+.bpm-create-form-shell.is-oa-lite .bpm-create-form-title {
+  margin-top: 0;
+  font-size: 22px;
+}
+
 .bpm-create-form-tabs {
   display: flex;
   min-height: 0;
   flex: 1;
   flex-direction: column;
   padding-top: 12px;
+}
+
+.bpm-create-form-shell.is-oa-lite .bpm-create-form-tabs {
+  padding-top: 0;
 }
 
 .bpm-create-form-tab-active {
@@ -418,8 +441,18 @@ defineExpose({ initProcessInfo });
   margin-top: -1px;
 }
 
+.bpm-create-form-shell.is-oa-lite .bpm-create-form-panel {
+  padding-top: 18px;
+  border-top: 0;
+  margin-top: 0;
+}
+
 .bpm-create-form-actions {
   padding: 16px 0 0;
   border-top: 1px solid var(--oa-shell-border);
+}
+
+.bpm-create-form-shell.is-oa-lite .bpm-create-form-actions {
+  padding-top: 12px;
 }
 </style>
