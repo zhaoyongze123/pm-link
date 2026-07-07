@@ -216,6 +216,23 @@ public class AuthController {
         return null;
     }
 
+    @GetMapping("/kod-sso/direct-login")
+    @PermitAll
+    @TenantIgnore
+    @Operation(summary = "使用可道云访问令牌直接登录并跳转")
+    @Parameters({
+            @Parameter(name = "kodAccessToken", description = "可道云访问令牌", required = true),
+            @Parameter(name = "redirectUri", description = "前端回跳地址", required = true)
+    })
+    public void directLoginByKodToken(HttpServletResponse response,
+                                      @RequestParam("kodAccessToken") String kodAccessToken,
+                                      @RequestParam("redirectUri") String redirectUri) throws IOException {
+        Long tenantId = getKodSsoTenantId();
+        String clientRedirectUrl = TenantUtils.execute(tenantId,
+                () -> kodSsoService.buildClientRedirectUrl(kodAccessToken, redirectUri));
+        response.sendRedirect(clientRedirectUrl);
+    }
+
     @PostMapping("/kod-sso/exchange")
     @PermitAll
     @TenantIgnore

@@ -6,11 +6,13 @@ yudao:
     permit-all-urls:
       - /admin-api/system/auth/kod-sso/start
       - /admin-api/system/auth/kod-sso/callback
+      - /admin-api/system/auth/kod-sso/direct-login
       - /admin-api/system/auth/kod-sso/exchange
   tenant:
     ignore-urls:
       - /admin-api/system/auth/kod-sso/start
       - /admin-api/system/auth/kod-sso/callback
+      - /admin-api/system/auth/kod-sso/direct-login
       - /admin-api/system/auth/kod-sso/exchange
   kod-sso:
     enabled: ${KOD_SSO_ENABLED:true}
