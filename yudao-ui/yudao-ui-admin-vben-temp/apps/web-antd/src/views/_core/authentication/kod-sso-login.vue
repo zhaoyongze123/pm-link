@@ -176,7 +176,11 @@ onMounted(async () => {
 
 <style scoped>
 .kod-sso-loading-shell {
-  min-height: 100vh;
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  width: 100vw;
+  height: 100vh;
   background: #fff;
 }
 </style>

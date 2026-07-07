@@ -21,6 +21,7 @@ import {
 } from '#/api';
 import { getUserProfile } from '#/api/system/user/profile';
 import { $t } from '#/locales';
+import { normalizeOaAssetUrl } from '#/utils';
 import { filterAccessMenus } from '#/utils/menu-filter';
 import { resolveUserHomePath } from '#/utils/oa-user';
 
@@ -169,7 +170,7 @@ export const useAuthStore = defineStore('auth', () => {
     const rawUser = (authPermissionInfo.user || {}) as Partial<UserInfoWithEmail>;
     const normalizedUser: NormalizedUserInfo = {
       ...rawUser,
-      avatar: profile?.avatar || rawUser.avatar || '',
+      avatar: normalizeOaAssetUrl(profile?.avatar || rawUser.avatar || ''),
       email: profile?.email ?? rawUser.email,
       homePath: resolveUserHomePath(
         rawUser.homePath,

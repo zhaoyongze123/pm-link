@@ -46,6 +46,7 @@ import {
   isForceCreateEntry,
   KOD_ENTRY_APPROVAL,
 } from '#/utils/kod-entry';
+import { normalizeOaAssetUrl } from '#/utils';
 import { isAdminUser } from '#/utils/oa-user';
 import ProcessDetail, {
   type OaLiteDetailRequest,
@@ -311,7 +312,8 @@ const availableTemplateDefinitions = computed<OaTemplateCard[]>(() => {
     .map((definition) => ({
       definition,
       description: definition.description || `${definition.name}审批流程`,
-      icon: definition.icon || 'solar:document-text-outline',
+      icon:
+        normalizeOaAssetUrl(definition.icon) || 'solar:document-text-outline',
       key: definition.id,
       title: definition.name,
     }))

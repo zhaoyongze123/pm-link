@@ -3,113 +3,97 @@ set -euo pipefail
 
 PLUGIN_BASE_DIR="${PLUGIN_BASE_DIR:-/root/deployments/kodbox/data/plugins}"
 
-write_plugin() {
+write_app() {
+  local plugin_dir="$1"
+  local class_name="$2"
+  local target_file="${PLUGIN_BASE_DIR}/${plugin_dir}/app.php"
+
+  python3 - "$class_name" "$target_file" <<'PY'
+from pathlib import Path
+import sys
+
+class_name = sys.argv[1]
+target_file = Path(sys.argv[2])
+
+template = """<?php
+class __CLASS_NAME__ extends PluginBase{
+    function __construct(){
+        parent::__construct();
+    }
+    public function regist(){
+        $this->hookRegist(array(
+            'user.commonJs.insert' => '__CLASS_NAME__.echoJs'
+        ));
+    }
+    public function echoJs(){
+        $this->echoFile('static/main.js');
+    }
+    public function index(){
+        if (!KodUser::isLogin()) {
+            show_tips('用户未登录');
+        }
+        $config = $this->getConfig();
+        $entryUrl = trim((string)_get($config, 'entryUrl', ''));
+        if (!$entryUrl) {
+            show_tips('插件入口地址未配置');
+        }
+
+        $joiner = strpos($entryUrl, '?') === false ? '?' : '&';
+        $redirectUri = $entryUrl . $joiner . '_pluginRefresh=' . time();
+        $entryParts = parse_url($entryUrl);
+        $scheme = _get($entryParts, 'scheme', 'https');
+        $host = _get($entryParts, 'host', '');
+        if (!$host) {
+            show_tips('插件入口地址配置无效');
+        }
+        $port = isset($entryParts['port']) ? ':' . $entryParts['port'] : '';
+        $kodAccessToken = Action('user.index')->accessToken();
+        $directLoginUrl = $scheme . '://' . $host . $port
+            . '/admin-api/system/auth/kod-sso/direct-login?kodAccessToken='
+            . rawurlencode($kodAccessToken)
+            . '&redirectUri=' . rawurlencode($redirectUri);
+        header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+        header('Pragma: no-cache');
+        header('Location: ' . $directLoginUrl);
+        exit;
+    }
+}
+"""
+
+target_file.write_text(template.replace('__CLASS_NAME__', class_name))
+PY
+
+  echo "[完成] 已写入 ${target_file}"
+}
+
+write_main() {
   local plugin_dir="$1"
   local page_id="$2"
   local icon="$3"
   local target_file="${PLUGIN_BASE_DIR}/${plugin_dir}/static/main.js"
 
-  if [ ! -d "${PLUGIN_BASE_DIR}/${plugin_dir}" ]; then
-    echo "[错误] 插件目录不存在: ${PLUGIN_BASE_DIR}/${plugin_dir}" >&2
-    exit 1
-  fi
-
-  python3 - "${page_id}" "${icon}" "${target_file}" <<'PY'
+  python3 - "$plugin_dir" "$page_id" "$icon" "$target_file" <<'PY'
 from pathlib import Path
 import sys
 
-page_id = sys.argv[1]
-icon = sys.argv[2]
-target_file = Path(sys.argv[3])
+plugin_dir = sys.argv[1]
+page_id = sys.argv[2]
+icon = sys.argv[3]
+target_file = Path(sys.argv[4])
 
 template = """kodReady.push(function(){
     var pageId = '__PAGE_ID__';
     var pageTitle = '{{package.name}}';
-    var pageUrl = '{{config.entryUrl}}';
-    var directLoginPath = '/admin-api/system/auth/kod-sso/direct-login';
+    var pluginUrl = '/index.php?plugin/__PLUGIN_DIR__/index';
 
     function buildFreshUrl() {
-        var joiner = pageUrl.indexOf('?') >= 0 ? '&' : '?';
-        return pageUrl + joiner + '_pluginRefresh=' + Date.now();
+        return pluginUrl + '&_pluginRefresh=' + Date.now();
     }
-
-    function buildDirectLoginUrl(kodAccessToken, redirectUrl) {
-        return window.location.origin + directLoginPath
-            + '?kodAccessToken=' + encodeURIComponent(kodAccessToken)
-            + '&redirectUri=' + encodeURIComponent(redirectUrl);
-    }
-
-    function extractKodAccessToken(result) {
-        if (!result || result.code !== true || !result.data || typeof result.data !== 'string') {
-            var message = result && (result.info || result.data || result.msg);
-            throw new Error(message || '获取可道云登录票据失败');
-        }
-        return result.data;
-    }
-
-    function requestKodAccessToken() {
-        return $.ajax({
-            url: '/index.php?user/index/accessTokenGet',
-            method: 'GET',
-            dataType: 'json'
-        });
-    }
-
-    function escapeHtml(text) {
-        return String(text || '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#39;');
-    }
-
-    var OaEntryView = ClassBase.extend({
-        init: function() {
-            this.$el = this.parent.$('.app-main');
-            this.$el.css({
-                width: '100%',
-                height: '100%',
-                background: '#fff'
-            });
-            this.$el.html('');
-            this.openIframe();
-        },
-        openIframe: function() {
-            var self = this;
-            requestKodAccessToken().done(function(result){
-                try {
-                    var kodAccessToken = extractKodAccessToken(result);
-                    var iframeUrl = buildDirectLoginUrl(kodAccessToken, buildFreshUrl());
-                    var iframeHtml = '<iframe'
-                        + ' src="' + iframeUrl + '"'
-                        + ' style="width:100%;height:100%;border:none;background:#fff;"'
-                        + ' referrerpolicy="same-origin"'
-                        + '></iframe>';
-                    self.$el.html(iframeHtml);
-                } catch (error) {
-                    self.renderError(error && error.message ? error.message : '打开页面失败，请刷新后重试');
-                }
-            }).fail(function(xhr){
-                var response = xhr && xhr.responseJSON;
-                var message = response && (response.info || response.data || response.msg);
-                self.renderError(message || '获取可道云登录票据失败');
-            });
-        },
-        renderError: function(message) {
-            this.$el.html(
-                '<div style="box-sizing:border-box;width:100%;height:100%;padding:32px;background:#fff;color:#333;line-height:1.8;">'
-                + '<div style="font-size:16px;font-weight:600;margin-bottom:8px;">打开失败</div>'
-                + '<div style="font-size:14px;">' + escapeHtml(message) + '</div>'
-                + '</div>'
-            );
-        }
-    });
 
     Events.bind('main.menu.loadBefore', function(listData){
         listData[pageId] = {
             name: pageTitle,
-            url: pageUrl,
+            url: pluginUrl,
             target: '{{config.openWith}}',
             subMenu: '{{config.menuSubMenu}}',
             menuAdd: '{{config.menuAdd}}',
@@ -117,22 +101,30 @@ template = """kodReady.push(function(){
         };
     });
 
-    Router.mapPage({
+    Router.mapIframe({
         page: pageId,
         title: pageTitle,
-        View: OaEntryView
+        url: buildFreshUrl(),
+        ignoreLogin: false
     });
 });
 """
 
-content = template.replace("__PAGE_ID__", page_id).replace("__ICON__", icon)
+content = template.replace('__PLUGIN_DIR__', plugin_dir).replace('__PAGE_ID__', page_id).replace('__ICON__', icon)
 target_file.write_text(content)
 PY
 
   echo "[完成] 已写入 ${target_file}"
 }
 
-write_plugin "approvalCreateCenter" "{{package.id}}" "ri-draft-fill"
-write_plugin "meetingRoom" "{{package.id}}" "ri-team-fill"
-write_plugin "scheduleCenter" "{{package.id}}" "ri-calendar-check-fill"
-write_plugin "partyFile" "partyFileStandaloneV2" "ri-government-fill"
+write_app "approvalCreateCenter" "approvalCreateCenterPlugin"
+write_main "approvalCreateCenter" "{{package.id}}" "ri-draft-fill"
+
+write_app "meetingRoom" "meetingRoomPlugin"
+write_main "meetingRoom" "{{package.id}}" "ri-team-fill"
+
+write_app "scheduleCenter" "scheduleCenterPlugin"
+write_main "scheduleCenter" "{{package.id}}" "ri-calendar-check-fill"
+
+write_app "partyFile" "partyFilePlugin"
+write_main "partyFile" "partyFileStandaloneV2" "ri-government-fill"

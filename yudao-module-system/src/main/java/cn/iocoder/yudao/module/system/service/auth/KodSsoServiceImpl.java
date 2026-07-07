@@ -393,6 +393,12 @@ public class KodSsoServiceImpl implements KodSsoService {
                 createReqVO.setStatus(CommonStatusEnum.ENABLE.getStatus());
                 Long deptId = runWithSystemOperatorContext(() -> deptService.createDept(createReqVO));
                 dept = deptService.getDept(deptId);
+                if (dept == null) {
+                    dept = deptMapper.selectByParentIdAndName(parentId, deptName);
+                }
+                if (dept == null) {
+                    throw exception(AUTH_KOD_SSO_BAD_REQUEST, "创建或查询部门失败: " + deptName);
+                }
             } else if (!Objects.equals(dept.getStatus(), CommonStatusEnum.ENABLE.getStatus())) {
                 DeptSaveReqVO updateReqVO = new DeptSaveReqVO();
                 updateReqVO.setId(dept.getId());

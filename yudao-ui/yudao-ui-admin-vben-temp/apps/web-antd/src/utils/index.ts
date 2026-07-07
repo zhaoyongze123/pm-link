@@ -2,6 +2,7 @@ import type { Recordable } from '@vben/types';
 
 export * from './rangePickerProps';
 export * from './routerHelper';
+export * from './asset-url';
 
 // 从共享包导出 URL 工具函数
 export { isUrl } from '@vben/utils';

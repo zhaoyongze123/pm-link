@@ -120,16 +120,18 @@ const coreRoutes: RouteRecordRaw[] = [
           title: $t('page.auth.login'),
         },
       },
-      {
-        name: 'KodSSOLogin',
-        path: 'kod-sso-login',
-        component: () =>
-          import('#/views/_core/authentication/kod-sso-login.vue'),
-        meta: {
-          title: $t('page.auth.login'),
-        },
-      },
     ],
+  },
+  {
+    name: 'KodSSOLogin',
+    path: '/auth/kod-sso-login',
+    component: () => import('#/views/_core/authentication/kod-sso-login.vue'),
+    meta: {
+      hideInBreadcrumb: true,
+      hideInMenu: true,
+      hideInTab: true,
+      title: $t('page.auth.login'),
+    },
   },
   /**
    * 用于 bpm 移动端流程表单 web-view 的嵌入
