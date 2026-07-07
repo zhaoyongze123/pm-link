@@ -12,7 +12,7 @@ import { RouterView, useRoute } from 'vue-router';
 import { useAccess } from '@vben/access';
 import { AuthenticationLoginExpiredModal, useVbenModal } from '@vben/common-ui';
 import { isTenantEnable, useTabs, useWatermark } from '@vben/hooks';
-import { AntdProfileOutlined, IconifyIcon } from '@vben/icons';
+import { IconifyIcon } from '@vben/icons';
 import {
   LayoutMenu,
   LockScreen,
@@ -35,7 +35,6 @@ import {
   updateNotifyMessageRead,
 } from '#/api/system/notify/message';
 import { getSimpleTenantList } from '#/api/system/tenant';
-import { $t } from '#/locales';
 import { router } from '#/router';
 import { useAuthStore } from '#/store';
 import {
@@ -256,16 +255,6 @@ const avatar = computed(
 const tenantEnable = computed(
   () => hasAccessByCodes(['system:tenant:visit']) && isTenantEnable(),
 );
-
-const userMenus = computed(() => [
-  {
-    handler: () => {
-      router.push({ name: 'Profile' });
-    },
-    icon: AntdProfileOutlined,
-    text: $t('ui.widgets.profile'),
-  },
-]);
 
 const [NotifyMessageDetailModal, notifyMessageDetailModalApi] = useVbenModal({
   connectedComponent: NotifyMessageDetail,
@@ -990,7 +979,6 @@ watch(
           <UserDropdown
             :avatar="avatar"
             :description="userStore.userInfo?.email"
-            :menus="userMenus"
             :show-logout="false"
             :tag-text="userStore.userInfo?.username"
             :text="userStore.userInfo?.nickname"

@@ -1,7 +1,7 @@
 <script lang="ts" setup>
 import type { ModelCategoryInfo } from '#/api/bpm/model';
 
-import { onActivated, reactive, ref, useTemplateRef, watch } from 'vue';
+import { onActivated, onMounted, reactive, ref, useTemplateRef, watch } from 'vue';
 
 import { Page, useVbenModal } from '@vben/common-ui';
 import { IconifyIcon } from '@vben/icons';
@@ -75,7 +75,11 @@ async function getList() {
   }
 }
 
-/** 初始化 */
+/** 初始化：首屏加载一次，切回页面时再刷新 */
+onMounted(() => {
+  getList();
+});
+
 onActivated(() => {
   getList();
 });

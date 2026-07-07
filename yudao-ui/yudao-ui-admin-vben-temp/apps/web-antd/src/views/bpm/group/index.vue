@@ -86,15 +86,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
   <Page auto-content-height title="用户分组">
     <FormModal @success="handleRefresh" />
     <div class="oa-workspace-page oa-group-page">
-
       <section class="oa-workspace-panel min-h-0">
-        <div class="oa-workspace-panel-header">
-          <div>
-            <h3 class="oa-workspace-panel-title">用户分组</h3>
-          </div>
-        </div>
         <div class="oa-workspace-panel-body min-h-0">
-          <Grid table-title="用户分组">
+          <Grid>
             <template #toolbar-tools>
               <TableAction
                 :actions="[

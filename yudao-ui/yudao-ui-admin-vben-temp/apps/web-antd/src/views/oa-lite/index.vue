@@ -1385,12 +1385,6 @@ onUnmounted(() => {
                       </div>
                     </div>
 
-                    <div class="oa-lite-list-filterbar">
-                      <div class="oa-lite-list-hero-meta">
-                        <span>{{ currentPageState?.total || currentList.length }} 条记录</span>
-                      </div>
-                    </div>
-
                     <div class="oa-lite-filter-shell">
                       <div class="oa-lite-filters">
                         <Input

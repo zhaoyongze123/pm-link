@@ -94,16 +94,8 @@ const [Grid, gridApi] = useVbenVxeGrid({
     <FormModal @success="handleRefresh" />
     <div class="oa-workspace-page oa-approval-template-page">
       <section class="oa-workspace-panel min-h-0">
-        <div class="oa-workspace-panel-header">
-          <div>
-            <h3 class="oa-workspace-panel-title">审批模板管理</h3>
-            <p class="oa-workspace-panel-subtitle">
-              这里管理发起审批里真正展示的模板。模板绑定流程定义，支持统一上架/下架和切换流程。
-            </p>
-          </div>
-        </div>
         <div class="oa-workspace-panel-body min-h-0">
-          <Grid table-title="审批模板列表">
+          <Grid>
             <template #icon="{ row }">
               <img
                 v-if="row.icon && isImageIcon(row.icon)"

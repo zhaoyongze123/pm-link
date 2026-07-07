@@ -105,15 +105,9 @@ const [Grid, gridApi] = useVbenVxeGrid({
     </template>
 
     <div class="oa-workspace-page">
-
       <section class="oa-workspace-panel min-h-0">
-        <div class="oa-workspace-panel-header">
-          <div>
-            <h3 class="oa-workspace-panel-title">流程实例</h3>
-          </div>
-        </div>
         <div class="oa-workspace-panel-body min-h-0">
-          <Grid table-title="流程实例">
+          <Grid>
             <template #tasks="{ row }">
               <template v-if="row.tasks && row.tasks.length > 0">
                 <Button
